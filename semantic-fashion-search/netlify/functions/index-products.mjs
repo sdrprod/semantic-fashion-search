@@ -51,7 +51,7 @@ export const handler = async (event) => {
       };
     }
 
-    const productsPath = join(process.cwd(), 'data', 'products.json');
+    const productsPath = join(process.cwd(), 'semantic-fashion-search', 'data', 'products.json');
     const productsData = JSON.parse(readFileSync(productsPath, 'utf-8'));
 
     console.log(`Loading ${productsData.length} products for indexing...`);
