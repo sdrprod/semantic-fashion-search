@@ -1,0 +1,202 @@
+[
+  {
+    "brand": "Everlane",
+    "title": "The Way-High Drape Pant",
+    "description": "Wide-leg, high-waisted trousers in a luxe drape fabric. Features a flattering silhouette with an elasticated waistband for comfort.",
+    "tags": ["pants", "wide-leg", "high-waisted", "neutral", "office", "casual"],
+    "price": 118.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Everlane+Way-High+Drape+Pant"
+  },
+  {
+    "brand": "Reformation",
+    "title": "Carina Midi Dress",
+    "description": "A black fitted midi dress with a square neckline and no cutouts. Features a side slit and body-hugging silhouette. Minimal and elegant.",
+    "tags": ["black", "midi", "dress", "square neckline", "fitted", "minimal", "elegant", "evening"],
+    "price": 248.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Reformation+Carina+Midi+Dress"
+  },
+  {
+    "brand": "& Other Stories",
+    "title": "Ribbed Knit Midi Dress",
+    "description": "Body-hugging ribbed knit dress in black. Features a square neckline, long sleeves, and midi length. Perfect for layering or wearing solo.",
+    "tags": ["black", "midi", "dress", "ribbed", "knit", "square neckline", "fitted", "casual"],
+    "price": 79.0,
+    "currency": "USD",
+    "imageUrl": "https://img.ltwebstatic.com/images3_pi/2022/10/17/16659978818360707979d73eaef5b58d36d7a68471.webp?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Ribbed+Knit+Midi+Dress+black"
+  },
+  {
+    "brand": "COS",
+    "title": "Tailored Blazer",
+    "description": "Classic tailored blazer in black with a relaxed fit. Features notch lapels, single-breasted closure, and front pockets. Versatile and timeless.",
+    "tags": ["black", "blazer", "tailored", "minimal", "office", "versatile"],
+    "price": 250.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=COS+Tailored+Blazer+black"
+  },
+  {
+    "brand": "Mango",
+    "title": "Satin Slip Dress",
+    "description": "Elegant satin slip dress in emerald green. Features delicate straps, cowl neckline, and midi length. Perfect for special occasions.",
+    "tags": ["green", "midi", "dress", "satin", "slip", "elegant", "evening", "formal"],
+    "price": 99.99,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Mango+Satin+Slip+Dress+green"
+  },
+  {
+    "brand": "ASOS Design",
+    "title": "Oversized Denim Jacket",
+    "description": "Classic oversized denim jacket in mid-blue wash. Features button closure, chest pockets, and comfortable fit.",
+    "tags": ["denim", "jacket", "oversized", "blue", "casual", "versatile"],
+    "price": 58.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=ASOS+Oversized+Denim+Jacket"
+  },
+  {
+    "brand": "Zara",
+    "title": "Linen Blend Wide Leg Pants",
+    "description": "High-waisted wide leg pants in natural beige linen blend. Features side pockets and comfortable elastic waistband.",
+    "tags": ["pants", "wide-leg", "linen", "beige", "neutral", "summer", "casual"],
+    "price": 49.99,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1594633313593-bab3825d0caf?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Zara+Linen+Wide+Leg+Pants+beige"
+  },
+  {
+    "brand": "Massimo Dutti",
+    "title": "Silk Blouse",
+    "description": "Elegant silk blouse in ivory with a relaxed fit. Features button front, collar, and long sleeves. Perfect for office or evening wear.",
+    "tags": ["blouse", "silk", "ivory", "white", "elegant", "office", "formal"],
+    "price": 129.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1584670744125-6c175f28d98f?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Massimo+Dutti+Silk+Blouse+ivory"
+  },
+  {
+    "brand": "H&M",
+    "title": "Knitted Turtleneck Sweater",
+    "description": "Cozy knitted turtleneck sweater in cream. Features ribbed texture, long sleeves, and relaxed fit. Perfect for layering.",
+    "tags": ["sweater", "knit", "turtleneck", "cream", "neutral", "cozy", "winter"],
+    "price": 39.99,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=H%26M+Knitted+Turtleneck+Sweater+cream"
+  },
+  {
+    "brand": "Arket",
+    "title": "Cotton Poplin Shirt Dress",
+    "description": "Crisp white cotton poplin shirt dress with button-front closure. Features midi length, collar, and waist tie. Clean and minimal.",
+    "tags": ["dress", "shirt dress", "white", "cotton", "midi", "minimal", "casual"],
+    "price": 99.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Arket+Cotton+Poplin+Shirt+Dress+white"
+  },
+  {
+    "brand": "Free People",
+    "title": "Flowy Maxi Dress",
+    "description": "Bohemian flowy maxi dress in terracotta with floral print. Features V-neckline, long sleeves, and tiered skirt.",
+    "tags": ["maxi", "dress", "floral", "bohemian", "flowy", "orange", "summer"],
+    "price": 168.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Free+People+Flowy+Maxi+Dress+floral"
+  },
+  {
+    "brand": "Uniqlo",
+    "title": "Cashmere Crew Neck Sweater",
+    "description": "Premium cashmere crew neck sweater in charcoal grey. Soft, lightweight, and perfect for layering or wearing solo.",
+    "tags": ["sweater", "cashmere", "grey", "crew neck", "minimal", "luxe", "winter"],
+    "price": 99.9,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Uniqlo+Cashmere+Crew+Neck+Sweater+grey"
+  },
+  {
+    "brand": "Sezane",
+    "title": "Leather Ankle Boots",
+    "description": "Classic black leather ankle boots with low heel. Features side zip closure and almond toe. Versatile and timeless.",
+    "tags": ["boots", "ankle boots", "black", "leather", "classic", "versatile"],
+    "price": 265.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Sezane+Leather+Ankle+Boots+black"
+  },
+  {
+    "brand": "Ganni",
+    "title": "Floral Print Wrap Dress",
+    "description": "Vibrant floral print wrap dress in pink and green. Features V-neckline, short sleeves, and midi length. Feminine and playful.",
+    "tags": ["dress", "wrap dress", "floral", "pink", "midi", "feminine", "summer"],
+    "price": 285.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Ganni+Floral+Wrap+Dress"
+  },
+  {
+    "brand": "Topshop",
+    "title": "High-Rise Straight Jeans",
+    "description": "Classic high-rise straight leg jeans in dark indigo wash. Features five-pocket styling and button fly.",
+    "tags": ["jeans", "denim", "straight leg", "high-rise", "blue", "classic", "casual"],
+    "price": 75.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Topshop+High-Rise+Straight+Jeans"
+  },
+  {
+    "brand": "Acne Studios",
+    "title": "Oversized Wool Coat",
+    "description": "Luxurious oversized wool coat in camel. Features double-breasted closure, notch lapels, and side pockets. Statement outerwear piece.",
+    "tags": ["coat", "wool", "camel", "oversized", "luxe", "winter", "outerwear"],
+    "price": 850.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Acne+Studios+Oversized+Wool+Coat+camel"
+  },
+  {
+    "brand": "Levi's",
+    "title": "501 Original Fit Jeans",
+    "description": "Iconic straight leg jeans with button fly in classic medium blue wash. Timeless and versatile.",
+    "tags": ["jeans", "denim", "straight leg", "blue", "classic", "casual", "vintage"],
+    "price": 98.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Levi%27s+501+Original+Fit+Jeans"
+  },
+  {
+    "brand": "Whistles",
+    "title": "Pleated Midi Skirt",
+    "description": "Elegant pleated midi skirt in navy blue. Features elastic waistband and flowy silhouette. Perfect for office or evening wear.",
+    "tags": ["skirt", "midi", "pleated", "navy", "blue", "elegant", "office"],
+    "price": 139.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Whistles+Pleated+Midi+Skirt+navy"
+  },
+  {
+    "brand": "Vince",
+    "title": "Cashmere Cardigan",
+    "description": "Soft cashmere cardigan in oatmeal with button front. Features relaxed fit and ribbed trim. Luxurious layering piece.",
+    "tags": ["cardigan", "cashmere", "beige", "neutral", "cozy", "luxe", "layering"],
+    "price": 345.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Vince+Cashmere+Cardigan+oatmeal"
+  },
+  {
+    "brand": "Staud",
+    "title": "Mini Tote Bag",
+    "description": "Structured mini tote bag in tan leather with top handles. Features magnetic closure and interior pocket. Chic and practical.",
+    "tags": ["bag", "tote", "leather", "tan", "beige", "structured", "minimal"],
+    "price": 195.0,
+    "currency": "USD",
+    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "productUrl": "https://www.google.com/search?tbm=shop&q=Staud+Mini+Tote+Bag+tan+leather"
+  }
+]

@@ -5,7 +5,7 @@ import type { SearchResponse } from "../types";
  */
 export async function searchProducts(
   query: string,
-  limit = 20
+  limit = 6
 ): Promise<SearchResponse> {
   const response = await fetch("/api/search", {
     method: "POST",

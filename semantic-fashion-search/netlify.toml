@@ -5,6 +5,11 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  included_files = ["data/**"]
+
+[dev]
+  targetPort = 5173
+  functions = "netlify/functions"
 
 [[redirects]]
   from = "/api/search"
