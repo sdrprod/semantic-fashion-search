@@ -3,870 +3,1562 @@
     "brand": "Everlane",
     "title": "The Way-High Drape Pant",
     "description": "Wide-leg, high-waisted trousers in a luxe drape fabric. Features a flattering silhouette with an elasticated waistband for comfort.",
-    "tags": ["pants", "wide-leg", "high-waisted", "neutral", "office", "casual"],
+    "tags": [
+      "pants",
+      "wide-leg",
+      "high-waisted",
+      "neutral",
+      "office",
+      "casual"
+    ],
     "price": 118.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?wide-leg-pants",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Everlane+The+Way-High+Drape+Pant"
   },
   {
     "brand": "Reformation",
     "title": "Carina Midi Dress",
     "description": "A black fitted midi dress with a square neckline and no cutouts. Features a side slit and body-hugging silhouette. Minimal and elegant.",
-    "tags": ["black", "midi", "dress", "square neckline", "fitted", "minimal", "elegant", "evening"],
+    "tags": [
+      "black",
+      "midi",
+      "dress",
+      "square neckline",
+      "fitted",
+      "minimal",
+      "elegant",
+      "evening"
+    ],
     "price": 248.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Reformation+Carina+Midi+Dress"
   },
   {
     "brand": "& Other Stories",
     "title": "Ribbed Knit Midi Dress",
     "description": "Body-hugging ribbed knit dress in black. Features a square neckline, long sleeves, and midi length. Perfect for layering or wearing solo.",
-    "tags": ["black", "midi", "dress", "ribbed", "knit", "square neckline", "fitted", "casual"],
+    "tags": [
+      "black",
+      "midi",
+      "dress",
+      "ribbed",
+      "knit",
+      "square neckline",
+      "fitted",
+      "casual"
+    ],
     "price": 79.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,black,knit",
     "productUrl": "https://www.google.com/search?tbm=shop&q=%26+Other+Stories+Ribbed+Knit+Midi+Dress"
   },
   {
     "brand": "COS",
     "title": "Tailored Blazer",
     "description": "Classic tailored blazer in black with a relaxed fit. Features notch lapels, single-breasted closure, and front pockets. Versatile and timeless.",
-    "tags": ["black", "blazer", "tailored", "minimal", "office", "versatile"],
+    "tags": [
+      "black",
+      "blazer",
+      "tailored",
+      "minimal",
+      "office",
+      "versatile"
+    ],
     "price": 250.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?blazer,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=COS+Tailored+Blazer"
   },
   {
     "brand": "Mango",
     "title": "Satin Slip Dress",
     "description": "Elegant satin slip dress in emerald green. Features delicate straps, cowl neckline, and midi length. Perfect for special occasions.",
-    "tags": ["green", "midi", "dress", "satin", "slip", "elegant", "evening", "formal"],
+    "tags": [
+      "green",
+      "midi",
+      "dress",
+      "satin",
+      "slip",
+      "elegant",
+      "evening",
+      "formal"
+    ],
     "price": 99.99,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,green,satin",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Mango+Satin+Slip+Dress"
   },
   {
     "brand": "ASOS Design",
     "title": "Oversized Denim Jacket",
     "description": "Classic oversized denim jacket in mid-blue wash. Features button closure, chest pockets, and comfortable fit.",
-    "tags": ["denim", "jacket", "oversized", "blue", "casual", "versatile"],
+    "tags": [
+      "denim",
+      "jacket",
+      "oversized",
+      "blue",
+      "casual",
+      "versatile"
+    ],
     "price": 58.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?denim-jacket,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=ASOS+Design+Oversized+Denim+Jacket"
   },
   {
     "brand": "Zara",
     "title": "Linen Blend Wide Leg Pants",
     "description": "High-waisted wide leg pants in natural beige linen blend. Features side pockets and comfortable elastic waistband.",
-    "tags": ["pants", "wide-leg", "linen", "beige", "neutral", "summer", "casual"],
+    "tags": [
+      "pants",
+      "wide-leg",
+      "linen",
+      "beige",
+      "neutral",
+      "summer",
+      "casual"
+    ],
     "price": 49.99,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1624206112918-feb53c415ccb?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?wide-leg-pants,beige,linen",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Zara+Linen+Blend+Wide+Leg+Pants"
   },
   {
     "brand": "Massimo Dutti",
     "title": "Silk Blouse",
     "description": "Elegant silk blouse in ivory with a relaxed fit. Features button front, collar, and long sleeves. Perfect for office or evening wear.",
-    "tags": ["blouse", "silk", "ivory", "white", "elegant", "office", "formal"],
+    "tags": [
+      "blouse",
+      "silk",
+      "ivory",
+      "white",
+      "elegant",
+      "office",
+      "formal"
+    ],
     "price": 129.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1618932260643-eee4a2f652a6?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?blouse,white,silk",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Massimo+Dutti+Silk+Blouse"
   },
   {
     "brand": "H&M",
     "title": "Knitted Turtleneck Sweater",
     "description": "Cozy knitted turtleneck sweater in cream. Features ribbed texture, long sleeves, and relaxed fit. Perfect for layering.",
-    "tags": ["sweater", "knit", "turtleneck", "cream", "neutral", "cozy", "winter"],
+    "tags": [
+      "sweater",
+      "knit",
+      "turtleneck",
+      "cream",
+      "neutral",
+      "cozy",
+      "winter"
+    ],
     "price": 39.99,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sweater,cream,knit",
     "productUrl": "https://www.google.com/search?tbm=shop&q=H%26M+Knitted+Turtleneck+Sweater"
   },
   {
     "brand": "Arket",
     "title": "Cotton Poplin Shirt Dress",
     "description": "Crisp white cotton poplin shirt dress with button-front closure. Features midi length, collar, and waist tie. Clean and minimal.",
-    "tags": ["dress", "shirt dress", "white", "cotton", "midi", "minimal", "casual"],
+    "tags": [
+      "dress",
+      "shirt dress",
+      "white",
+      "cotton",
+      "midi",
+      "minimal",
+      "casual"
+    ],
     "price": 99.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,white,cotton",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Arket+Cotton+Poplin+Shirt+Dress"
   },
   {
     "brand": "Free People",
     "title": "Flowy Maxi Dress",
     "description": "Bohemian flowy maxi dress in terracotta with floral print. Features V-neckline, long sleeves, and tiered skirt.",
-    "tags": ["maxi", "dress", "floral", "bohemian", "flowy", "orange", "summer"],
+    "tags": [
+      "maxi",
+      "dress",
+      "floral",
+      "bohemian",
+      "flowy",
+      "orange",
+      "summer"
+    ],
     "price": 168.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?maxi-dress,red",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Free+People+Flowy+Maxi+Dress"
   },
   {
     "brand": "Uniqlo",
     "title": "Cashmere Crew Neck Sweater",
     "description": "Premium cashmere crew neck sweater in charcoal grey. Soft, lightweight, and perfect for layering or wearing solo.",
-    "tags": ["sweater", "cashmere", "grey", "crew neck", "minimal", "luxe", "winter"],
+    "tags": [
+      "sweater",
+      "cashmere",
+      "grey",
+      "crew neck",
+      "minimal",
+      "luxe",
+      "winter"
+    ],
     "price": 99.9,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sweater,gray,cashmere",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Uniqlo+Cashmere+Crew+Neck+Sweater"
   },
   {
     "brand": "Sezane",
     "title": "Leather Ankle Boots",
     "description": "Classic black leather ankle boots with low heel. Features side zip closure and almond toe. Versatile and timeless.",
-    "tags": ["boots", "ankle boots", "black", "leather", "classic", "versatile"],
+    "tags": [
+      "boots",
+      "ankle boots",
+      "black",
+      "leather",
+      "classic",
+      "versatile"
+    ],
     "price": 265.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?ankle-boots,black,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Sezane+Leather+Ankle+Boots"
   },
   {
     "brand": "Ganni",
     "title": "Floral Print Wrap Dress",
     "description": "Vibrant floral print wrap dress in pink and green. Features V-neckline, short sleeves, and midi length. Feminine and playful.",
-    "tags": ["dress", "wrap dress", "floral", "pink", "midi", "feminine", "summer"],
+    "tags": [
+      "dress",
+      "wrap dress",
+      "floral",
+      "pink",
+      "midi",
+      "feminine",
+      "summer"
+    ],
     "price": 285.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,green",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Ganni+Floral+Print+Wrap+Dress"
   },
   {
     "brand": "Topshop",
     "title": "High-Rise Straight Jeans",
     "description": "Classic high-rise straight leg jeans in dark indigo wash. Features five-pocket styling and button fly.",
-    "tags": ["jeans", "denim", "straight leg", "high-rise", "blue", "classic", "casual"],
+    "tags": [
+      "jeans",
+      "denim",
+      "straight leg",
+      "high-rise",
+      "blue",
+      "classic",
+      "casual"
+    ],
     "price": 75.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?straight-leg-jeans,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Topshop+High-Rise+Straight+Jeans"
   },
   {
     "brand": "Acne Studios",
     "title": "Oversized Wool Coat",
     "description": "Luxurious oversized wool coat in camel. Features double-breasted closure, notch lapels, and side pockets. Statement outerwear piece.",
-    "tags": ["coat", "wool", "camel", "oversized", "luxe", "winter", "outerwear"],
+    "tags": [
+      "coat",
+      "wool",
+      "camel",
+      "oversized",
+      "luxe",
+      "winter",
+      "outerwear"
+    ],
     "price": 850.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?coat,camel,wool",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Acne+Studios+Oversized+Wool+Coat"
   },
   {
     "brand": "Levi's",
     "title": "501 Original Fit Jeans",
     "description": "Iconic straight leg jeans with button fly in classic medium blue wash. Timeless and versatile.",
-    "tags": ["jeans", "denim", "straight leg", "blue", "classic", "casual", "vintage"],
+    "tags": [
+      "jeans",
+      "denim",
+      "straight leg",
+      "blue",
+      "classic",
+      "casual",
+      "vintage"
+    ],
     "price": 98.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?straight-leg-jeans,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Levi%27s+501+Original+Fit+Jeans"
   },
   {
     "brand": "Whistles",
     "title": "Pleated Midi Skirt",
     "description": "Elegant pleated midi skirt in navy blue. Features elastic waistband and flowy silhouette. Perfect for office or evening wear.",
-    "tags": ["skirt", "midi", "pleated", "navy", "blue", "elegant", "office"],
+    "tags": [
+      "skirt",
+      "midi",
+      "pleated",
+      "navy",
+      "blue",
+      "elegant",
+      "office"
+    ],
     "price": 139.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?skirt,blue",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Whistles+Pleated+Midi+Skirt"
   },
   {
     "brand": "Vince",
     "title": "Cashmere Cardigan",
     "description": "Soft cashmere cardigan in oatmeal with button front. Features relaxed fit and ribbed trim. Luxurious layering piece.",
-    "tags": ["cardigan", "cashmere", "beige", "neutral", "cozy", "luxe", "layering"],
+    "tags": [
+      "cardigan",
+      "cashmere",
+      "beige",
+      "neutral",
+      "cozy",
+      "luxe",
+      "layering"
+    ],
     "price": 345.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sweater,beige,cashmere",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Vince+Cashmere+Cardigan"
   },
   {
     "brand": "Staud",
     "title": "Mini Tote Bag",
     "description": "Structured mini tote bag in tan leather with top handles. Features magnetic closure and interior pocket. Chic and practical.",
-    "tags": ["bag", "tote", "leather", "tan", "beige", "structured", "minimal"],
+    "tags": [
+      "bag",
+      "tote",
+      "leather",
+      "tan",
+      "beige",
+      "structured",
+      "minimal"
+    ],
     "price": 195.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-tote,red,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Staud+Mini+Tote+Bag"
   },
   {
     "brand": "Reformation",
     "title": "Cutout Midi Dress",
     "description": "Black midi dress with strategic cutouts at waist. Features fitted silhouette, V-neckline, and back slit. Sexy yet sophisticated.",
-    "tags": ["black", "midi", "dress", "cutout", "fitted", "sexy", "evening", "party"],
+    "tags": [
+      "black",
+      "midi",
+      "dress",
+      "cutout",
+      "fitted",
+      "sexy",
+      "evening",
+      "party"
+    ],
     "price": 268.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Reformation+Cutout+Midi+Dress"
   },
   {
     "brand": "Madewell",
     "title": "Perfect Vintage Jean",
     "description": "Relaxed straight leg jeans in light vintage wash. Features high waist, button fly, and classic five pockets. Effortlessly cool.",
-    "tags": ["jeans", "denim", "straight leg", "vintage", "blue", "relaxed", "casual"],
+    "tags": [
+      "jeans",
+      "denim",
+      "straight leg",
+      "vintage",
+      "blue",
+      "relaxed",
+      "casual"
+    ],
     "price": 128.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?straight-leg-jeans,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Madewell+Perfect+Vintage+Jean"
   },
   {
     "brand": "Entireworld",
     "title": "Type A Sweatpant",
     "description": "Soft organic cotton sweatpants in heather grey. Features elastic waistband with drawstring and tapered leg. Cozy and elevated.",
-    "tags": ["sweatpants", "joggers", "grey", "cotton", "loungewear", "comfortable", "casual"],
+    "tags": [
+      "sweatpants",
+      "joggers",
+      "grey",
+      "cotton",
+      "loungewear",
+      "comfortable",
+      "casual"
+    ],
     "price": 88.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?red,cotton",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Entireworld+Type+A+Sweatpant"
   },
   {
     "brand": "Anine Bing",
     "title": "Harvey Hoodie",
     "description": "Vintage-inspired hoodie in washed black. Features relaxed fit, drawstring hood, and kangaroo pocket. Effortless cool.",
-    "tags": ["hoodie", "sweatshirt", "black", "oversized", "casual", "streetwear"],
+    "tags": [
+      "hoodie",
+      "sweatshirt",
+      "black",
+      "oversized",
+      "casual",
+      "streetwear"
+    ],
     "price": 149.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?hoodie,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Anine+Bing+Harvey+Hoodie"
   },
   {
     "brand": "Patagonia",
     "title": "Better Sweater Fleece Jacket",
     "description": "Classic fleece jacket in navy blue. Features full-zip closure, stand-up collar, and side pockets. Warm and sustainable.",
-    "tags": ["fleece", "jacket", "navy", "blue", "outdoor", "casual", "sustainable"],
+    "tags": [
+      "fleece",
+      "jacket",
+      "navy",
+      "blue",
+      "outdoor",
+      "casual",
+      "sustainable"
+    ],
     "price": 139.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?coat,blue,fleece",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Patagonia+Better+Sweater+Fleece+Jacket"
   },
   {
     "brand": "Everlane",
     "title": "The Perform Legging",
     "description": "High-waisted performance leggings in black. Features compression fabric, hidden pocket, and seamless waistband. Perfect for workouts or athleisure.",
-    "tags": ["leggings", "athletic", "black", "high-waisted", "activewear", "compression"],
+    "tags": [
+      "leggings",
+      "athletic",
+      "black",
+      "high-waisted",
+      "activewear",
+      "compression"
+    ],
     "price": 68.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leggings,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Everlane+The+Perform+Legging"
   },
   {
     "brand": "Outdoor Voices",
     "title": "Exercise Dress",
     "description": "Sporty mini dress in heather grey. Features built-in shorts, racerback design, and moisture-wicking fabric. Athletic and cute.",
-    "tags": ["dress", "athletic", "grey", "mini", "activewear", "sporty"],
+    "tags": [
+      "dress",
+      "athletic",
+      "grey",
+      "mini",
+      "activewear",
+      "sporty"
+    ],
     "price": 98.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?mini-dress,gray",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Outdoor+Voices+Exercise+Dress"
   },
   {
     "brand": "Aritzia",
     "title": "Super Puff Shorty",
     "description": "Cropped puffer jacket in glossy black. Features down insulation, snap closure, and oversized fit. Warm and stylish.",
-    "tags": ["puffer", "jacket", "black", "cropped", "winter", "outerwear", "warm"],
+    "tags": [
+      "puffer",
+      "jacket",
+      "black",
+      "cropped",
+      "winter",
+      "outerwear",
+      "warm"
+    ],
     "price": 250.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?puffer-jacket,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Aritzia+Super+Puff+Shorty"
   },
   {
     "brand": "J.Crew",
     "title": "Regent Blazer",
     "description": "Classic wool blazer in navy. Features notch lapels, single-breasted closure, and structured shoulders. Professional and polished.",
-    "tags": ["blazer", "navy", "blue", "wool", "tailored", "office", "professional"],
+    "tags": [
+      "blazer",
+      "navy",
+      "blue",
+      "wool",
+      "tailored",
+      "office",
+      "professional"
+    ],
     "price": 298.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1591369822096-ffd140ec948f?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?blazer,red,wool",
     "productUrl": "https://www.google.com/search?tbm=shop&q=J.Crew+Regent+Blazer"
   },
   {
     "brand": "Rag & Bone",
     "title": "Nina High-Rise Ankle Skinny",
     "description": "High-rise skinny jeans in black coated denim. Features ankle length, five-pocket styling, and stretch fabric. Sleek and edgy.",
-    "tags": ["jeans", "skinny", "black", "high-rise", "coated", "ankle", "edgy"],
+    "tags": [
+      "jeans",
+      "skinny",
+      "black",
+      "high-rise",
+      "coated",
+      "ankle",
+      "edgy"
+    ],
     "price": 225.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?trousers,black,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Rag+%26+Bone+Nina+High-Rise+Ankle+Skinny"
   },
   {
     "brand": "Toteme",
     "title": "Signature Silk Shirt",
     "description": "Oversized silk shirt in ivory. Features relaxed fit, button front, and chest pocket. Effortlessly chic.",
-    "tags": ["shirt", "blouse", "silk", "ivory", "white", "oversized", "minimal", "luxe"],
+    "tags": [
+      "shirt",
+      "blouse",
+      "silk",
+      "ivory",
+      "white",
+      "oversized",
+      "minimal",
+      "luxe"
+    ],
     "price": 390.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1618932260643-eee4a2f652a6?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?blouse,white,silk",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Toteme+Signature+Silk+Shirt"
   },
   {
     "brand": "The Row",
     "title": "Margaux Tote",
     "description": "Structured leather tote in black. Features top handles, magnetic closure, and interior pockets. Timeless investment piece.",
-    "tags": ["bag", "tote", "leather", "black", "structured", "minimal", "luxe", "investment"],
+    "tags": [
+      "bag",
+      "tote",
+      "leather",
+      "black",
+      "structured",
+      "minimal",
+      "luxe",
+      "investment"
+    ],
     "price": 1790.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-tote,black,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=The+Row+Margaux+Tote"
   },
   {
     "brand": "Mansur Gavriel",
     "title": "Bucket Bag",
     "description": "Minimalist bucket bag in camel with contrast pink interior. Features drawstring closure and adjustable strap. Cult favorite.",
-    "tags": ["bag", "bucket bag", "camel", "tan", "leather", "minimal", "crossbody"],
+    "tags": [
+      "bag",
+      "bucket bag",
+      "camel",
+      "tan",
+      "leather",
+      "minimal",
+      "crossbody"
+    ],
     "price": 495.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?crossbody-bag,pink,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Mansur+Gavriel+Bucket+Bag"
   },
   {
     "brand": "Loewe",
     "title": "Puzzle Bag",
     "description": "Architectural leather bag in tan. Features geometric design, multiple carrying options, and luxurious craftsmanship. Statement piece.",
-    "tags": ["bag", "leather", "tan", "structured", "luxe", "designer", "crossbody"],
+    "tags": [
+      "bag",
+      "leather",
+      "tan",
+      "structured",
+      "luxe",
+      "designer",
+      "crossbody"
+    ],
     "price": 2750.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?crossbody-bag,tan,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Loewe+Puzzle+Bag"
   },
   {
     "brand": "Dr. Martens",
     "title": "1460 Combat Boot",
     "description": "Iconic 8-eye leather boot in black. Features grooved sole, yellow stitching, and signature air-cushioned sole. Timeless rebellion.",
-    "tags": ["boots", "combat boots", "black", "leather", "edgy", "classic", "grunge"],
+    "tags": [
+      "boots",
+      "combat boots",
+      "black",
+      "leather",
+      "edgy",
+      "classic",
+      "grunge"
+    ],
     "price": 150.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?combat-boots,black,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Dr.+Martens+1460+Combat+Boot"
   },
   {
     "brand": "Stuart Weitzman",
     "title": "5050 Over-the-Knee Boot",
     "description": "Stretch suede over-the-knee boot in black. Features block heel, almond toe, and perfect fit. Classic elegance.",
-    "tags": ["boots", "over-the-knee", "black", "suede", "heeled", "elegant", "evening"],
+    "tags": [
+      "boots",
+      "over-the-knee",
+      "black",
+      "suede",
+      "heeled",
+      "elegant",
+      "evening"
+    ],
     "price": 598.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?boots,black,suede",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Stuart+Weitzman+5050+Over-the-Knee+Boot"
   },
   {
     "brand": "Golden Goose",
     "title": "Superstar Sneakers",
     "description": "Distressed leather sneakers in white with silver star. Features vintage look and handcrafted details. Effortlessly cool.",
-    "tags": ["sneakers", "white", "leather", "distressed", "casual", "streetwear", "luxe"],
+    "tags": [
+      "sneakers",
+      "white",
+      "leather",
+      "distressed",
+      "casual",
+      "streetwear",
+      "luxe"
+    ],
     "price": 495.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,white,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Golden+Goose+Superstar+Sneakers"
   },
   {
     "brand": "Veja",
     "title": "V-10 Sneakers",
     "description": "Sustainable leather sneakers in white with grey accents. Features organic cotton lining and wild rubber sole. Eco-friendly style.",
-    "tags": ["sneakers", "white", "grey", "sustainable", "casual", "eco-friendly"],
+    "tags": [
+      "sneakers",
+      "white",
+      "grey",
+      "sustainable",
+      "casual",
+      "eco-friendly"
+    ],
     "price": 150.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,white,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Veja+V-10+Sneakers"
   },
   {
     "brand": "Sam Edelman",
     "title": "Yaro Ankle Strap Sandal",
     "description": "Minimalist block heel sandal in nude. Features ankle strap, open toe, and comfortable heel height. Versatile and flattering.",
-    "tags": ["sandals", "heels", "nude", "beige", "block heel", "minimalist", "dressy"],
+    "tags": [
+      "sandals",
+      "heels",
+      "nude",
+      "beige",
+      "block heel",
+      "minimalist",
+      "dressy"
+    ],
     "price": 120.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sandals,beige",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Sam+Edelman+Yaro+Ankle+Strap+Sandal"
   },
   {
     "brand": "Birkenstock",
     "title": "Arizona Soft Footbed Sandals",
     "description": "Classic two-strap sandals in taupe suede. Features contoured cork footbed and adjustable buckles. Comfortable and iconic.",
-    "tags": ["sandals", "taupe", "suede", "flat", "comfortable", "casual", "classic"],
+    "tags": [
+      "sandals",
+      "taupe",
+      "suede",
+      "flat",
+      "comfortable",
+      "casual",
+      "classic"
+    ],
     "price": 135.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1603487742131-4160ec999306?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sandals,red,suede",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Birkenstock+Arizona+Soft+Footbed+Sandals"
   },
   {
     "brand": "Rothy's",
     "title": "The Point Flat",
     "description": "Knitted pointed-toe flat in black. Features seamless design, machine washable construction, and sustainable materials. Modern and practical.",
-    "tags": ["flats", "black", "pointed toe", "sustainable", "comfortable", "minimal"],
+    "tags": [
+      "flats",
+      "black",
+      "pointed toe",
+      "sustainable",
+      "comfortable",
+      "minimal"
+    ],
     "price": 149.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?ballet-flats,black,knit",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Rothy%27s+The+Point+Flat"
   },
   {
     "brand": "Tieks",
     "title": "Classic Ballet Flat",
     "description": "Italian leather ballet flat in cognac. Features split sole design, cushioned insole, and foldable construction. Travel-friendly elegance.",
-    "tags": ["flats", "ballet flats", "brown", "cognac", "leather", "comfortable", "classic"],
+    "tags": [
+      "flats",
+      "ballet flats",
+      "brown",
+      "cognac",
+      "leather",
+      "comfortable",
+      "classic"
+    ],
     "price": 175.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?ballet-flats,brown,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Tieks+Classic+Ballet+Flat"
   },
   {
     "brand": "Reformation",
     "title": "Petites Juliette Dress",
     "description": "Fitted mini dress in red with sweetheart neckline. Features puff sleeves and back zip. Romantic and flirty.",
-    "tags": ["dress", "mini", "red", "fitted", "sweetheart neckline", "romantic", "party"],
+    "tags": [
+      "dress",
+      "mini",
+      "red",
+      "fitted",
+      "sweetheart neckline",
+      "romantic",
+      "party"
+    ],
     "price": 218.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?mini-dress,red",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Reformation+Petites+Juliette+Dress"
   },
   {
     "brand": "For Love & Lemons",
     "title": "Charlotte Mini Dress",
     "description": "Eyelet lace mini dress in white. Features puff sleeves, square neckline, and ruffle hem. Whimsical and feminine.",
-    "tags": ["dress", "mini", "white", "lace", "eyelet", "romantic", "feminine", "summer"],
+    "tags": [
+      "dress",
+      "mini",
+      "white",
+      "lace",
+      "eyelet",
+      "romantic",
+      "feminine",
+      "summer"
+    ],
     "price": 265.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?mini-dress,white",
     "productUrl": "https://www.google.com/search?tbm=shop&q=For+Love+%26+Lemons+Charlotte+Mini+Dress"
   },
   {
     "brand": "Rixo",
     "title": "Colette Midi Dress",
     "description": "Vintage-inspired midi dress in floral print. Features puff sleeves, V-neckline, and flowing skirt. Retro romance.",
-    "tags": ["dress", "midi", "floral", "vintage", "romantic", "feminine", "tea dress"],
+    "tags": [
+      "dress",
+      "midi",
+      "floral",
+      "vintage",
+      "romantic",
+      "feminine",
+      "tea dress"
+    ],
     "price": 330.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,red",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Rixo+Colette+Midi+Dress"
   },
   {
     "brand": "Realisation Par",
     "title": "The Teale Dress",
     "description": "Slip midi dress in red with cowl neckline. Features bias cut, spaghetti straps, and silk-like fabric. Instagram famous.",
-    "tags": ["dress", "midi", "slip", "red", "silk", "elegant", "evening", "trendy"],
+    "tags": [
+      "dress",
+      "midi",
+      "slip",
+      "red",
+      "silk",
+      "elegant",
+      "evening",
+      "trendy"
+    ],
     "price": 220.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?midi-dress,red,silk",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Realisation+Par+The+Teale+Dress"
   },
   {
     "brand": "Zimmermann",
     "title": "Linen Halter Dress",
     "description": "Flowing halter dress in ivory linen. Features open back, tiered skirt, and romantic details. Resort luxury.",
-    "tags": ["dress", "halter", "white", "ivory", "linen", "maxi", "resort", "luxe"],
+    "tags": [
+      "dress",
+      "halter",
+      "white",
+      "ivory",
+      "linen",
+      "maxi",
+      "resort",
+      "luxe"
+    ],
     "price": 650.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?maxi-dress,white,linen",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Zimmermann+Linen+Halter+Dress"
   },
   {
     "brand": "Rolla's",
     "title": "Dusters Denim Shorts",
     "description": "High-rise denim shorts in faded blue. Features raw hem, relaxed fit, and vintage wash. Summer essential.",
-    "tags": ["shorts", "denim", "blue", "high-rise", "casual", "summer", "vintage"],
+    "tags": [
+      "shorts",
+      "denim",
+      "blue",
+      "high-rise",
+      "casual",
+      "summer",
+      "vintage"
+    ],
     "price": 79.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?denim-shorts,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Rolla%27s+Dusters+Denim+Shorts"
   },
   {
     "brand": "Agolde",
     "title": "Parker Vintage Shorts",
     "description": "Relaxed denim shorts in light vintage wash. Features high waist, organic cotton, and distressed details. Perfectly worn-in.",
-    "tags": ["shorts", "denim", "blue", "high-rise", "vintage", "casual", "summer"],
+    "tags": [
+      "shorts",
+      "denim",
+      "blue",
+      "high-rise",
+      "vintage",
+      "casual",
+      "summer"
+    ],
     "price": 148.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?denim-shorts,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Agolde+Parker+Vintage+Shorts"
   },
   {
     "brand": "Citizens of Humanity",
     "title": "Paloma Shorts",
     "description": "Baggy denim shorts in black. Features loose fit, mid-rise, and rolled hem. Effortlessly cool.",
-    "tags": ["shorts", "denim", "black", "baggy", "relaxed", "casual", "streetwear"],
+    "tags": [
+      "shorts",
+      "denim",
+      "black",
+      "baggy",
+      "relaxed",
+      "casual",
+      "streetwear"
+    ],
     "price": 198.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?denim-shorts,black,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Citizens+of+Humanity+Paloma+Shorts"
   },
   {
     "brand": "Abercrombie & Fitch",
     "title": "Curve Love High Rise Shorts",
     "description": "High-rise denim shorts in medium wash. Features inclusive sizing, comfortable stretch, and flattering fit. Modern classic.",
-    "tags": ["shorts", "denim", "blue", "high-rise", "stretch", "casual", "inclusive"],
+    "tags": [
+      "shorts",
+      "denim",
+      "blue",
+      "high-rise",
+      "stretch",
+      "casual",
+      "inclusive"
+    ],
     "price": 70.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?denim-shorts,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Abercrombie+%26+Fitch+Curve+Love+High+Rise+Shorts"
   },
   {
     "brand": "Nanushka",
     "title": "Vegan Leather Skirt",
     "description": "Midi pencil skirt in vegan leather in chocolate brown. Features high waist and back slit. Sustainable luxury.",
-    "tags": ["skirt", "midi", "leather", "brown", "vegan", "pencil skirt", "sustainable"],
+    "tags": [
+      "skirt",
+      "midi",
+      "leather",
+      "brown",
+      "vegan",
+      "pencil skirt",
+      "sustainable"
+    ],
     "price": 395.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?skirt,brown,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Nanushka+Vegan+Leather+Skirt"
   },
   {
     "brand": "Aritzia",
     "title": "Wilfred Free Slip Skirt",
     "description": "Satin midi slip skirt in champagne. Features elastic waistband and bias cut. Effortlessly elegant.",
-    "tags": ["skirt", "midi", "slip", "champagne", "beige", "satin", "elegant", "minimal"],
+    "tags": [
+      "skirt",
+      "midi",
+      "slip",
+      "champagne",
+      "beige",
+      "satin",
+      "elegant",
+      "minimal"
+    ],
     "price": 88.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?skirt,beige,satin",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Aritzia+Wilfred+Free+Slip+Skirt"
   },
   {
     "brand": "Zara",
     "title": "Floral Print Maxi Skirt",
     "description": "Flowing maxi skirt in black floral print. Features elastic waist and tiered design. Bohemian chic.",
-    "tags": ["skirt", "maxi", "floral", "black", "flowy", "bohemian", "summer"],
+    "tags": [
+      "skirt",
+      "maxi",
+      "floral",
+      "black",
+      "flowy",
+      "bohemian",
+      "summer"
+    ],
     "price": 69.99,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?skirt,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Zara+Floral+Print+Maxi+Skirt"
   },
   {
     "brand": "Mango",
     "title": "Denim Mini Skirt",
     "description": "Classic denim mini skirt in medium wash. Features button front, A-line silhouette, and front pockets. Timeless staple.",
-    "tags": ["skirt", "mini", "denim", "blue", "casual", "classic", "A-line"],
+    "tags": [
+      "skirt",
+      "mini",
+      "denim",
+      "blue",
+      "casual",
+      "classic",
+      "A-line"
+    ],
     "price": 45.99,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?skirt,blue,denim",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Mango+Denim+Mini+Skirt"
   },
   {
     "brand": "Rails",
     "title": "Collins Military Jacket",
     "description": "Utility jacket in olive green. Features chest pockets, adjustable waist, and lightweight fabric. Military-inspired cool.",
-    "tags": ["jacket", "utility", "olive", "green", "casual", "military", "lightweight"],
+    "tags": [
+      "jacket",
+      "utility",
+      "olive",
+      "green",
+      "casual",
+      "military",
+      "lightweight"
+    ],
     "price": 228.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?coat,red",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Rails+Collins+Military+Jacket"
   },
   {
     "brand": "Barbour",
     "title": "Classic Beadnell Wax Jacket",
     "description": "Iconic waxed cotton jacket in olive. Features corduroy collar, flap pockets, and weather-resistant finish. British heritage.",
-    "tags": ["jacket", "waxed", "olive", "green", "outdoor", "classic", "heritage"],
+    "tags": [
+      "jacket",
+      "waxed",
+      "olive",
+      "green",
+      "outdoor",
+      "classic",
+      "heritage"
+    ],
     "price": 399.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?coat,green,cotton",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Barbour+Classic+Beadnell+Wax+Jacket"
   },
   {
     "brand": "The North Face",
     "title": "Nuptse Puffer Jacket",
     "description": "Classic puffer jacket in black. Features down insulation, stowable hood, and packable design. Iconic warmth.",
-    "tags": ["jacket", "puffer", "black", "down", "winter", "outdoor", "warm"],
+    "tags": [
+      "jacket",
+      "puffer",
+      "black",
+      "down",
+      "winter",
+      "outdoor",
+      "warm"
+    ],
     "price": 329.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?puffer-jacket,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=The+North+Face+Nuptse+Puffer+Jacket"
   },
   {
     "brand": "Sandro",
     "title": "Leather Biker Jacket",
     "description": "Classic moto jacket in black leather. Features asymmetric zip, belted waist, and silver hardware. Timeless edge.",
-    "tags": ["jacket", "leather", "moto", "black", "edgy", "classic", "biker"],
+    "tags": [
+      "jacket",
+      "leather",
+      "moto",
+      "black",
+      "edgy",
+      "classic",
+      "biker"
+    ],
     "price": 795.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-jacket,black,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Sandro+Leather+Biker+Jacket"
   },
   {
     "brand": "Cuyana",
     "title": "Classic Leather Tote",
     "description": "Structured leather tote in saddle brown. Features interior pockets, laptop sleeve, and timeless design. Investment quality.",
-    "tags": ["bag", "tote", "leather", "brown", "structured", "work", "minimal"],
+    "tags": [
+      "bag",
+      "tote",
+      "leather",
+      "brown",
+      "structured",
+      "work",
+      "minimal"
+    ],
     "price": 295.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-tote,red,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Cuyana+Classic+Leather+Tote"
   },
   {
     "brand": "Senreve",
     "title": "Maestra Satchel",
     "description": "Convertible structured bag in black pebbled leather. Features multiple carrying options and organizational compartments. Modern functionality.",
-    "tags": ["bag", "satchel", "black", "leather", "structured", "convertible", "work"],
+    "tags": [
+      "bag",
+      "satchel",
+      "black",
+      "leather",
+      "structured",
+      "convertible",
+      "work"
+    ],
     "price": 795.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?handbag,black,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Senreve+Maestra+Satchel"
   },
   {
     "brand": "Strathberry",
     "title": "Nano Tote",
     "description": "Mini structured tote in burgundy leather. Features signature metal bar and crossbody strap. Scottish luxury.",
-    "tags": ["bag", "tote", "burgundy", "red", "leather", "mini", "crossbody", "luxe"],
+    "tags": [
+      "bag",
+      "tote",
+      "burgundy",
+      "red",
+      "leather",
+      "mini",
+      "crossbody",
+      "luxe"
+    ],
     "price": 395.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-tote,red,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Strathberry+Nano+Tote"
   },
   {
     "brand": "Bottega Veneta",
     "title": "Cassette Crossbody Bag",
     "description": "Woven leather crossbody in butter yellow. Features signature intrecciato weave and flap closure. Luxury statement.",
-    "tags": ["bag", "crossbody", "yellow", "leather", "woven", "luxe", "designer"],
+    "tags": [
+      "bag",
+      "crossbody",
+      "yellow",
+      "leather",
+      "woven",
+      "luxe",
+      "designer"
+    ],
     "price": 2850.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?crossbody-bag,yellow,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Bottega+Veneta+Cassette+Crossbody+Bag"
   },
   {
     "brand": "Dagne Dover",
     "title": "Landon Carryall",
     "description": "Neoprene weekender bag in heather grey. Features laptop pocket, water-resistant fabric, and organized compartments. Modern utility.",
-    "tags": ["bag", "tote", "grey", "neoprene", "weekender", "travel", "functional"],
+    "tags": [
+      "bag",
+      "tote",
+      "grey",
+      "neoprene",
+      "weekender",
+      "travel",
+      "functional"
+    ],
     "price": 175.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-tote,gray",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Dagne+Dover+Landon+Carryall"
   },
   {
     "brand": "Herschel Supply Co.",
     "title": "Classic Backpack",
     "description": "Canvas backpack in black. Features laptop sleeve, front pocket, and striped lining. Casual cool.",
-    "tags": ["bag", "backpack", "black", "canvas", "casual", "functional", "student"],
+    "tags": [
+      "bag",
+      "backpack",
+      "black",
+      "canvas",
+      "casual",
+      "functional",
+      "student"
+    ],
     "price": 55.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?backpack,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Herschel+Supply+Co.+Classic+Backpack"
   },
   {
     "brand": "Fjallraven",
     "title": "Kanken Backpack",
     "description": "Iconic square backpack in mustard yellow. Features water-resistant fabric, dual top handles, and foam back panel. Scandinavian design.",
-    "tags": ["bag", "backpack", "yellow", "mustard", "water-resistant", "casual", "iconic"],
+    "tags": [
+      "bag",
+      "backpack",
+      "yellow",
+      "mustard",
+      "water-resistant",
+      "casual",
+      "iconic"
+    ],
     "price": 80.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?backpack,tan",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Fjallraven+Kanken+Backpack"
   },
   {
     "brand": "Janessa Leone",
     "title": "Adriana Wide Brim Hat",
     "description": "Wool felt fedora in camel. Features wide brim and grosgrain band. Sophisticated topper.",
-    "tags": ["hat", "fedora", "camel", "tan", "wool", "wide brim", "accessories"],
+    "tags": [
+      "hat",
+      "fedora",
+      "camel",
+      "tan",
+      "wool",
+      "wide brim",
+      "accessories"
+    ],
     "price": 225.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1521369909029-2afed882baee?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?hat,tan,wool",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Janessa+Leone+Adriana+Wide+Brim+Hat"
   },
   {
     "brand": "Lack of Color",
     "title": "Rancher Hat",
     "description": "Stiff brim boater hat in ivory. Features grosgrain ribbon and structured crown. Summer essential.",
-    "tags": ["hat", "boater", "ivory", "white", "straw", "summer", "accessories"],
+    "tags": [
+      "hat",
+      "boater",
+      "ivory",
+      "white",
+      "straw",
+      "summer",
+      "accessories"
+    ],
     "price": 99.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1521369909029-2afed882baee?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?hat,white",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Lack+of+Color+Rancher+Hat"
   },
   {
     "brand": "Acne Studios",
     "title": "Oversized Wool Scarf",
     "description": "Extra large wool scarf in grey. Features logo patch and soft texture. Signature accessory.",
-    "tags": ["scarf", "grey", "wool", "oversized", "winter", "accessories", "minimal"],
+    "tags": [
+      "scarf",
+      "grey",
+      "wool",
+      "oversized",
+      "winter",
+      "accessories",
+      "minimal"
+    ],
     "price": 270.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?scarf,gray,wool",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Acne+Studios+Oversized+Wool+Scarf"
   },
   {
     "brand": "Madewell",
     "title": "Leather Belt",
     "description": "Classic leather belt in cognac. Features brass buckle and quality construction. Everyday essential.",
-    "tags": ["belt", "leather", "brown", "cognac", "accessories", "classic", "minimal"],
+    "tags": [
+      "belt",
+      "leather",
+      "brown",
+      "cognac",
+      "accessories",
+      "classic",
+      "minimal"
+    ],
     "price": 42.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leather-belt,brown,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Madewell+Leather+Belt"
   },
   {
     "brand": "Catbird",
     "title": "Swan Necklace",
     "description": "Delicate gold chain necklace. Features simple design and 14k gold. Everyday fine jewelry.",
-    "tags": ["jewelry", "necklace", "gold", "delicate", "minimal", "accessories"],
+    "tags": [
+      "jewelry",
+      "necklace",
+      "gold",
+      "delicate",
+      "minimal",
+      "accessories"
+    ],
     "price": 168.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?gold-necklace",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Catbird+Swan+Necklace"
   },
   {
     "brand": "Mejuri",
     "title": "Bold Hoops",
     "description": "Chunky gold hoop earrings. Features vermeil gold and statement size. Modern classic.",
-    "tags": ["jewelry", "earrings", "hoops", "gold", "accessories", "statement"],
+    "tags": [
+      "jewelry",
+      "earrings",
+      "hoops",
+      "gold",
+      "accessories",
+      "statement"
+    ],
     "price": 75.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?gold-earrings",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Mejuri+Bold+Hoops"
   },
   {
     "brand": "Missoma",
     "title": "Lucy Williams Coin Necklace",
     "description": "Layered coin necklace in gold vermeil. Features adjustable length and trending design. Instagram favorite.",
-    "tags": ["jewelry", "necklace", "gold", "coin", "layered", "accessories", "trendy"],
+    "tags": [
+      "jewelry",
+      "necklace",
+      "gold",
+      "coin",
+      "layered",
+      "accessories",
+      "trendy"
+    ],
     "price": 199.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?gold-necklace,red",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Missoma+Lucy+Williams+Coin+Necklace"
   },
   {
     "brand": "Ray-Ban",
     "title": "Classic Wayfarer Sunglasses",
     "description": "Iconic acetate sunglasses in black. Features G-15 lenses and timeless design. Cool since 1952.",
-    "tags": ["sunglasses", "black", "accessories", "classic", "iconic", "retro"],
+    "tags": [
+      "sunglasses",
+      "black",
+      "accessories",
+      "classic",
+      "iconic",
+      "retro"
+    ],
     "price": 154.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sunglasses,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Ray-Ban+Classic+Wayfarer+Sunglasses"
   },
   {
     "brand": "Oliver Peoples",
     "title": "Gregory Peck Sunglasses",
     "description": "Vintage-inspired round sunglasses in tortoise. Features keyhole bridge and premium lenses. Sophisticated style.",
-    "tags": ["sunglasses", "tortoise", "brown", "round", "vintage", "accessories", "luxe"],
+    "tags": [
+      "sunglasses",
+      "tortoise",
+      "brown",
+      "round",
+      "vintage",
+      "accessories",
+      "luxe"
+    ],
     "price": 395.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sunglasses,red",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Oliver+Peoples+Gregory+Peck+Sunglasses"
   },
   {
     "brand": "Le Specs",
     "title": "Bandwagon Sunglasses",
     "description": "Oversized cat-eye sunglasses in black. Features flat top design and affordable luxury. Fashion-forward.",
-    "tags": ["sunglasses", "black", "cat-eye", "oversized", "accessories", "trendy"],
+    "tags": [
+      "sunglasses",
+      "black",
+      "cat-eye",
+      "oversized",
+      "accessories",
+      "trendy"
+    ],
     "price": 69.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?sunglasses,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Le+Specs+Bandwagon+Sunglasses"
   },
   {
     "brand": "Wolford",
     "title": "Neon 40 Tights",
     "description": "Semi-opaque tights in black. Features 40 denier, matte finish, and perfect fit. Hosiery perfection.",
-    "tags": ["tights", "hosiery", "black", "accessories", "basics", "luxe"],
+    "tags": [
+      "tights",
+      "hosiery",
+      "black",
+      "accessories",
+      "basics",
+      "luxe"
+    ],
     "price": 44.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?tights,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Wolford+Neon+40+Tights"
   },
   {
     "brand": "Commando",
     "title": "Faux Leather Leggings",
     "description": "Sleek faux leather leggings in black. Features perfect stretch and no-waistband design. Wardrobe MVP.",
-    "tags": ["leggings", "pants", "black", "leather", "faux leather", "stretchy", "trendy"],
+    "tags": [
+      "leggings",
+      "pants",
+      "black",
+      "leather",
+      "faux leather",
+      "stretchy",
+      "trendy"
+    ],
     "price": 98.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?trousers,black,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Commando+Faux+Leather+Leggings"
   },
   {
     "brand": "Lululemon",
     "title": "Align High-Rise Pant",
     "description": "Buttery soft yoga leggings in black. Features 25-inch inseam, high-rise waist, and four-way stretch. Cult favorite.",
-    "tags": ["leggings", "athletic", "yoga", "black", "high-rise", "activewear", "comfortable"],
+    "tags": [
+      "leggings",
+      "athletic",
+      "yoga",
+      "black",
+      "high-rise",
+      "activewear",
+      "comfortable"
+    ],
     "price": 98.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leggings,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Lululemon+Align+High-Rise+Pant"
   },
   {
     "brand": "Girlfriend Collective",
     "title": "Compressive High-Rise Legging",
     "description": "Recycled leggings in black. Features compressive fabric, high waist, and sustainable construction. Eco-conscious performance.",
-    "tags": ["leggings", "athletic", "black", "high-rise", "sustainable", "activewear", "compression"],
+    "tags": [
+      "leggings",
+      "athletic",
+      "black",
+      "high-rise",
+      "sustainable",
+      "activewear",
+      "compression"
+    ],
     "price": 68.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leggings,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Girlfriend+Collective+Compressive+High-Rise+Legging"
   },
   {
     "brand": "Alo Yoga",
     "title": "Airlift Legging",
     "description": "High-performance leggings in heather grey. Features sculpting fabric, high waist, and sweat-wicking properties. Studio to street.",
-    "tags": ["leggings", "athletic", "grey", "high-rise", "activewear", "yoga", "performance"],
+    "tags": [
+      "leggings",
+      "athletic",
+      "grey",
+      "high-rise",
+      "activewear",
+      "yoga",
+      "performance"
+    ],
     "price": 118.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?leggings,gray",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Alo+Yoga+Airlift+Legging"
   },
   {
     "brand": "Nike",
     "title": "Air Force 1 '07",
     "description": "Classic leather sneakers in triple white. Features iconic silhouette and cushioned sole. Timeless streetwear.",
-    "tags": ["sneakers", "white", "leather", "athletic", "casual", "iconic", "streetwear"],
+    "tags": [
+      "sneakers",
+      "white",
+      "leather",
+      "athletic",
+      "casual",
+      "iconic",
+      "streetwear"
+    ],
     "price": 110.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,white,leather",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Nike+Air+Force+1+%2707"
   },
   {
     "brand": "New Balance",
     "title": "574 Core Sneakers",
     "description": "Retro running sneakers in grey with navy accents. Features suede and mesh upper. Dad shoe chic.",
-    "tags": ["sneakers", "grey", "navy", "athletic", "retro", "casual", "comfortable"],
+    "tags": [
+      "sneakers",
+      "grey",
+      "navy",
+      "athletic",
+      "retro",
+      "casual",
+      "comfortable"
+    ],
     "price": 85.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,navy,suede",
     "productUrl": "https://www.google.com/search?tbm=shop&q=New+Balance+574+Core+Sneakers"
   },
   {
     "brand": "Converse",
     "title": "Chuck Taylor All Star High Top",
     "description": "Classic canvas high-top sneakers in black. Features rubber toe cap and iconic design. Forever cool.",
-    "tags": ["sneakers", "black", "canvas", "high-top", "casual", "iconic", "classic"],
+    "tags": [
+      "sneakers",
+      "black",
+      "canvas",
+      "high-top",
+      "casual",
+      "iconic",
+      "classic"
+    ],
     "price": 60.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Converse+Chuck+Taylor+All+Star+High+Top"
   },
   {
     "brand": "On",
     "title": "Cloud 5 Running Shoes",
     "description": "Lightweight running shoes in all-white. Features CloudTec cushioning and performance design. Swiss engineering.",
-    "tags": ["sneakers", "white", "running", "athletic", "performance", "comfortable"],
+    "tags": [
+      "sneakers",
+      "white",
+      "running",
+      "athletic",
+      "performance",
+      "comfortable"
+    ],
     "price": 140.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,white",
     "productUrl": "https://www.google.com/search?tbm=shop&q=On+Cloud+5+Running+Shoes"
   },
   {
     "brand": "Hoka",
     "title": "Bondi 8 Running Shoes",
     "description": "Maximalist cushioned running shoes in black. Features thick midsole and plush comfort. Cloud-like ride.",
-    "tags": ["sneakers", "black", "running", "athletic", "cushioned", "performance", "comfortable"],
+    "tags": [
+      "sneakers",
+      "black",
+      "running",
+      "athletic",
+      "cushioned",
+      "performance",
+      "comfortable"
+    ],
     "price": 165.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,black",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Hoka+Bondi+8+Running+Shoes"
   },
   {
     "brand": "Adidas",
     "title": "Samba Classic Sneakers",
     "description": "Iconic indoor soccer shoes in black with white stripes. Features suede toe and gum sole. Retro cool.",
-    "tags": ["sneakers", "black", "white", "suede", "athletic", "retro", "classic"],
+    "tags": [
+      "sneakers",
+      "black",
+      "white",
+      "suede",
+      "athletic",
+      "retro",
+      "classic"
+    ],
     "price": 100.0,
     "currency": "USD",
-    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=600&fit=crop",
+    "imageUrl": "https://source.unsplash.com/400x600/?white-sneakers,black,suede",
     "productUrl": "https://www.google.com/search?tbm=shop&q=Adidas+Samba+Classic+Sneakers"
   }
 ]
