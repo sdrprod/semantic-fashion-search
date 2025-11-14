@@ -65,13 +65,13 @@ export const handler = async (event) => {
 
       for (const product of batch) {
         try {
-          const combinedText = [
-  	    product.title,
-  	    product.title,  // Repeat title for higher weight
-  	    product.title,  // Triple it for even more emphasis
-  	    product.description,
-  	    ...product.tags
-	    ].join(' ');
+        const combinedText = [
+		product.title,
+		product.title,
+		product.title,
+		product.description,
+		...product.tags
+		].join(" ");
 
           const embedding = await embedText(combinedText);
 
@@ -96,8 +96,8 @@ export const handler = async (event) => {
 
       if (productsToInsert.length > 0) {
         const { error } = await supabase
-          .from('products')
-          .insert(productsToInsert);
+		.from("products")
+		.insert(productsToInsert);
 
         if (error) {
           console.error('Supabase insert error:', error);
