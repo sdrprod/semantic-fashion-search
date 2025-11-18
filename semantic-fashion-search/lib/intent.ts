@@ -47,7 +47,7 @@ Important guidelines:
 - "Stunning but not showing anyone up" means sophisticated, refined, not flashy`;
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-5-sonnet-latest',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
