@@ -299,3 +299,89 @@ export async function syncImpactProducts(
 
   return { synced, errors };
 }
+
+/**
+ * Get all campaign IDs from environment
+ */
+export function getAllCampaignIds(): string[] {
+  const campaignIds = process.env.IMPACT_CAMPAIGN_IDS;
+
+  if (!campaignIds) {
+    // Fall back to single campaign ID
+    const singleId = process.env.IMPACT_CAMPAIGN_ID;
+    if (singleId) {
+      return [singleId];
+    }
+    return [];
+  }
+
+  return campaignIds.split(',').map(id => id.trim()).filter(Boolean);
+}
+
+/**
+ * Sync products from all configured Impact campaigns
+ */
+export async function syncAllCampaigns(
+  supabase: any,
+  options: {
+    maxProductsPerCampaign?: number;
+    generateEmbeddings?: boolean;
+    onProgress?: (campaignId: string, synced: number, errors: number) => void;
+  } = {}
+): Promise<{
+  totalSynced: number;
+  totalErrors: number;
+  campaignResults: Array<{ campaignId: string; synced: number; errors: number }>;
+}> {
+  const { maxProductsPerCampaign = 500, generateEmbeddings = true, onProgress } = options;
+
+  const campaignIds = getAllCampaignIds();
+
+  if (campaignIds.length === 0) {
+    throw new Error('No campaign IDs configured. Set IMPACT_CAMPAIGN_IDS or IMPACT_CAMPAIGN_ID.');
+  }
+
+  let totalSynced = 0;
+  let totalErrors = 0;
+  const campaignResults: Array<{ campaignId: string; synced: number; errors: number }> = [];
+
+  console.log(`Starting sync for ${campaignIds.length} campaigns...`);
+
+  for (const campaignId of campaignIds) {
+    try {
+      console.log(`Syncing campaign ${campaignId}...`);
+
+      const { synced, errors } = await syncImpactProducts(supabase, {
+        campaignId,
+        maxProducts: maxProductsPerCampaign,
+        generateEmbeddings,
+      });
+
+      totalSynced += synced;
+      totalErrors += errors;
+      campaignResults.push({ campaignId, synced, errors });
+
+      console.log(`Campaign ${campaignId}: synced ${synced}, errors ${errors}`);
+
+      if (onProgress) {
+        onProgress(campaignId, synced, errors);
+      }
+
+      // Rate limiting between campaigns
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+    } catch (err) {
+      console.error(`Error syncing campaign ${campaignId}:`, err);
+      totalErrors++;
+      campaignResults.push({ campaignId, synced: 0, errors: 1 });
+    }
+  }
+
+  console.log(`Sync complete: ${totalSynced} products synced, ${totalErrors} errors across ${campaignIds.length} campaigns`);
+
+  return {
+    totalSynced,
+    totalErrors,
+    campaignResults,
+  };
+}

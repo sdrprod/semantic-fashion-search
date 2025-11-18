@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
-import { syncImpactProducts } from '@/lib/impact';
+import { syncImpactProducts, syncAllCampaigns, getAllCampaignIds } from '@/lib/impact';
 import { generateEmbedding } from '@/lib/embeddings';
 
 /**
@@ -12,8 +12,9 @@ import { generateEmbedding } from '@/lib/embeddings';
  *
  * Body:
  *   source: 'impact' | 'cj' (affiliate network)
- *   campaignId?: string (optional, uses env default)
- *   maxProducts?: number (default: 1000)
+ *   syncAll?: boolean (sync all configured campaigns)
+ *   campaignId?: string (optional, uses env default for single sync)
+ *   maxProducts?: number (default: 1000 for single, 500 per campaign for syncAll)
  *   generateEmbeddings?: boolean (default: true)
  */
 export async function POST(request: NextRequest) {
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       source = 'impact',
+      syncAll = false,
       campaignId,
       maxProducts = 1000,
       generateEmbeddings = true,
@@ -44,12 +46,40 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseClient(true);
 
-    // Sync products from affiliate network
-    const { synced, errors } = await syncImpactProducts(supabase, {
-      campaignId,
-      maxProducts,
-      generateEmbeddings: false, // We'll generate separately for better control
-    });
+    let synced = 0;
+    let errors = 0;
+    let campaignResults: Array<{ campaignId: string; synced: number; errors: number }> | undefined;
+
+    if (syncAll) {
+      // Sync all configured campaigns
+      const campaignIds = getAllCampaignIds();
+
+      if (campaignIds.length === 0) {
+        return NextResponse.json(
+          { error: 'No campaign IDs configured. Set IMPACT_CAMPAIGN_IDS environment variable.' },
+          { status: 400 }
+        );
+      }
+
+      const result = await syncAllCampaigns(supabase, {
+        maxProductsPerCampaign: maxProducts || 500,
+        generateEmbeddings: false, // We'll generate separately for better control
+      });
+
+      synced = result.totalSynced;
+      errors = result.totalErrors;
+      campaignResults = result.campaignResults;
+    } else {
+      // Sync single campaign (backward compatible)
+      const result = await syncImpactProducts(supabase, {
+        campaignId,
+        maxProducts,
+        generateEmbeddings: false, // We'll generate separately for better control
+      });
+
+      synced = result.synced;
+      errors = result.errors;
+    }
 
     // Generate embeddings if requested
     let embeddingsGenerated = 0;
@@ -89,13 +119,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const response: {
+      success: boolean;
+      synced: number;
+      errors: number;
+      embeddingsGenerated: number;
+      message: string;
+      campaignResults?: Array<{ campaignId: string; synced: number; errors: number }>;
+    } = {
       success: true,
       synced,
       errors,
       embeddingsGenerated,
-      message: `Synced ${synced} products with ${errors} errors. Generated ${embeddingsGenerated} embeddings.`,
-    });
+      message: syncAll
+        ? `Synced ${synced} products from ${campaignResults?.length || 0} campaigns with ${errors} errors. Generated ${embeddingsGenerated} embeddings.`
+        : `Synced ${synced} products with ${errors} errors. Generated ${embeddingsGenerated} embeddings.`,
+    };
+
+    if (campaignResults) {
+      response.campaignResults = campaignResults;
+    }
+
+    return NextResponse.json(response);
 
   } catch (err) {
     console.error('Sync error:', err);
