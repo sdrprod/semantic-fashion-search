@@ -7,6 +7,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load environment variables from .env.local
+config({ path: resolve(process.cwd(), '.env.local') });
 
 // Load environment variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
