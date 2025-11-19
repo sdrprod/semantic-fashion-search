@@ -1436,8 +1436,6 @@ async function seedProducts() {
           product_url: `https://example.com/products/${product.title.toLowerCase().replace(/\s+/g, '-')}`,
           combined_text: combinedText,
           embedding: embedding,
-          affiliate_network: 'sample',
-          merchant_id: 'sample-merchant',
         }, {
           onConflict: 'product_url',
           ignoreDuplicates: false,
