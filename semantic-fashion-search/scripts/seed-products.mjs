@@ -1425,7 +1425,7 @@ async function seedProducts() {
       // Insert into database
       const { error } = await supabase
         .from('products')
-        .upsert({
+        .insert({
           brand: product.brand,
           title: product.title,
           description: product.description,
@@ -1436,9 +1436,6 @@ async function seedProducts() {
           product_url: `https://example.com/products/${product.title.toLowerCase().replace(/\s+/g, '-')}`,
           combined_text: combinedText,
           embedding: embedding,
-        }, {
-          onConflict: 'product_url',
-          ignoreDuplicates: false,
         });
 
       if (error) {
