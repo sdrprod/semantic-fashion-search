@@ -68,12 +68,17 @@ async function executeMultiSearch(
   page: number,
   similarityThreshold: number
 ): Promise<Map<string, Product[]>> {
+  console.log('[executeMultiSearch] Starting with queries:', queries.map(q => q.query));
+
   const supabase = getSupabaseClient(true) as any;
   const results = new Map<string, Product[]>();
 
   // Generate embeddings for all queries in batch
   const queryTexts = queries.map(q => q.query);
+  console.log('[executeMultiSearch] Generating embeddings for:', queryTexts);
+
   const embeddings = await generateEmbeddings(queryTexts);
+  console.log('[executeMultiSearch] Embeddings generated:', embeddings.length, 'embeddings of length', embeddings[0]?.length);
 
   // Execute searches in parallel
   const searchPromises = queries.map(async (searchQuery, index) => {
@@ -82,18 +87,36 @@ async function executeMultiSearch(
     // Calculate how many results to fetch based on priority and weight
     const fetchLimit = Math.ceil(limit * searchQuery.weight * 1.5);
 
-    const { data, error } = await supabase.rpc('match_products', {
-      query_embedding: embedding,
-      match_count: fetchLimit,
-    });
+    console.log(`[executeMultiSearch] Calling match_products for "${searchQuery.query}" with limit ${fetchLimit}`);
+    console.log(`[executeMultiSearch] Embedding sample for "${searchQuery.query}":`, embedding?.slice(0, 5));
 
-    if (error) {
-      console.error(`Search error for "${searchQuery.query}":`, error);
+    let data: any[] = [];
+
+    try {
+      const result = await supabase.rpc('match_products', {
+        query_embedding: embedding,
+        match_count: fetchLimit,
+      });
+
+      if (result.error) {
+        console.error(`[executeMultiSearch] Error for "${searchQuery.query}":`, {
+          message: result.error.message,
+          details: result.error.details,
+          hint: result.error.hint,
+          code: result.error.code
+        });
+        return { query: searchQuery.query, products: [] };
+      }
+
+      data = result.data || [];
+      console.log(`[executeMultiSearch] Success for "${searchQuery.query}": received ${data.length} products`);
+    } catch (err) {
+      console.error(`[executeMultiSearch] Exception for "${searchQuery.query}":`, err);
       return { query: searchQuery.query, products: [] };
     }
 
     // Filter by similarity threshold and convert to Product type
-    const products: Product[] = (data || [])
+    const products: Product[] = data
       .filter((row: ProductRow & { similarity: number }) =>
         row.similarity >= similarityThreshold
       )
