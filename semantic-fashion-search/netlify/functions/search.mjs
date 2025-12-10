@@ -34,6 +34,13 @@ async function embedText(text) {
 
 export const handler = async (event) => {
   try {
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      supabaseUrlPrefix: process.env.SUPABASE_URL?.substring(0, 20)
+    });
+
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
@@ -55,8 +62,11 @@ export const handler = async (event) => {
     if (limit > 50) limit = 50;
     if (limit < 1) limit = 20;
 
+    console.log('Getting embedding for query:', query);
     const embedding = await embedText(query);
+    console.log('Embedding received, length:', embedding?.length);
 
+    console.log('Calling match_products RPC...');
     const { data, error } = await supabase.rpc('match_products', {
       query_embedding: embedding,
       match_count: limit
@@ -64,6 +74,7 @@ export const handler = async (event) => {
 
     if (error) {
       console.error('Supabase match_products error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return {
         statusCode: 500,
         body: JSON.stringify({ error: 'Search failed.' })

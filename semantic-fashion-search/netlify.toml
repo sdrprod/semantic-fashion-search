@@ -1,22 +1,39 @@
 [build]
   command = "npm run build"
-  publish = "dist"
+  publish = ".next"
 
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-  included_files = ["data/**"]
+[build.environment]
+  NODE_VERSION = "18"
 
-[dev]
-  targetPort = 5173
-  functions = "netlify/functions"
+# Next.js plugin for Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
-[[redirects]]
-  from = "/api/search"
-  to = "/.netlify/functions/search"
-  status = 200
+# Environment variables placeholder
+# Set these in Netlify dashboard:
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_ROLE_KEY
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - OPENAI_API_KEY
+# - ANTHROPIC_API_KEY
 
-[[redirects]]
-  from = "/api/index-products"
-  to = "/.netlify/functions/index-products"
-  status = 200
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache images
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
