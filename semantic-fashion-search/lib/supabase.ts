@@ -8,20 +8,31 @@ let initialized = false;
 function initializeClients() {
   if (initialized) return;
 
+  console.log('[Supabase] Initializing clients...', {
+    hasSupabaseUrl: !!(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    urlPrefix: (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.substring(0, 30)
+  });
+
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (supabaseUrl && supabaseServiceKey) {
+    console.log('[Supabase] Creating admin client');
     supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
+  } else {
+    console.error('[Supabase] Missing URL or service key for admin client');
   }
 
   if (supabaseUrl && supabaseAnonKey) {
+    console.log('[Supabase] Creating anon client');
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
   }
 
