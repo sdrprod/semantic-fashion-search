@@ -1415,8 +1415,8 @@ async function seedProducts() {
     const product = products[i];
 
     try {
-      // Create combined text for embedding
-      const combinedText = `${product.title} ${product.title} ${product.title} ${product.description} ${product.tags.join(' ')}`;
+      // Create combined text for embedding (title once + description + tags)
+      const combinedText = `${product.title}. ${product.description}. ${product.tags.join(', ')}.`;
 
       // Generate embedding
       console.log(`[${i + 1}/${products.length}] Generating embedding for: ${product.title}`);
