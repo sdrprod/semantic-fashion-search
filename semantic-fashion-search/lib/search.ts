@@ -93,8 +93,11 @@ async function executeMultiSearch(
     let data: any[] = [];
 
     try {
+      // Convert embedding array to PostgreSQL vector string format
+      const vectorString = `[${embedding.join(',')}]`;
+
       const result = await supabase.rpc('match_products', {
-        query_embedding: embedding,
+        query_embedding: vectorString,
         match_count: fetchLimit,
       });
 
@@ -244,8 +247,11 @@ export async function simpleSearch(
   const supabase = getSupabaseClient(true) as any;
   const embedding = await generateEmbedding(query);
 
+  // Convert embedding array to PostgreSQL vector string format
+  const vectorString = `[${embedding.join(',')}]`;
+
   const { data, error } = await supabase.rpc('match_products', {
-    query_embedding: embedding,
+    query_embedding: vectorString,
     match_count: limit,
   });
 
