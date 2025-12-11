@@ -20,7 +20,7 @@ export async function semanticSearch(
   const {
     limit = 10,
     page = 1,
-    similarityThreshold = 0.3,
+    similarityThreshold = 0.05,  // Lowered from 0.3 to 0.05
     diversityFactor = 0.1,
   } = options;
 
