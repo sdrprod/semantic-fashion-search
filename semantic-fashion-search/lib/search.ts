@@ -110,16 +110,28 @@ async function executeMultiSearch(
 
       data = result.data || [];
       console.log(`[executeMultiSearch] Success for "${searchQuery.query}": received ${data.length} products`);
+
+      // Log similarity scores
+      if (data.length > 0) {
+        const similarities = data.map((row: any) => row.similarity).slice(0, 10);
+        console.log(`[executeMultiSearch] Similarity scores for "${searchQuery.query}":`, similarities);
+        console.log(`[executeMultiSearch] Similarity threshold: ${similarityThreshold}`);
+      }
     } catch (err) {
       console.error(`[executeMultiSearch] Exception for "${searchQuery.query}":`, err);
       return { query: searchQuery.query, products: [] };
     }
 
     // Filter by similarity threshold and convert to Product type
+    console.log(`[executeMultiSearch] Filtering ${data.length} products with threshold ${similarityThreshold}`);
     const products: Product[] = data
-      .filter((row: ProductRow & { similarity: number }) =>
-        row.similarity >= similarityThreshold
-      )
+      .filter((row: ProductRow & { similarity: number }) => {
+        const passes = row.similarity >= similarityThreshold;
+        if (!passes && data.indexOf(row) < 3) {
+          console.log(`[executeMultiSearch] Filtered out "${row.title}" (similarity: ${row.similarity})`);
+        }
+        return passes;
+      })
       .map((row: ProductRow & { similarity: number }) => ({
         id: row.id,
         imageUrl: row.image_url,
