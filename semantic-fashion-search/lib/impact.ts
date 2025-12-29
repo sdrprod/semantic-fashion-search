@@ -167,7 +167,7 @@ export function affiliateToProduct(affiliate: AffiliateProduct): Omit<Product, '
     brand: affiliate.brand,
     title: affiliate.name,
     description: affiliate.description,
-    price: affiliate.price,
+    price: affiliate.price ?? null, // Convert undefined to null for Product type
     currency: affiliate.currency,
     productUrl: affiliate.productUrl,
     tags,
