@@ -1,9 +1,28 @@
 import { useSearch } from "./hooks/useSearch";
+import { useSession } from "./hooks/useSession";
+import { useFeedback } from "./hooks/useFeedback";
 import { SearchBar } from "./components/SearchBar";
 import { ProductCard } from "./components/ProductCard";
+import { RefinementBox } from "./components/RefinementBox";
 
 export function App() {
-  const { query, setQuery, results, loading, error, runSearch } = useSearch();
+  const {
+    query,
+    setQuery,
+    refinement,
+    setRefinement,
+    results,
+    loading,
+    error,
+    showRefinement,
+    runSearch
+  } = useSearch();
+
+  const sessionId = useSession();
+  const { votes, hiddenProducts, upvote, downvote } = useFeedback(sessionId);
+
+  // Filter out downvoted products
+  const visibleResults = results.filter(product => !hiddenProducts.has(product.id));
 
   const hasSearched = results.length > 0 || error !== null || loading;
 
@@ -20,8 +39,16 @@ export function App() {
         <SearchBar
           value={query}
           onChange={setQuery}
-          onSubmit={runSearch}
+          onSubmit={() => runSearch(false)}
           loading={loading}
+        />
+
+        <RefinementBox
+          value={refinement}
+          onChange={setRefinement}
+          onRefine={() => runSearch(true)}
+          loading={loading}
+          show={showRefinement && results.length > 0}
         />
 
         <main className="main-content">
@@ -57,10 +84,16 @@ export function App() {
             </div>
           )}
 
-          {!loading && !error && results.length > 0 && (
+          {!loading && !error && visibleResults.length > 0 && (
             <div className="results-grid">
-              {results.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {visibleResults.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onUpvote={upvote}
+                  onDownvote={downvote}
+                  currentVote={votes.get(product.id)}
+                />
               ))}
             </div>
           )}

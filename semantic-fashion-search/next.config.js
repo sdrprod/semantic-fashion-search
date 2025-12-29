@@ -22,6 +22,30 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.cloudfront.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.shopify.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.shopify.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'www.dhresource.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.dhresource.com',
+      },
+      {
+        protocol: 'http',
+        hostname: '*.dhresource.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.dhresource.com',
+      },
     ],
   },
 

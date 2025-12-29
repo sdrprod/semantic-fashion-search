@@ -17,20 +17,29 @@ CREATE TABLE IF NOT EXISTS public.products (
   price numeric(10,2),
   currency text NOT NULL DEFAULT 'USD',
   image_url text NOT NULL,
-  product_url text NOT NULL,
+  product_url text NOT NULL UNIQUE,
   combined_text text NOT NULL,
   embedding vector(1536),
+  affiliate_network text,
+  merchant_id text,
+  merchant_name text,
+  category text,
+  in_stock boolean DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- 3. Create vector index for similarity search
-CREATE INDEX IF NOT EXISTS products_embedding_idx
-ON public.products
-USING ivfflat (embedding vector_l2_ops)
-WITH (lists = 100);
+-- NOTE: Skipping index creation to avoid memory issues on small Supabase instances
+-- For small datasets (<1000 products), sequential scan is fast enough
+-- If you have a larger instance and need the index, uncomment below:
+-- CREATE INDEX IF NOT EXISTS products_embedding_cosine_idx
+-- ON public.products
+-- USING ivfflat (embedding vector_cosine_ops)
+-- WITH (lists = 25);
 
 -- 4. Create RPC function for semantic similarity search
+-- IMPORTANT: Uses cosine distance (<=>) for OpenAI embeddings (not L2 distance <->)
 CREATE OR REPLACE FUNCTION public.match_products(
   query_embedding vector(1536),
   match_count int DEFAULT 20
@@ -46,6 +55,9 @@ RETURNS TABLE (
   image_url text,
   product_url text,
   combined_text text,
+  merchant_id text,
+  merchant_name text,
+  affiliate_network text,
   similarity float
 )
 LANGUAGE sql STABLE AS $$
@@ -60,10 +72,13 @@ LANGUAGE sql STABLE AS $$
     p.image_url,
     p.product_url,
     p.combined_text,
-    1 - (p.embedding <-> query_embedding) AS similarity
+    p.merchant_id,
+    p.merchant_name,
+    p.affiliate_network,
+    1 - (p.embedding <=> query_embedding) AS similarity
   FROM public.products p
   WHERE p.embedding IS NOT NULL
-  ORDER BY p.embedding <-> query_embedding
+  ORDER BY p.embedding <=> query_embedding
   LIMIT match_count;
 $$;
 

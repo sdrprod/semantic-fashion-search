@@ -111,23 +111,43 @@ export async function fetchImpactProducts(
 
   const data: ImpactCatalogResponse = await response.json();
 
+  // Debug: Log first product to see actual API response structure
+  if (data.Items && data.Items.length > 0) {
+    console.log('[Impact API] Sample product fields:', Object.keys(data.Items[0]));
+    console.log('[Impact API] First product:', JSON.stringify(data.Items[0], null, 2));
+  }
+
   // Transform Impact products to our affiliate product format
-  const products: AffiliateProduct[] = data.Items.map(item => ({
-    id: item.Id,
-    name: item.Name,
-    description: item.Description || '',
-    price: item.Price,
-    currency: item.Currency || 'USD',
-    imageUrl: item.ImageUrl,
-    productUrl: item.TrackingUrl || item.OriginalUrl,
-    brand: item.Manufacturer || 'Unknown',
-    category: item.Category || 'Fashion',
-    merchantName: item.Manufacturer,
-    merchantId: item.CatalogId,
-    affiliateNetwork: 'impact',
-    inStock: item.InStock !== false,
-    lastUpdated: item.LastUpdated || new Date().toISOString(),
-  }));
+  const products: AffiliateProduct[] = data.Items.map(item => {
+    // Try multiple possible URL field names (Url is most common from actual API responses)
+    const productUrl = (item as any).Url || item.TrackingUrl || item.OriginalUrl || (item as any).ProductUrl || (item as any).ClickUrl || '';
+    const imageUrl = item.ImageUrl || (item as any).Image || (item as any).ImageURL || '';
+
+    // Parse price - Impact API returns CurrentPrice as a string
+    const currentPrice = (item as any).CurrentPrice || item.Price || '0';
+    const price = parseFloat(currentPrice);
+    const validPrice = price > 0 ? price : undefined;
+
+    // Clean up description - avoid "null" strings
+    const description = item.Description && item.Description !== 'null' ? item.Description : '';
+
+    return {
+      id: item.Id,
+      name: item.Name,
+      description,
+      price: validPrice,
+      currency: item.Currency || 'USD',
+      imageUrl,
+      productUrl,
+      brand: item.Manufacturer || 'Unknown',
+      category: item.Category || 'Fashion',
+      merchantName: item.Manufacturer,
+      merchantId: item.CatalogId,
+      affiliateNetwork: 'impact',
+      inStock: item.InStock !== false,
+      lastUpdated: item.LastUpdated || new Date().toISOString(),
+    };
+  });
 
   return {
     products,
@@ -250,22 +270,41 @@ export async function syncImpactProducts(
       if (products.length === 0) break;
 
       // Convert and prepare products for insertion
-      const productsToInsert = products.map(p => {
-        const product = affiliateToProduct(p);
-        return {
-          brand: product.brand,
-          title: product.title,
-          description: product.description,
-          tags: product.tags,
-          price: product.price,
-          currency: product.currency,
-          image_url: product.imageUrl,
-          product_url: product.productUrl,
-          combined_text: `${product.title} ${product.title} ${product.title} ${product.description} ${product.tags?.join(' ')}`,
-          affiliate_network: product.affiliateNetwork,
-          merchant_id: product.merchantId,
-        };
-      });
+      const productsToInsert = products
+        .map(p => {
+          const product = affiliateToProduct(p);
+          // Use title as fallback when description is empty (for DHgate and other low-quality sources)
+          const descriptionText = product.description?.trim() || product.title;
+          return {
+            brand: product.brand,
+            title: product.title,
+            description: product.description,
+            tags: product.tags,
+            price: product.price,
+            currency: product.currency,
+            image_url: product.imageUrl,
+            product_url: product.productUrl,
+            combined_text: `${product.title} ${descriptionText} ${product.tags?.join(' ')}`,
+            affiliate_network: product.affiliateNetwork,
+            merchant_id: product.merchantId,
+          };
+        })
+        .filter(p => {
+          // Filter out products with missing required fields
+          const isValid = p.product_url && p.title && p.image_url;
+          if (!isValid) {
+            console.log(`Skipping invalid product: ${p.title || 'unknown'} (missing URL or image)`);
+          }
+          return isValid;
+        });
+
+      if (productsToInsert.length === 0) {
+        console.log(`No valid products found on page ${page}, skipping...`);
+        page++;
+        continue;
+      }
+
+      console.log(`Inserting ${productsToInsert.length} valid products from page ${page}...`);
 
       // Upsert products to database
       const { error } = await supabase

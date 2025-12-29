@@ -105,9 +105,12 @@ export async function POST(request: NextRequest) {
 
           // Update products with embeddings
           for (let j = 0; j < batch.length; j++) {
+            // Convert embedding array to PostgreSQL vector format
+            const vectorString = `[${embeddings[j].join(',')}]`;
+
             await (supabase as any)
               .from('products')
-              .update({ embedding: embeddings[j] })
+              .update({ embedding: vectorString })
               .eq('id', batch[j].id);
 
             embeddingsGenerated++;
