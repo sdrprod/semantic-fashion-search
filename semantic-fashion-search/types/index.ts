@@ -98,7 +98,7 @@ export interface AffiliateProduct {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price: number | undefined;
   currency: string;
   imageUrl: string;
   productUrl: string;
