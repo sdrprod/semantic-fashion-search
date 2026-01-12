@@ -42,6 +42,7 @@ export default function Home() {
     setError(null);
     setIntent(null);
     setPage(1);
+    setUploadedImages([]); // Clear uploaded images when doing text search
 
     try {
       const response = await fetch('/api/search', {

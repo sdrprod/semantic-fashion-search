@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Image from 'next/image';
 import type { Product } from '@/types';
 
@@ -6,6 +7,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const [imageError, setImageError] = useState(false);
+
   const formatPrice = (price: number | null, currency: string) => {
     if (price === null) return 'Price on request';
 
@@ -41,14 +44,22 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="product-card">
       <div className="product-image-container">
-        <Image
-          src={product.imageUrl}
-          alt={product.title}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="product-image"
-          loading="lazy"
-        />
+        {!imageError ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.title}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="product-image"
+            loading="lazy"
+            onError={() => setImageError(true)}
+            unoptimized
+          />
+        ) : (
+          <div className="product-image-placeholder">
+            <span>Image unavailable</span>
+          </div>
+        )}
         {product.onSale && (
           <div className="sale-badge">SALE</div>
         )}

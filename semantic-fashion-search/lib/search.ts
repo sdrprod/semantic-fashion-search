@@ -56,10 +56,17 @@ export async function semanticSearch(
     diversityFactor
   );
 
+  // For totalCount: we don't know the exact total due to filtering
+  // Set it higher than results.length to enable pagination
+  // This allows "Load More" / pagination to work
+  const estimatedTotal = rankedResults.length < limit
+    ? rankedResults.length  // Last page
+    : rankedResults.length * 3;  // Estimate more pages available
+
   return {
     query,
     results: rankedResults,
-    totalCount: rankedResults.length,
+    totalCount: estimatedTotal,
     page,
     pageSize: limit,
     intent,
@@ -154,21 +161,8 @@ async function executeMultiSearch(
     console.log(`[executeMultiSearch] Filtering ${data.length} products with text threshold ${similarityThreshold}`);
 
     let filteredProducts = data.filter((row: ProductRow & { similarity: number }) => {
-      // Check if this is a DHGate product by looking at merchant/brand/URL
-      const isDHGate =
-        row.brand?.toLowerCase().includes('dhgate') ||
-        row.product_url?.toLowerCase().includes('dhgate') ||
-        row.title?.toLowerCase().includes('dhgate');
-
-      // Skip DHGate entirely for now - will revisit after database expansion
-      if (isDHGate) {
-        if (data.indexOf(row) < 3) {
-          console.log(`[executeMultiSearch] Skipping DHGate product: "${row.title?.slice(0, 80)}..."`);
-        }
-        return false;
-      }
-
-      // Apply standard threshold for all other vendors
+      // DHGate filter REMOVED - products already passed quality filters during sync
+      // Only apply similarity threshold for all vendors
       const passes = row.similarity >= similarityThreshold;
 
       if (!passes && data.indexOf(row) < 3) {
@@ -324,8 +318,8 @@ function applyDiversity(products: Product[], factor: number): Product[] {
     const product = products[i];
     const brandCount = brandCounts.get(product.brand) || 0;
 
-    // Penalize if we already have many from this brand
-    const shouldInclude = brandCount < 3 || Math.random() > factor;
+    // Allow up to 10 per brand (increased from 3) to handle catalogs with limited brand diversity
+    const shouldInclude = brandCount < 10 || Math.random() > factor;
 
     if (shouldInclude) {
       diverse.push(product);

@@ -54,6 +54,40 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.missacc.com',
       },
+      // CJ Affiliate merchants
+      {
+        protocol: 'https',
+        hostname: 'img.shein.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.shein.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.posh.mk',
+      },
+      {
+        protocol: 'https',
+        hostname: 'di2ponv0v5otw.cloudfront.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'static.nike.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.nike.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.adidas.com',
+      },
+      // Allow all HTTPS images as fallback (can restrict later)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
 

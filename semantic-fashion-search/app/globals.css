@@ -234,6 +234,7 @@ body {
 }
 
 .product-image-container {
+  position: relative;
   width: 100%;
   height: 320px;
   overflow: hidden;
@@ -245,6 +246,17 @@ body {
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s;
+}
+
+.product-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  font-size: 0.875rem;
 }
 
 .product-card:hover .product-image {
