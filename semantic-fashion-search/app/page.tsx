@@ -58,12 +58,21 @@ export default function Home() {
     }
 
     setQuery(searchQuery);
-    setSearchType('text');
     setLoading(true);
     setError(null);
     setIntent(null);
+    setQualityWarning(null);
     setPage(1);
-    setUploadedImages([]); // Clear uploaded images when doing text search
+
+    // If images are uploaded, use hybrid search
+    if (uploadedImages.length > 0) {
+      console.log('[Search] Using hybrid search (text + images)');
+      await handleVisualSearch();
+      return;
+    }
+
+    // Otherwise, use text-only search
+    setSearchType('text');
 
     try {
       const response = await fetch('/api/search', {
@@ -105,13 +114,18 @@ export default function Home() {
       return;
     }
 
-    // Capture query NOW before it gets cleared
+    // Capture query for search
     const searchQuery = query.trim();
 
-    setSearchType('visual');
+    // Determine search type
+    const hasImages = uploadedImages.length > 0;
+    const hasText = searchQuery && searchQuery.length >= 3;
+    setSearchType(hasImages && hasText ? 'visual' : hasImages ? 'visual' : 'text');
+
     setLoading(true);
     setError(null);
     setIntent(null);
+    setQualityWarning(null);
     setResults([]); // Clear previous results
     setPage(1);
 
@@ -141,13 +155,23 @@ export default function Home() {
       const data = await response.json();
       console.log('[Visual Search] Response:', data);
       setResults(data.results || []);
-      setTotalCount(data.results?.length || 0);
+      setTotalCount(data.totalCount || data.results?.length || 0);
+      setQualityWarning(data.qualityWarning || null);
 
-      // Create a custom intent message for visual search
+      // Create a custom intent message based on search type
       const imageText = uploadedImages.length === 1 ? '1 image' : `${uploadedImages.length} images`;
-      const intentMsg = searchQuery
-        ? `I understand you're looking for items similar to ${imageText} with the description: "${searchQuery}". Is that correct?`
-        : `I understand you're looking for items similar to ${imageText}. Is that correct?`;
+      let intentMsg = '';
+
+      if (data.meta?.searchType === 'hybrid') {
+        // Hybrid search (images + text)
+        intentMsg = `I understand you're looking for items matching your description "${searchQuery}" combined with visual details from ${imageText}. This hybrid search gives you the most granular results. Is that correct?`;
+      } else if (searchQuery) {
+        // Image + text but processed as visual
+        intentMsg = `I understand you're looking for items similar to ${imageText} with the description: "${searchQuery}". Is that correct?`;
+      } else {
+        // Image-only search
+        intentMsg = `I understand you're looking for items similar to ${imageText}. Is that correct?`;
+      }
 
       setIntent({ explanation: intentMsg } as ParsedIntent);
     } catch (err) {
@@ -230,7 +254,10 @@ export default function Home() {
             <div className="visual-search-section">
               <div className="visual-search-header">
                 <h2 className="visual-search-title">Or Search by Image</h2>
-                <p className="visual-search-subtitle">Upload up to 3 images to find similar styles</p>
+                <p className="visual-search-subtitle">
+                  Upload up to 3 images to find similar styles
+                  <span className="hybrid-hint"> • Combine with text for ultra-precise results</span>
+                </p>
               </div>
 
               <ImageUpload
@@ -240,13 +267,23 @@ export default function Home() {
               />
 
               {uploadedImages.length > 0 && (
-                <button
-                  className="visual-search-btn"
-                  onClick={handleVisualSearch}
-                  disabled={loading}
-                >
-                  {loading ? 'Searching...' : `Search by Visual`}
-                </button>
+                <>
+                  <button
+                    className="visual-search-btn"
+                    onClick={handleVisualSearch}
+                    disabled={loading}
+                  >
+                    {loading ? 'Searching...' :
+                      query && query.trim().length >= 3
+                        ? `🔍 Hybrid Search (Text + Images)`
+                        : `🔍 Search by Images`}
+                  </button>
+                  {query && query.trim().length >= 3 && (
+                    <p className="hybrid-search-note">
+                      Combining your text description with uploaded images for the most accurate results
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

@@ -1205,6 +1205,22 @@ body {
   color: #6c757d;
 }
 
+.hybrid-hint {
+  color: #17a2b8;
+  font-weight: 600;
+}
+
+.hybrid-search-note {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #e7f6f8;
+  border: 1px solid #b8e5ec;
+  border-radius: 6px;
+  color: #0c5460;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 /* Update visual search button */
 .hero .visual-search-btn {
   background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
