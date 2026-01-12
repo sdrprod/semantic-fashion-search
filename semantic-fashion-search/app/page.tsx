@@ -170,13 +170,13 @@ export default function Home() {
 
       if (data.meta?.searchType === 'hybrid') {
         // Hybrid search (images + text)
-        intentMsg = `I understand you're looking for items matching your description "${searchQuery}" combined with visual details from ${imageText}. This hybrid search gives you the most granular results. Is that correct?`;
+        intentMsg = `Perfect! I can help you find pieces that match "${searchQuery}" while also capturing the style, colors, and vibe from the ${imageText} you uploaded. By combining your description with visual analysis, we're searching for the most precise matches - this is the best way to find exactly what you're envisioning! Does that sound right?`;
       } else if (searchQuery) {
         // Image + text but processed as visual
-        intentMsg = `I understand you're looking for items similar to ${imageText} with the description: "${searchQuery}". Is that correct?`;
+        intentMsg = `I can help you find pieces similar to the ${imageText} you shared, with a focus on "${searchQuery}". I'm analyzing the style, colors, and aesthetic from your images to find matching items that fit your description. How does that sound?`;
       } else {
         // Image-only search
-        intentMsg = `I understand you're looking for items similar to ${imageText}. Is that correct?`;
+        intentMsg = `I'm analyzing the ${imageText} you uploaded to find pieces with similar styles, colors, and aesthetics! I'll search for items that match the vibe and look of what you've shown me. Does that work for you?`;
       }
 
       setIntent({ explanation: intentMsg } as ParsedIntent);
@@ -261,14 +261,14 @@ export default function Home() {
               <div className="visual-search-header">
                 <h2 className="visual-search-title">Or Search by Image</h2>
                 <p className="visual-search-subtitle">
-                  Upload up to 3 images to find similar styles
+                  Upload up to 5 images to find similar styles (top, jacket, shoes, bag, accessories)
                   <span className="hybrid-hint"> • Combine with text for ultra-precise results</span>
                 </p>
               </div>
 
               <ImageUpload
                 onImagesChange={setUploadedImages}
-                maxFiles={3}
+                maxFiles={5}
                 disabled={loading}
               />
 

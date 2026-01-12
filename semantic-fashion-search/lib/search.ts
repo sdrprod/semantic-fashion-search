@@ -62,21 +62,53 @@ export async function semanticSearch(
     diversityFactor
   );
 
+  // Apply tiered quality thresholds - higher bar for top results
+  const qualityFilteredResults = allRankedResults.filter((product, index) => {
+    let requiredSimilarity = similarityThreshold;
+
+    // Top 3 results: require +0.15 similarity boost for quality
+    if (index < 3) {
+      requiredSimilarity = similarityThreshold + 0.15;
+    }
+    // Results 4-6: require +0.10 similarity boost
+    else if (index < 6) {
+      requiredSimilarity = similarityThreshold + 0.10;
+    }
+    // Results 7+: use base threshold
+
+    const passes = (product.similarity || 0) >= requiredSimilarity;
+
+    if (!passes) {
+      console.log(
+        `[semanticSearch] ⚠️ Filtered result #${index + 1} for insufficient quality: ` +
+        `"${product.title?.slice(0, 50)}..." ` +
+        `(similarity: ${product.similarity?.toFixed(3)}, required: ${requiredSimilarity.toFixed(3)})`
+      );
+    }
+
+    return passes;
+  });
+
+  console.log(
+    `[semanticSearch] Quality filtering: ${allRankedResults.length} → ${qualityFilteredResults.length} results ` +
+    `(filtered ${allRankedResults.length - qualityFilteredResults.length})`
+  );
+
   // Calculate pagination
   const startIndex = (page - 1) * limit;
   const endIndex = startIndex + limit;
-  const paginatedResults = allRankedResults.slice(startIndex, endIndex);
+  const paginatedResults = qualityFilteredResults.slice(startIndex, endIndex);
 
-  // Use actual total count from ranked results
-  const totalCount = allRankedResults.length;
+  // Use actual total count from quality-filtered results
+  const totalCount = qualityFilteredResults.length;
 
   console.log(`[semanticSearch] Pagination: page=${page}, showing ${startIndex}-${endIndex} of ${totalCount} total results`);
 
   // Detect low quality results and add warning message
   let qualityWarning: string | undefined;
-  if (allRankedResults.length > 0) {
-    const maxSimilarity = Math.max(...allRankedResults.map(p => p.similarity || 0));
-    const avgSimilarity = allRankedResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / allRankedResults.length;
+  if (qualityFilteredResults.length > 0) {
+    const maxSimilarity = Math.max(...qualityFilteredResults.map(p => p.similarity || 0));
+    const avgSimilarity = qualityFilteredResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / qualityFilteredResults.length;
 
     // Show warning if best match is below 0.45 or average is below 0.35
     if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {
@@ -166,6 +198,7 @@ function isMensProduct(title: string, description: string): boolean {
  */
 function isNonApparelMaterial(title: string, description: string): boolean {
   const materialTerms = [
+    // Fabric/Material terms
     'fabric by the yard', 'by the yard', 'fabric diy', 'diy material',
     'upholstery fabric', 'sofa fabric', 'cushion cover fabric',
     'curtain fabric', 'canvas fabric', 'raw fabric', 'cloth material',
@@ -174,7 +207,23 @@ function isNonApparelMaterial(title: string, description: string): boolean {
     'width ', 'wide ', 'per yard', '/yard', 'fabric wholesale',
     'coral velvet fabric', 'flannel fabric', 'linen fabric',
     'cotton fabric', 'canvas by', 'material by', 'upholstery sofa',
-    'cushion covers fabric', 'diy matreial', 'diy materia'
+    'cushion covers fabric', 'diy matreial', 'diy materia',
+    'fabric swatch', 'material swatch', 'fabric sample',
+    'quilting fabric', 'patchwork fabric', 'fabric bolt',
+
+    // Home decor (non-wearable)
+    'throw pillow', 'pillow cover', 'cushion cover', 'bedding set',
+    'duvet cover', 'comforter set', 'bed sheet', 'table cloth',
+    'tablecloth', 'placemat', 'napkin set', 'window curtain',
+    'shower curtain', 'bath mat', 'area rug', 'carpet',
+    'wall tapestry', 'wall hanging', 'home textile',
+
+    // Craft/DIY supplies
+    'craft supply', 'sewing notion', 'zipper by', 'button pack',
+    'elastic by', 'ribbon by', 'trim by', 'lace by',
+
+    // Measurements indicating raw materials
+    'meters length', 'yards length', 'cm width', 'inch width',
   ];
 
   const combinedText = `${title} ${description}`.toLowerCase();
@@ -183,7 +232,7 @@ function isNonApparelMaterial(title: string, description: string): boolean {
   const hasMaterialTerm = materialTerms.some(term => combinedText.includes(term));
 
   // Check for measurements indicating raw fabric (e.g., "Width 145cm", "Wide 59\"")
-  const hasFabricMeasurement = /width\s*\d+|wide\s*\d+/i.test(combinedText);
+  const hasFabricMeasurement = /width\s*\d+|wide\s*\d+|length\s*\d+|meters?\s+long|yards?\s+long/i.test(combinedText);
 
   return hasMaterialTerm || hasFabricMeasurement;
 }

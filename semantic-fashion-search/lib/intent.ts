@@ -34,7 +34,7 @@ Return your response as JSON with this structure:
       "weight": 1.0
     }
   ],
-  "explanation": "Write in second person addressing the user directly. Start with 'I understand that you are looking for...' and summarize their request conversationally. End with 'Is that correct?' to invite feedback."
+  "explanation": "Write 2-3 sentences in a warm, friendly tone like a fashion-savvy colleague helping a friend. Start with 'I can help you find...' or 'It sounds like you're looking for...' Describe the vibe, occasion, and key style elements in detail. Add enthusiasm and be descriptive about the aesthetic. End with 'Does that sound right?' or 'How does that sound?' to invite feedback. Be conversational and helpful, not robotic."
 }
 
 Important guidelines:
@@ -136,6 +136,6 @@ export function createSimpleIntent(query: string): ParsedIntent {
         weight: 1.0,
       },
     ],
-    explanation: `I understand that you are looking for ${query}. Is that correct?`,
+    explanation: `I can help you find ${query}! I'll search through our collection to find pieces that match what you're looking for. Does that sound right?`,
   };
 }

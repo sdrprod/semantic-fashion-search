@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 // Security limits
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_FILES = 3;
+const MAX_FILES = 5; // Support 5 images for complete outfit compositions (top, jacket, shoes, bag, accessories)
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 // Rate limiting (simple in-memory, consider Redis for production)
