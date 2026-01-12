@@ -80,6 +80,39 @@ export async function semanticSearch(
 }
 
 /**
+ * Check if query explicitly requests sexy/provocative items
+ */
+function hasSexyIntent(query: string): boolean {
+  const sexyKeywords = [
+    'sexy', 'lingerie', 'intimate', 'risque', 'provocative', 'enticing',
+    'skimpy', 'revealing', 'sultry', 'seductive', 'alluring', 'naughty',
+    'racy', 'steamy', 'sensual', 'erotic', 'burlesque', 'negligee',
+    'teddy', 'bodysuit', 'fishnet', 'lace bra', 'thong', 'garter',
+    'bedroom', 'boudoir', 'spicy', 'hot outfit'
+  ];
+
+  const lowerQuery = query.toLowerCase();
+  return sexyKeywords.some(keyword => lowerQuery.includes(keyword));
+}
+
+/**
+ * Check if product contains sexy/provocative content
+ */
+function isSexyProduct(title: string, description: string): boolean {
+  const sexyTerms = [
+    'sexy', 'lingerie', 'intimate', 'revealing', 'sheer', 'see-through',
+    'transparent', 'mesh', 'fishnet', 'teddy', 'bodysuit', 'negligee',
+    'babydoll', 'chemise', 'garter', 'thong', 'g-string', 'crotchless',
+    'open bust', 'cupless', 'peek-a-boo', 'peekaboo', 'erotic', 'naughty',
+    'boudoir', 'bedroom', 'sultry', 'provocative', 'enticing', 'lace bra set',
+    'adult costume', 'roleplay', 'role play', 'burlesque', 'stripper'
+  ];
+
+  const combinedText = `${title} ${description}`.toLowerCase();
+  return sexyTerms.some(term => combinedText.includes(term));
+}
+
+/**
  * Execute multiple semantic searches in parallel
  */
 async function executeMultiSearch(
@@ -163,20 +196,34 @@ async function executeMultiSearch(
     }
 
     // Filter by similarity threshold and convert to Product type
-    // TEMPORARILY SKIP DHGate products entirely due to poor data quality
     console.log(`[executeMultiSearch] Filtering ${data.length} products with text threshold ${similarityThreshold}`);
 
+    // Check if query has explicit sexy intent
+    const queryHasSexyIntent = hasSexyIntent(searchQuery.query);
+    console.log(`[executeMultiSearch] Query sexy intent: ${queryHasSexyIntent ? 'YES' : 'NO'}`);
+
     let filteredProducts = data.filter((row: ProductRow & { similarity: number }) => {
-      // DHGate filter REMOVED - products already passed quality filters during sync
-      // Only apply similarity threshold for all vendors
-      const passes = row.similarity >= similarityThreshold;
+      // FILTER 1: Content filtering - Remove sexy/provocative items unless explicitly requested
+      if (!queryHasSexyIntent && isSexyProduct(row.title, row.description || '')) {
+        console.log(`[executeMultiSearch] ❌ Filtered sexy product (not requested): "${row.title?.slice(0, 60)}..."`);
+        return false;
+      }
+
+      // FILTER 2: DHGate quality - Apply stricter threshold for DHGate vendors
+      const isDHGate = row.product_url?.toLowerCase().includes('dhgate') ||
+                       row.brand?.toLowerCase().includes('dhgate');
+      const requiredThreshold = isDHGate ? similarityThreshold + 0.1 : similarityThreshold;
+
+      const passes = row.similarity >= requiredThreshold;
 
       if (!passes && data.indexOf(row) < 3) {
         console.log(
-          `[executeMultiSearch] Filtered out "${row.title}" (text similarity: ${row.similarity}, ` +
-          `required: ${similarityThreshold})`
+          `[executeMultiSearch] Filtered out "${row.title?.slice(0, 60)}..." ` +
+          `(similarity: ${row.similarity?.toFixed(3)}, required: ${requiredThreshold?.toFixed(3)}` +
+          `${isDHGate ? ' [DHGate+0.1]' : ''})`
         );
       }
+
       return passes;
     });
 
