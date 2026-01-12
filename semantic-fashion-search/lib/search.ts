@@ -127,6 +127,20 @@ function isSexyProduct(title: string, description: string): boolean {
 }
 
 /**
+ * Check if product is for men
+ */
+function isMensProduct(title: string, description: string): boolean {
+  const mensTerms = [
+    "men's", 'mens', "mens'", 'for men', 'for him', 'men only',
+    'male', 'masculine', 'man ', 'gentleman', "gentleman's",
+    'boys', "boy's", 'men ', 'menswear'
+  ];
+
+  const combinedText = `${title} ${description}`.toLowerCase();
+  return mensTerms.some(term => combinedText.includes(term));
+}
+
+/**
  * Execute multiple semantic searches in parallel
  */
 async function executeMultiSearch(
@@ -223,7 +237,13 @@ async function executeMultiSearch(
         return false;
       }
 
-      // FILTER 2: DHGate quality - Apply stricter threshold for DHGate vendors
+      // FILTER 2: Men's products - Always filter out men's clothing
+      if (isMensProduct(row.title, row.description || '')) {
+        console.log(`[executeMultiSearch] ❌ Filtered men's product: "${row.title?.slice(0, 60)}..."`);
+        return false;
+      }
+
+      // FILTER 3: DHGate quality - Apply stricter threshold for DHGate vendors
       const isDHGate = row.product_url?.toLowerCase().includes('dhgate') ||
                        row.brand?.toLowerCase().includes('dhgate');
       const requiredThreshold = isDHGate ? similarityThreshold + 0.1 : similarityThreshold;

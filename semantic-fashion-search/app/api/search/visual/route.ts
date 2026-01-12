@@ -83,7 +83,7 @@ async function analyzeImagesWithVision(imageDataUrls: string[]): Promise<string>
     const content: any[] = [
       {
         type: 'text',
-        text: 'Describe the fashion items in these images in detail. Focus on: clothing type, style, color, pattern, fabric/material, fit, occasion, and any distinctive features. Be specific and detailed as this will be used for search.'
+        text: 'List the fashion items with: type, style, colors, patterns, materials, fit. Be concise and specific.'
       }
     ];
 
@@ -93,21 +93,21 @@ async function analyzeImagesWithVision(imageDataUrls: string[]): Promise<string>
         type: 'image_url',
         image_url: {
           url: imageUrl,
-          detail: 'high' // High detail for fashion items
+          detail: 'low' // Use low detail for faster processing
         }
       });
     }
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o', // Updated model name
+      model: 'gpt-4o-mini', // Faster and cheaper model
       messages: [
         {
           role: 'user',
           content
         }
       ],
-      max_tokens: 500,
-      temperature: 0.3, // Lower temperature for more consistent descriptions
+      max_tokens: 150, // Reduced for faster response
+      temperature: 0.2, // Lower temperature for more consistent descriptions
     });
 
     const description = response.choices[0]?.message?.content || '';
