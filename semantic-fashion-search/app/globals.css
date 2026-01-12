@@ -223,6 +223,32 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* Quality Warning - shown when similarity scores are low */
+.quality-warning {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0 2rem 0;
+  box-shadow: 0 1px 3px rgba(255, 193, 7, 0.1);
+}
+
+.quality-warning-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.quality-warning-text {
+  color: #856404;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
 .spinner {
   width: 40px;
   height: 40px;

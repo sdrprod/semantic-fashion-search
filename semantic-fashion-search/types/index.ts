@@ -24,6 +24,7 @@ export interface SearchResponse {
   page?: number;
   pageSize?: number;
   intent?: ParsedIntent;
+  qualityWarning?: string; // Message when search results aren't ideal quality
 }
 
 export interface SearchParams {

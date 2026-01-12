@@ -24,6 +24,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [intent, setIntent] = useState<ParsedIntent | null>(null);
+  const [qualityWarning, setQualityWarning] = useState<string | null>(null);
   const [searchType, setSearchType] = useState<'text' | 'visual' | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -39,6 +40,7 @@ export default function Home() {
     setResults([]);
     setError(null);
     setIntent(null);
+    setQualityWarning(null);
     setSearchType(null);
     setPage(1);
     setTotalCount(0);
@@ -84,12 +86,14 @@ export default function Home() {
       const data = await response.json();
       setResults(data.results || []);
       setIntent(data.intent || null);
+      setQualityWarning(data.qualityWarning || null);
       setTotalCount(data.totalCount || data.results?.length || 0);
     } catch (err) {
       console.error('Search failed:', err);
       setError(err instanceof Error ? err.message : 'Search failed. Please try again.');
       setResults([]);
       setIntent(null);
+      setQualityWarning(null);
     } finally {
       setLoading(false);
     }
@@ -181,6 +185,7 @@ export default function Home() {
 
       const data = await response.json();
       setResults(data.results || []);
+      setQualityWarning(data.qualityWarning || null);
       setTotalCount(data.totalCount || data.results?.length || 0);
     } catch (err) {
       console.error('Page load failed:', err);
@@ -326,6 +331,14 @@ export default function Home() {
               <div className="intent-explanation">
                 {intent?.explanation || `I understand that you are looking for ${query}. Is that correct?`}
               </div>
+
+              {/* Quality Warning - shown when similarity scores are low */}
+              {qualityWarning && (
+                <div className="quality-warning">
+                  <div className="quality-warning-icon">ℹ️</div>
+                  <p className="quality-warning-text">{qualityWarning}</p>
+                </div>
+              )}
             </>
           )}
 

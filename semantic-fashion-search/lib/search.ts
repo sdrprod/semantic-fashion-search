@@ -69,6 +69,19 @@ export async function semanticSearch(
 
   console.log(`[semanticSearch] Pagination: page=${page}, showing ${startIndex}-${endIndex} of ${totalCount} total results`);
 
+  // Detect low quality results and add warning message
+  let qualityWarning: string | undefined;
+  if (allRankedResults.length > 0) {
+    const maxSimilarity = Math.max(...allRankedResults.map(p => p.similarity || 0));
+    const avgSimilarity = allRankedResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / allRankedResults.length;
+
+    // Show warning if best match is below 0.45 or average is below 0.35
+    if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {
+      qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
+      console.log(`[semanticSearch] Quality warning triggered - max: ${maxSimilarity.toFixed(3)}, avg: ${avgSimilarity.toFixed(3)}`);
+    }
+  }
+
   return {
     query,
     results: paginatedResults,
@@ -76,6 +89,7 @@ export async function semanticSearch(
     page,
     pageSize: limit,
     intent,
+    qualityWarning,
   };
 }
 
@@ -350,9 +364,23 @@ function rankResults(
     .sort((a, b) => b.score - a.score)
     .map(item => item.product);
 
-  // Apply diversity factor - avoid too many similar items
-  if (diversityFactor > 0) {
-    rankedProducts = applyDiversity(rankedProducts, diversityFactor);
+  // Apply diversity factor within similarity tiers to preserve quality ordering
+  // This ensures best matches always appear first, regardless of brand
+  if (diversityFactor > 0 && rankedProducts.length > 0) {
+    // Group products by similarity score ranges
+    const highQuality = rankedProducts.filter(p => (p.similarity || 0) >= 0.6);
+    const mediumQuality = rankedProducts.filter(p => (p.similarity || 0) >= 0.4 && (p.similarity || 0) < 0.6);
+    const lowerQuality = rankedProducts.filter(p => (p.similarity || 0) < 0.4);
+
+    // Apply diversity within each tier separately to maintain similarity order
+    const diverseHigh = applyDiversity(highQuality, diversityFactor);
+    const diverseMedium = applyDiversity(mediumQuality, diversityFactor);
+    const diverseLow = applyDiversity(lowerQuality, diversityFactor);
+
+    // Concatenate tiers to preserve quality ordering
+    rankedProducts = [...diverseHigh, ...diverseMedium, ...diverseLow];
+
+    console.log(`[rankResults] Applied diversity within tiers - High: ${diverseHigh.length}, Medium: ${diverseMedium.length}, Low: ${diverseLow.length}`);
   }
 
   return rankedProducts.slice(0, limit);
