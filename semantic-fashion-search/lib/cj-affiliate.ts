@@ -505,7 +505,7 @@ export async function syncCJProducts(
         const productData = affiliateToProduct(product);
 
         // Create combined text for embedding
-        const combinedText = `${productData.title} ${productData.description} ${productData.brand} ${productData.tags.join(' ')}`;
+        const combinedText = `${productData.title} ${productData.description} ${productData.brand} ${productData.tags?.join(' ') || ''}`;
 
         try {
           // Upsert product to database
