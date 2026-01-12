@@ -1,6 +1,7 @@
 import { getSupabaseClient, ProductRow } from './supabase';
 import { generateEmbedding, generateEmbeddings } from './embeddings';
 import { extractIntent, isSimpleQuery, createSimpleIntent } from './intent';
+import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision-embeddings';
 import type { Product, SearchResponse, ParsedIntent, SearchQuery } from '@/types';
 
 interface SearchOptions {
@@ -8,6 +9,8 @@ interface SearchOptions {
   page?: number;
   similarityThreshold?: number;
   diversityFactor?: number;
+  enableImageValidation?: boolean;
+  imageValidationThreshold?: number;
 }
 
 /**
@@ -22,6 +25,8 @@ export async function semanticSearch(
     page = 1,
     similarityThreshold = 0.3,  // Back to 0.3 with proper embeddings
     diversityFactor = 0.1,
+    enableImageValidation = false,  // DISABLED - vision model broken, needs fixing
+    imageValidationThreshold = 0.6,  // 60% image similarity required
   } = options;
 
   // Determine if we need full intent extraction or simple search
@@ -38,7 +43,9 @@ export async function semanticSearch(
     intent.searchQueries,
     limit,
     page,
-    similarityThreshold
+    similarityThreshold,
+    enableImageValidation,
+    imageValidationThreshold
   );
 
   // Merge and rank results
@@ -66,38 +73,55 @@ async function executeMultiSearch(
   queries: SearchQuery[],
   limit: number,
   page: number,
-  similarityThreshold: number
+  similarityThreshold: number,
+  enableImageValidation: boolean = false,
+  imageValidationThreshold: number = 0.6
 ): Promise<Map<string, Product[]>> {
   console.log('[executeMultiSearch] Starting with queries:', queries.map(q => q.query));
+  console.log('[executeMultiSearch] Image validation:', enableImageValidation ? 'ENABLED' : 'DISABLED');
 
   const supabase = getSupabaseClient(true) as any;
   const results = new Map<string, Product[]>();
 
-  // Generate embeddings for all queries in batch
+  // Generate text embeddings for all queries in batch
   const queryTexts = queries.map(q => q.query);
-  console.log('[executeMultiSearch] Generating embeddings for:', queryTexts);
+  console.log('[executeMultiSearch] Generating text embeddings for:', queryTexts);
 
-  const embeddings = await generateEmbeddings(queryTexts);
-  console.log('[executeMultiSearch] Embeddings generated:', embeddings.length, 'embeddings of length', embeddings[0]?.length);
+  const textEmbeddings = await generateEmbeddings(queryTexts);
+  console.log('[executeMultiSearch] Text embeddings generated:', textEmbeddings.length, 'embeddings of length', textEmbeddings[0]?.length);
+
+  // Generate vision embeddings if image validation is enabled
+  let visionEmbeddings: number[][] | null = null;
+  if (enableImageValidation) {
+    console.log('[executeMultiSearch] Generating vision embeddings for image validation...');
+    try {
+      visionEmbeddings = await Promise.all(
+        queryTexts.map(text => generateTextVisionEmbedding(text))
+      );
+      console.log('[executeMultiSearch] Vision embeddings generated:', visionEmbeddings.length);
+    } catch (error) {
+      console.error('[executeMultiSearch] Vision embedding generation failed, continuing without image validation:', error);
+      visionEmbeddings = null;
+    }
+  }
 
   // Execute searches in parallel
   const searchPromises = queries.map(async (searchQuery, index) => {
-    const embedding = embeddings[index];
+    const textEmbedding = textEmbeddings[index];
+    const visionEmbedding = visionEmbeddings?.[index];
 
     // Calculate how many results to fetch based on priority and weight
     const fetchLimit = Math.ceil(limit * searchQuery.weight * 1.5);
 
     console.log(`[executeMultiSearch] Calling match_products for "${searchQuery.query}" with limit ${fetchLimit}`);
-    console.log(`[executeMultiSearch] Embedding sample for "${searchQuery.query}":`, embedding?.slice(0, 5));
+    console.log(`[executeMultiSearch] Text embedding sample for "${searchQuery.query}":`, textEmbedding?.slice(0, 5));
 
     let data: any[] = [];
 
     try {
-      // Convert embedding array to PostgreSQL vector string format
-      const vectorString = `[${embedding.join(',')}]`;
-
+      // Pass embedding array directly - PostgreSQL will convert to vector
       const result = await supabase.rpc('match_products', {
-        query_embedding: vectorString,
+        query_embedding: textEmbedding,
         match_count: fetchLimit,
       });
 
@@ -126,27 +150,102 @@ async function executeMultiSearch(
     }
 
     // Filter by similarity threshold and convert to Product type
-    console.log(`[executeMultiSearch] Filtering ${data.length} products with threshold ${similarityThreshold}`);
-    const products: Product[] = data
-      .filter((row: ProductRow & { similarity: number }) => {
-        const passes = row.similarity >= similarityThreshold;
-        if (!passes && data.indexOf(row) < 3) {
-          console.log(`[executeMultiSearch] Filtered out "${row.title}" (similarity: ${row.similarity})`);
+    // TEMPORARILY SKIP DHGate products entirely due to poor data quality
+    console.log(`[executeMultiSearch] Filtering ${data.length} products with text threshold ${similarityThreshold}`);
+
+    let filteredProducts = data.filter((row: ProductRow & { similarity: number }) => {
+      // Check if this is a DHGate product by looking at merchant/brand/URL
+      const isDHGate =
+        row.brand?.toLowerCase().includes('dhgate') ||
+        row.product_url?.toLowerCase().includes('dhgate') ||
+        row.title?.toLowerCase().includes('dhgate');
+
+      // Skip DHGate entirely for now - will revisit after database expansion
+      if (isDHGate) {
+        if (data.indexOf(row) < 3) {
+          console.log(`[executeMultiSearch] Skipping DHGate product: "${row.title?.slice(0, 80)}..."`);
         }
-        return passes;
-      })
-      .map((row: ProductRow & { similarity: number }) => ({
-        id: row.id,
-        imageUrl: row.image_url,
-        brand: row.brand,
-        title: row.title,
-        description: row.description,
-        price: row.price,
-        currency: row.currency,
-        productUrl: row.product_url,
-        tags: row.tags,
-        similarity: row.similarity,
-      }));
+        return false;
+      }
+
+      // Apply standard threshold for all other vendors
+      const passes = row.similarity >= similarityThreshold;
+
+      if (!passes && data.indexOf(row) < 3) {
+        console.log(
+          `[executeMultiSearch] Filtered out "${row.title}" (text similarity: ${row.similarity}, ` +
+          `required: ${similarityThreshold})`
+        );
+      }
+      return passes;
+    });
+
+    // STAGE 2: Image validation (if enabled and vision embedding available)
+    if (visionEmbedding && enableImageValidation) {
+      console.log(`[executeMultiSearch] Applying image validation (threshold: ${imageValidationThreshold})...`);
+
+      const beforeCount = filteredProducts.length;
+      filteredProducts = filteredProducts.filter((row: any) => {
+        // Skip if product doesn't have image embedding yet
+        if (!row.image_embedding) {
+          console.log(`[executeMultiSearch] Skipping image validation for "${row.title}" (no image embedding)`);
+          return true; // Keep products without embeddings for now
+        }
+
+        // Parse the image embedding from vector format
+        let imageEmbedding: number[];
+        try {
+          if (typeof row.image_embedding === 'string') {
+            imageEmbedding = JSON.parse(row.image_embedding);
+          } else if (Array.isArray(row.image_embedding)) {
+            imageEmbedding = row.image_embedding;
+          } else {
+            console.log(`[executeMultiSearch] Invalid image embedding format for "${row.title}"`);
+            return true;
+          }
+
+          // Calculate image similarity
+          const imageSimilarity = calculateCosineSimilarity(visionEmbedding, imageEmbedding);
+          const passes = imageSimilarity >= imageValidationThreshold;
+
+          if (!passes) {
+            console.log(
+              `[executeMultiSearch] ❌ Image validation FAILED for "${row.title}" ` +
+              `(image similarity: ${(imageSimilarity * 100).toFixed(1)}%, required: ${(imageValidationThreshold * 100).toFixed(1)}%)`
+            );
+          } else {
+            console.log(
+              `[executeMultiSearch] ✅ Image validation PASSED for "${row.title}" ` +
+              `(image similarity: ${(imageSimilarity * 100).toFixed(1)}%)`
+            );
+          }
+
+          return passes;
+        } catch (error) {
+          console.error(`[executeMultiSearch] Error validating image for "${row.title}":`, error);
+          return true; // Keep on error
+        }
+      });
+
+      const filteredCount = beforeCount - filteredProducts.length;
+      console.log(`[executeMultiSearch] Image validation filtered out ${filteredCount}/${beforeCount} products`);
+    }
+
+    // Convert to Product type
+    const products: Product[] = filteredProducts.map((row: ProductRow & { similarity: number }) => ({
+      id: row.id,
+      imageUrl: row.image_url,
+      brand: row.brand,
+      title: row.title,
+      description: row.description,
+      price: row.price,
+      currency: row.currency,
+      productUrl: row.product_url,
+      tags: row.tags,
+      similarity: row.similarity,
+      merchantName: row.merchant_name,
+      onSale: row.on_sale,
+    }));
 
     return { query: searchQuery.query, products };
   });
@@ -247,11 +346,9 @@ export async function simpleSearch(
   const supabase = getSupabaseClient(true) as any;
   const embedding = await generateEmbedding(query);
 
-  // Convert embedding array to PostgreSQL vector string format
-  const vectorString = `[${embedding.join(',')}]`;
-
+  // Pass embedding array directly - PostgreSQL will convert to vector
   const { data, error } = await supabase.rpc('match_products', {
-    query_embedding: vectorString,
+    query_embedding: embedding,
     match_count: limit,
   });
 
@@ -271,5 +368,7 @@ export async function simpleSearch(
     productUrl: row.product_url,
     tags: row.tags,
     similarity: row.similarity,
+    merchantName: row.merchant_name,
+    onSale: row.on_sale,
   }));
 }

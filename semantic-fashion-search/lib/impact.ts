@@ -1,4 +1,5 @@
 import type { AffiliateProduct, Product } from '@/types';
+import { generateProductFingerprint, calculateProductQualityScore } from './deduplication';
 
 // Impact API configuration
 const IMPACT_API_BASE = 'https://api.impact.com';
@@ -463,11 +464,12 @@ export async function syncImpactProducts(
     generateEmbeddings?: boolean;
     minQualityScore?: number;
   } = {}
-): Promise<{ synced: number; errors: number }> {
+): Promise<{ synced: number; errors: number; duplicates?: number }> {
   const { maxProducts = 1000, generateEmbeddings = true, minQualityScore = 5 } = options;
 
   let synced = 0;
   let errors = 0;
+  let duplicates = 0;
   let page = 1;
   const pageSize = 100;
 
@@ -539,12 +541,74 @@ export async function syncImpactProducts(
 
       console.log(`Page ${page} filtering: ${validProducts.length}/${products.length} passed | Quality scores: min=${minScore}, max=${maxScore}, avg=${avgScore} | Threshold: ${minQualityScore} | Rejected: ${skippedNonFashion} non-fashion, ${skippedNonFashionKeywords} non-fashion keywords, ${skippedLowQuality} low quality, ${skippedMissingFields} missing fields, ${skippedNonUSD} non-USD`);
 
-      // Convert and prepare products for insertion
-      const productsToInsert = validProducts.map(p => {
+      // Convert and prepare products for insertion with deduplication
+      const productsToInsert = [];
+
+      for (const p of validProducts) {
         const product = affiliateToProduct(p);
         // Use title as fallback when description is empty (for DHgate and other low-quality sources)
         const descriptionText = product.description?.trim() || product.title;
-        return {
+
+        // Generate content hash for deduplication
+        const contentHash = generateProductFingerprint({
+          title: product.title,
+          brand: product.brand,
+          price: product.price,
+        });
+
+        // Check for existing duplicate
+        const { data: existingProducts, error: checkError } = await supabase
+          .from('products')
+          .select('id, title, description, brand, price, image_url, affiliate_network')
+          .eq('content_hash', contentHash);
+
+        if (checkError) {
+          console.error('Error checking for duplicates:', checkError.message);
+          // Continue anyway - let database handle it
+        }
+
+        // If duplicate found, compare quality
+        if (existingProducts && existingProducts.length > 0) {
+          const existingProduct = existingProducts[0];
+
+          // Calculate quality scores
+          const existingQuality = calculateProductQualityScore({
+            title: existingProduct.title,
+            description: existingProduct.description,
+            price: existingProduct.price,
+            brand: existingProduct.brand,
+            imageUrl: existingProduct.image_url,
+            affiliateNetwork: existingProduct.affiliate_network,
+          });
+
+          const newQuality = calculateProductQualityScore({
+            title: product.title,
+            description: product.description,
+            price: product.price,
+            brand: product.brand,
+            imageUrl: product.imageUrl,
+            affiliateNetwork: product.affiliateNetwork,
+          });
+
+          // If new product is not better quality AND not cheaper, skip it
+          if (newQuality <= existingQuality && (product.price ?? Infinity) >= (existingProduct.price ?? 0)) {
+            duplicates++;
+            continue;
+          }
+
+          // New product is better - delete the old one
+          const { error: deleteError } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', existingProduct.id);
+
+          if (deleteError) {
+            console.error('Error deleting inferior duplicate:', deleteError.message);
+          }
+        }
+
+        // Add to insert list
+        productsToInsert.push({
           brand: product.brand,
           title: product.title,
           description: product.description,
@@ -558,34 +622,36 @@ export async function syncImpactProducts(
           merchant_id: product.merchantId,
           merchant_name: product.merchantName,
           on_sale: product.onSale || false,
-        };
-      });
+          content_hash: contentHash,
+        });
+
+        // Check if we've reached the quota
+        if (productsToInsert.length >= (maxProducts - synced)) {
+          break;
+        }
+      }
 
       if (productsToInsert.length === 0) {
-        console.log(`No valid products found on page ${page}, skipping...`);
+        console.log(`No valid products found on page ${page} (all duplicates or filtered), skipping...`);
         page++;
         continue;
       }
 
-      // Don't insert more than requested (respect maxProducts limit)
-      const remainingQuota = maxProducts - synced;
-      const productsToActuallyInsert = productsToInsert.slice(0, remainingQuota);
-
-      console.log(`Inserting ${productsToActuallyInsert.length} valid products from page ${page}...`);
+      console.log(`Inserting ${productsToInsert.length} products from page ${page} (${duplicates} duplicates skipped so far)...`);
 
       // Upsert products to database
       const { error } = await supabase
         .from('products')
-        .upsert(productsToActuallyInsert, {
+        .upsert(productsToInsert, {
           onConflict: 'product_url',
           ignoreDuplicates: false,
         });
 
       if (error) {
         console.error('Database insert error:', error);
-        errors += productsToActuallyInsert.length;
+        errors += productsToInsert.length;
       } else {
-        synced += productsToActuallyInsert.length;
+        synced += productsToInsert.length;
       }
 
       // Check if we've synced enough products or reached end of results
@@ -603,7 +669,9 @@ export async function syncImpactProducts(
     }
   }
 
-  return { synced, errors };
+  console.log(`Sync complete: ${synced} synced, ${errors} errors, ${duplicates} duplicates skipped`);
+
+  return { synced, errors, duplicates };
 }
 
 /**
@@ -633,12 +701,13 @@ export async function syncAllCampaigns(
     maxProductsPerCampaign?: number;
     generateEmbeddings?: boolean;
     minQualityScore?: number;
-    onProgress?: (campaignId: string, synced: number, errors: number) => void;
+    onProgress?: (campaignId: string, synced: number, errors: number, duplicates: number) => void;
   } = {}
 ): Promise<{
   totalSynced: number;
   totalErrors: number;
-  campaignResults: Array<{ campaignId: string; synced: number; errors: number }>;
+  totalDuplicates: number;
+  campaignResults: Array<{ campaignId: string; synced: number; errors: number; duplicates: number }>;
 }> {
   const { maxProductsPerCampaign = 500, generateEmbeddings = true, minQualityScore = 5, onProgress } = options;
 
@@ -650,7 +719,8 @@ export async function syncAllCampaigns(
 
   let totalSynced = 0;
   let totalErrors = 0;
-  const campaignResults: Array<{ campaignId: string; synced: number; errors: number }> = [];
+  let totalDuplicates = 0;
+  const campaignResults: Array<{ campaignId: string; synced: number; errors: number; duplicates: number }> = [];
 
   console.log(`Starting sync for ${campaignIds.length} campaigns...`);
 
@@ -658,7 +728,7 @@ export async function syncAllCampaigns(
     try {
       console.log(`Syncing campaign ${campaignId}...`);
 
-      const { synced, errors } = await syncImpactProducts(supabase, {
+      const { synced, errors, duplicates = 0 } = await syncImpactProducts(supabase, {
         campaignId,
         maxProducts: maxProductsPerCampaign,
         generateEmbeddings,
@@ -667,12 +737,13 @@ export async function syncAllCampaigns(
 
       totalSynced += synced;
       totalErrors += errors;
-      campaignResults.push({ campaignId, synced, errors });
+      totalDuplicates += duplicates;
+      campaignResults.push({ campaignId, synced, errors, duplicates });
 
-      console.log(`Campaign ${campaignId}: synced ${synced}, errors ${errors}`);
+      console.log(`Campaign ${campaignId}: synced ${synced}, errors ${errors}, duplicates ${duplicates}`);
 
       if (onProgress) {
-        onProgress(campaignId, synced, errors);
+        onProgress(campaignId, synced, errors, duplicates);
       }
 
       // Rate limiting between campaigns
@@ -681,15 +752,16 @@ export async function syncAllCampaigns(
     } catch (err) {
       console.error(`Error syncing campaign ${campaignId}:`, err);
       totalErrors++;
-      campaignResults.push({ campaignId, synced: 0, errors: 1 });
+      campaignResults.push({ campaignId, synced: 0, errors: 1, duplicates: 0 });
     }
   }
 
-  console.log(`Sync complete: ${totalSynced} products synced, ${totalErrors} errors across ${campaignIds.length} campaigns`);
+  console.log(`Sync complete: ${totalSynced} products synced, ${totalErrors} errors, ${totalDuplicates} duplicates skipped across ${campaignIds.length} campaigns`);
 
   return {
     totalSynced,
     totalErrors,
+    totalDuplicates,
     campaignResults,
   };
 }

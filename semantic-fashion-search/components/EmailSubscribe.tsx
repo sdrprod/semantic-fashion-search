@@ -44,24 +44,24 @@ export function EmailSubscribe() {
   };
 
   return (
-    <div className="email-subscribe">
-      <h3 className="subscribe-title">Stay Updated</h3>
-      <p className="subscribe-description">
-        Get notified about new arrivals, sales, and personalized recommendations.
+    <section className="email-subscribe">
+      <h2 className="email-subscribe-title">Stay Updated on Fashion Trends</h2>
+      <p className="email-subscribe-subtitle">
+        Get exclusive deals and personalized fashion recommendations delivered to your inbox
       </p>
 
-      <form onSubmit={handleSubmit} className="subscribe-form">
+      <form onSubmit={handleSubmit} className="email-subscribe-form">
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
-          className="subscribe-input"
+          className="email-subscribe-input"
           disabled={status === 'loading'}
         />
         <button
           type="submit"
-          className="subscribe-button"
+          className="email-subscribe-button"
           disabled={status === 'loading'}
         >
           {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
@@ -69,10 +69,14 @@ export function EmailSubscribe() {
       </form>
 
       {message && (
-        <p className={`subscribe-message ${status === 'error' ? 'error' : 'success'}`}>
+        <p style={{
+          marginTop: '1rem',
+          color: status === 'error' ? '#dc3545' : '#17a2b8',
+          fontWeight: 600
+        }}>
           {message}
         </p>
       )}
-    </div>
+    </section>
   );
 }

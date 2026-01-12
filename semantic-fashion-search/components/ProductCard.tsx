@@ -17,6 +17,27 @@ export function ProductCard({ product }: ProductCardProps) {
     return formatter.format(price);
   };
 
+  // Determine what to show for brand/vendor
+  const displayBrand = (() => {
+    // Use brand if it's valid (not "Unknown" or empty)
+    if (product.brand &&
+        product.brand.toLowerCase() !== 'unknown' &&
+        product.brand.trim() !== '') {
+      return product.brand;
+    }
+    // Fall back to merchant name if available
+    if (product.merchantName && product.merchantName.trim() !== '') {
+      return product.merchantName;
+    }
+    // No brand to show
+    return null;
+  })();
+
+  // Only show description if it exists and isn't "null" string
+  const showDescription = product.description &&
+                          product.description !== 'null' &&
+                          product.description.trim() !== '';
+
   return (
     <div className="product-card">
       <div className="product-image-container">
@@ -28,11 +49,17 @@ export function ProductCard({ product }: ProductCardProps) {
           className="product-image"
           loading="lazy"
         />
+        {product.onSale && (
+          <div className="sale-badge">SALE</div>
+        )}
       </div>
       <div className="product-info">
-        <p className="product-brand">{product.brand}</p>
+        {displayBrand && <p className="product-brand">{displayBrand}</p>}
         <h3 className="product-title">{product.title}</h3>
-        <p className="product-description">{product.description}</p>
+        {showDescription && <p className="product-description">{product.description}</p>}
+        {product.onSale && (
+          <p className="sale-notice">This item is currently on sale</p>
+        )}
         <p className="product-price">{formatPrice(product.price, product.currency)}</p>
         <a
           href={product.productUrl}

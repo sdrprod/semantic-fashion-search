@@ -12,6 +12,8 @@ export interface Product {
   similarity?: number;
   affiliateNetwork?: string;
   merchantId?: string;
+  merchantName?: string; // Fallback when brand is Unknown
+  onSale?: boolean; // Whether product has "sale" or "on sale" in text
 }
 
 // Search types

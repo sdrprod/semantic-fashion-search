@@ -19,10 +19,21 @@ export function ProductCard({ product, onUpvote, onDownvote, currentVote }: Prod
     return formatter.format(price);
   };
 
-  // Only show brand if it's not "Unknown" or empty
-  const showBrand = product.brand &&
-                    product.brand.toLowerCase() !== 'unknown' &&
-                    product.brand.trim() !== '';
+  // Determine what to show for brand/vendor
+  const displayBrand = (() => {
+    // Use brand if it's valid (not "Unknown" or empty)
+    if (product.brand &&
+        product.brand.toLowerCase() !== 'unknown' &&
+        product.brand.trim() !== '') {
+      return product.brand;
+    }
+    // Fall back to merchant name if available
+    if (product.merchantName && product.merchantName.trim() !== '') {
+      return product.merchantName;
+    }
+    // No brand to show
+    return null;
+  })();
 
   // Only show description if it exists and isn't "null" string
   const showDescription = product.description &&
@@ -38,11 +49,17 @@ export function ProductCard({ product, onUpvote, onDownvote, currentVote }: Prod
           className="product-image"
           loading="lazy"
         />
+        {product.onSale && (
+          <div className="sale-badge">SALE</div>
+        )}
       </div>
       <div className="product-info">
-        {showBrand && <p className="product-brand">{product.brand}</p>}
+        {displayBrand && <p className="product-brand">{displayBrand}</p>}
         <h3 className="product-title">{product.title}</h3>
         {showDescription && <p className="product-description">{product.description}</p>}
+        {product.onSale && (
+          <p className="sale-notice">This item is currently on sale</p>
+        )}
         <p className="product-price">{formatPrice(product.price, product.currency)}</p>
         <a
           href={product.productUrl}

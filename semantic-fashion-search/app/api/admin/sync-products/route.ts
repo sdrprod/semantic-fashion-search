@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
 import { syncImpactProducts, syncAllCampaigns, getAllCampaignIds } from '@/lib/impact';
+import { syncCJProducts } from '@/lib/cj-affiliate';
 import { generateEmbedding } from '@/lib/embeddings';
 
 /**
@@ -16,6 +17,7 @@ import { generateEmbedding } from '@/lib/embeddings';
  *   campaignId?: string (optional, uses env default for single sync)
  *   maxProducts?: number (default: 1000 for single, 500 per campaign for syncAll)
  *   generateEmbeddings?: boolean (default: true)
+ *   minQualityScore?: number (default: 5, range: 0-7)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -35,22 +37,31 @@ export async function POST(request: NextRequest) {
       campaignId,
       maxProducts = 1000,
       generateEmbeddings = true,
+      minQualityScore = 5,
     } = body;
-
-    if (source !== 'impact') {
-      return NextResponse.json(
-        { error: 'Currently only Impact is supported. CJ integration coming soon.' },
-        { status: 400 }
-      );
-    }
 
     const supabase = getSupabaseClient(true);
 
     let synced = 0;
     let errors = 0;
+    let skipped = 0;
     let campaignResults: Array<{ campaignId: string; synced: number; errors: number }> | undefined;
 
-    if (syncAll) {
+    // Handle CJ Affiliate
+    if (source === 'cj') {
+      const result = await syncCJProducts(supabase, {
+        maxProducts,
+        generateEmbeddings: false, // We'll generate separately for better control
+        minQualityScore: minQualityScore || 4, // CJ default is 4 (lower than Impact)
+      });
+
+      synced = result.synced;
+      errors = result.errors;
+      skipped = result.skipped;
+    }
+    // Handle Impact
+    else if (source === 'impact') {
+      if (syncAll) {
       // Sync all configured campaigns
       const campaignIds = getAllCampaignIds();
 
@@ -64,6 +75,7 @@ export async function POST(request: NextRequest) {
       const result = await syncAllCampaigns(supabase, {
         maxProductsPerCampaign: maxProducts || 500,
         generateEmbeddings: false, // We'll generate separately for better control
+        minQualityScore,
       });
 
       synced = result.totalSynced;
@@ -75,10 +87,17 @@ export async function POST(request: NextRequest) {
         campaignId,
         maxProducts,
         generateEmbeddings: false, // We'll generate separately for better control
+        minQualityScore,
       });
 
       synced = result.synced;
       errors = result.errors;
+      }
+    } else {
+      return NextResponse.json(
+        { error: `Unknown affiliate network source: ${source}. Supported: 'impact', 'cj'` },
+        { status: 400 }
+      );
     }
 
     // Generate embeddings if requested
@@ -126,6 +145,7 @@ export async function POST(request: NextRequest) {
       success: boolean;
       synced: number;
       errors: number;
+      skipped?: number;
       embeddingsGenerated: number;
       message: string;
       campaignResults?: Array<{ campaignId: string; synced: number; errors: number }>;
@@ -133,10 +153,11 @@ export async function POST(request: NextRequest) {
       success: true,
       synced,
       errors,
+      skipped: skipped > 0 ? skipped : undefined,
       embeddingsGenerated,
       message: syncAll
         ? `Synced ${synced} products from ${campaignResults?.length || 0} campaigns with ${errors} errors. Generated ${embeddingsGenerated} embeddings.`
-        : `Synced ${synced} products with ${errors} errors. Generated ${embeddingsGenerated} embeddings.`,
+        : `Synced ${synced} products${skipped > 0 ? ` (skipped ${skipped})` : ''} with ${errors} errors. Generated ${embeddingsGenerated} embeddings.`,
     };
 
     if (campaignResults) {

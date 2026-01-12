@@ -7,6 +7,8 @@ export interface Product {
   price: number | null;
   currency: string;
   productUrl: string;
+  merchantName?: string; // Fallback when brand is Unknown
+  onSale?: boolean; // Whether product has "sale" or "on sale" in text
 }
 
 export interface SearchResponse {

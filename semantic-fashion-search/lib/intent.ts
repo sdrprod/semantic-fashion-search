@@ -34,7 +34,7 @@ Return your response as JSON with this structure:
       "weight": 1.0
     }
   ],
-  "explanation": "brief explanation of interpretation"
+  "explanation": "Write in second person addressing the user directly. Start with 'I understand that you are looking for...' and summarize their request conversationally. End with 'Is that correct?' to invite feedback."
 }
 
 Important guidelines:
@@ -44,7 +44,8 @@ Important guidelines:
 - Weight primary items higher (1.0) and accessories lower (0.6-0.8)
 - Priority 1 is highest, increase for secondary items
 - Extract subtle meaning - "not trying to show anyone up" means elegant but understated
-- "Stunning but not showing anyone up" means sophisticated, refined, not flashy`;
+- "Stunning but not showing anyone up" means sophisticated, refined, not flashy
+- ALWAYS provide an explanation in the format described above, addressing the user directly`;
 
   const response = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
@@ -133,5 +134,6 @@ export function createSimpleIntent(query: string): ParsedIntent {
         weight: 1.0,
       },
     ],
+    explanation: `I understand that you are looking for ${query}. Is that correct?`,
   };
 }

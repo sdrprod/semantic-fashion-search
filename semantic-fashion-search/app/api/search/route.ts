@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { query, limit = 10, page = 1 } = body;
+    const { query, limit = 24, page = 1 } = body;
 
     console.log('[Search API] Query params:', { query, limit, page });
 

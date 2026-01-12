@@ -13,9 +13,12 @@ export function App() {
     setRefinement,
     results,
     loading,
+    loadingMore,
     error,
     showRefinement,
-    runSearch
+    hasMore,
+    runSearch,
+    loadMore,
   } = useSearch();
 
   const sessionId = useSession();
@@ -85,17 +88,34 @@ export function App() {
           )}
 
           {!loading && !error && visibleResults.length > 0 && (
-            <div className="results-grid">
-              {visibleResults.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onUpvote={upvote}
-                  onDownvote={downvote}
-                  currentVote={votes.get(product.id)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="results-grid">
+                {visibleResults.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onUpvote={upvote}
+                    onDownvote={downvote}
+                    currentVote={votes.get(product.id)}
+                  />
+                ))}
+              </div>
+
+              {hasMore && (
+                <div className="load-more-container">
+                  <button
+                    className="load-more-button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? "Loading..." : "Load More"}
+                  </button>
+                  <p className="results-count">
+                    Showing {visibleResults.length} results
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>

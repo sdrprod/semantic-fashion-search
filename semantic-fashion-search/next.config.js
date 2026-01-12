@@ -46,6 +46,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.dhresource.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'static-dress.missacc.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.missacc.com',
+      },
     ],
   },
 

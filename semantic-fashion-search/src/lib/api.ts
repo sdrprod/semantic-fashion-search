@@ -5,14 +5,19 @@ import type { SearchResponse } from "../types";
  */
 export async function searchProducts(
   query: string,
-  limit = 6
+  options: {
+    limit?: number;
+    page?: number;
+  } = {}
 ): Promise<SearchResponse> {
+  const { limit = 24, page = 1 } = options;
+
   const response = await fetch("/api/search", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ query, limit })
+    body: JSON.stringify({ query, limit, page })
   });
 
   if (!response.ok) {

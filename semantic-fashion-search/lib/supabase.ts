@@ -72,6 +72,8 @@ export interface ProductRow {
   combined_text: string;
   embedding: number[];
   similarity?: number;
+  merchant_name?: string;
+  on_sale?: boolean;
   created_at: string;
   updated_at: string;
 }
