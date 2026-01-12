@@ -1,7 +1,7 @@
 import { getSupabaseClient, ProductRow } from './supabase';
 import { generateEmbedding, generateEmbeddings } from './embeddings';
 import { extractIntent, isSimpleQuery, createSimpleIntent } from './intent';
-import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision-embeddings';
+// import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision-embeddings';
 import type { Product, SearchResponse, ParsedIntent, SearchQuery } from '@/types';
 
 interface SearchOptions {
@@ -103,8 +103,10 @@ async function executeMultiSearch(
   console.log('[executeMultiSearch] Text embeddings generated:', textEmbeddings.length, 'embeddings of length', textEmbeddings[0]?.length);
 
   // Generate vision embeddings if image validation is enabled
+  // DISABLED: @xenova/transformers causes serverless function errors
+  // TODO: Re-enable when vision model is fixed and properly configured for serverless
   let visionEmbeddings: number[][] | null = null;
-  if (enableImageValidation) {
+  /* if (enableImageValidation) {
     console.log('[executeMultiSearch] Generating vision embeddings for image validation...');
     try {
       visionEmbeddings = await Promise.all(
@@ -115,7 +117,7 @@ async function executeMultiSearch(
       console.error('[executeMultiSearch] Vision embedding generation failed, continuing without image validation:', error);
       visionEmbeddings = null;
     }
-  }
+  } */
 
   // Execute searches in parallel
   const searchPromises = queries.map(async (searchQuery, index) => {
@@ -180,7 +182,9 @@ async function executeMultiSearch(
     });
 
     // STAGE 2: Image validation (if enabled and vision embedding available)
-    if (visionEmbedding && enableImageValidation) {
+    // DISABLED: @xenova/transformers causes serverless function errors
+    // TODO: Re-enable when vision model is fixed and properly configured for serverless
+    /* if (visionEmbedding && enableImageValidation) {
       console.log(`[executeMultiSearch] Applying image validation (threshold: ${imageValidationThreshold})...`);
 
       const beforeCount = filteredProducts.length;
@@ -228,7 +232,7 @@ async function executeMultiSearch(
 
       const filteredCount = beforeCount - filteredProducts.length;
       console.log(`[executeMultiSearch] Image validation filtered out ${filteredCount}/${beforeCount} products`);
-    }
+    } */
 
     // Convert to Product type
     const products: Product[] = filteredProducts.map((row: ProductRow & { similarity: number }) => ({
