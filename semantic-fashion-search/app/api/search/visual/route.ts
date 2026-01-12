@@ -189,6 +189,7 @@ export async function POST(request: NextRequest) {
     // If images provided, analyze them with GPT-4 Vision
     if (files.length > 0) {
       console.log(`[Visual Search API] Processing ${files.length} images...`);
+      const startImageProcessing = Date.now();
 
       const imageDataUrls: string[] = [];
       for (const file of files) {
@@ -203,10 +204,15 @@ export async function POST(request: NextRequest) {
           );
         }
       }
+      const imageConversionTime = Date.now() - startImageProcessing;
+      console.log(`[Visual Search API] Image conversion took ${imageConversionTime}ms`);
 
       // Analyze images with GPT-4 Vision
       try {
+        const startVisionAnalysis = Date.now();
         const imageDescription = await analyzeImagesWithVision(imageDataUrls);
+        const visionAnalysisTime = Date.now() - startVisionAnalysis;
+        console.log(`[Visual Search API] GPT-4 Vision analysis took ${visionAnalysisTime}ms`);
 
         // Combine image description with text query if provided
         if (textQuery && textQuery.trim().length > 0) {
@@ -233,13 +239,15 @@ export async function POST(request: NextRequest) {
 
     // Use semantic search with the combined query
     console.log('[Visual Search API] Executing semantic search...');
+    const startSemanticSearch = Date.now();
     const searchResponse = await semanticSearch(finalSearchQuery, {
       limit: 24,
       page: 1,
       similarityThreshold: 0.3,
       enableImageValidation: false, // Don't need image validation for visual search
     });
-
+    const semanticSearchTime = Date.now() - startSemanticSearch;
+    console.log(`[Visual Search API] Semantic search took ${semanticSearchTime}ms`);
     console.log(`[Visual Search API] Found ${searchResponse.results.length} results`);
 
     // Format response

@@ -127,17 +127,62 @@ function isSexyProduct(title: string, description: string): boolean {
 }
 
 /**
+ * Decode HTML entities in text
+ */
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#039;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ');
+}
+
+/**
  * Check if product is for men
  */
 function isMensProduct(title: string, description: string): boolean {
   const mensTerms = [
     "men's", 'mens', "mens'", 'for men', 'for him', 'men only',
     'male', 'masculine', 'man ', 'gentleman', "gentleman's",
-    'boys', "boy's", 'men ', 'menswear'
+    'boys', "boy's", 'men ', 'menswear', 'mens pants', 'mens shirt',
+    'mens jacket', 'mens suit', 'mens shoe', 'mens wear'
+  ];
+
+  // Decode HTML entities first
+  const decodedTitle = decodeHtmlEntities(title);
+  const decodedDescription = decodeHtmlEntities(description);
+  const combinedText = `${decodedTitle} ${decodedDescription}`.toLowerCase();
+
+  return mensTerms.some(term => combinedText.includes(term));
+}
+
+/**
+ * Check if product is raw fabric or non-apparel material
+ */
+function isNonApparelMaterial(title: string, description: string): boolean {
+  const materialTerms = [
+    'fabric by the yard', 'by the yard', 'fabric diy', 'diy material',
+    'upholstery fabric', 'sofa fabric', 'cushion cover fabric',
+    'curtain fabric', 'canvas fabric', 'raw fabric', 'cloth material',
+    'bed-sheeting material', 'bedding fabric', 'home decor fabric',
+    'craft fabric', 'sewing fabric', 'textile material', 'yard fabric',
+    'width ', 'wide ', 'per yard', '/yard', 'fabric wholesale',
+    'coral velvet fabric', 'flannel fabric', 'linen fabric',
+    'cotton fabric', 'canvas by', 'material by', 'upholstery sofa',
+    'cushion covers fabric', 'diy matreial', 'diy materia'
   ];
 
   const combinedText = `${title} ${description}`.toLowerCase();
-  return mensTerms.some(term => combinedText.includes(term));
+
+  // Check for fabric/material indicators
+  const hasMaterialTerm = materialTerms.some(term => combinedText.includes(term));
+
+  // Check for measurements indicating raw fabric (e.g., "Width 145cm", "Wide 59\"")
+  const hasFabricMeasurement = /width\s*\d+|wide\s*\d+/i.test(combinedText);
+
+  return hasMaterialTerm || hasFabricMeasurement;
 }
 
 /**
@@ -243,7 +288,19 @@ async function executeMultiSearch(
         return false;
       }
 
-      // FILTER 3: DHGate quality - Apply stricter threshold for DHGate vendors
+      // FILTER 3: Non-apparel materials - Filter out raw fabric, upholstery, DIY materials
+      if (isNonApparelMaterial(row.title, row.description || '')) {
+        console.log(`[executeMultiSearch] ❌ Filtered non-apparel material: "${row.title?.slice(0, 60)}..."`);
+        return false;
+      }
+
+      // FILTER 4: Price threshold - Minimum $20 for quality control
+      if (row.price !== null && row.price !== undefined && row.price < 20) {
+        console.log(`[executeMultiSearch] ❌ Filtered low-price product ($${row.price}): "${row.title?.slice(0, 60)}..."`);
+        return false;
+      }
+
+      // FILTER 5: DHGate quality - Apply stricter threshold for DHGate vendors
       const isDHGate = row.product_url?.toLowerCase().includes('dhgate') ||
                        row.brand?.toLowerCase().includes('dhgate');
       const requiredThreshold = isDHGate ? similarityThreshold + 0.1 : similarityThreshold;
