@@ -702,3 +702,247 @@ Search Flow with Feedback:
 5. Test Google OAuth flow
 
 ================================================================================
+
+## Session Continued: 2026-01-12 (Pagination & UX Improvements)
+### Time: ~04:00 AM
+
+**Context**:
+- Continuing from previous session after navigation improvements
+- User testing revealed pagination and UX issues
+- Image embeddings still running in background (~10-15% complete)
+
+**Tasks Completed This Session**:
+
+### 1. Fixed Pagination System ✅
+
+**Problem Reported**:
+- Always showing exactly 30 results (3 pages of 10)
+- Same 10 products repeating on each page instead of showing new items
+- totalCount always estimated as 30 regardless of actual matches
+
+**Root Cause Analysis**:
+- `page` parameter was accepted but never used (lib/search.ts line 82)
+- Every page request fetched the same top 10 results
+- totalCount hardcoded to `results.length * 3` (always 30 for 10 results)
+
+**Solution Implemented** (lib/search.ts):
+```javascript
+// OLD: Fetch limit, ignore page, estimate total
+const searchResults = await executeMultiSearch(queries, limit, page, threshold);
+const rankedResults = rankResults(searchResults, queries, limit, diversityFactor);
+const estimatedTotal = rankedResults.length < limit ? rankedResults.length : rankedResults.length * 3;
+
+// NEW: Fetch pool of 50, paginate properly, return actual total
+const poolSize = limit * 5; // 50 results
+const searchResults = await executeMultiSearch(queries, poolSize, threshold);
+const allRankedResults = rankResults(searchResults, queries, poolSize, diversityFactor);
+const startIndex = (page - 1) * limit;
+const paginatedResults = allRankedResults.slice(startIndex, startIndex + limit);
+const totalCount = allRankedResults.length; // Actual count
+```
+
+**Key Changes**:
+- Removed unused `page` parameter from executeMultiSearch
+- Fetch pool of 50 results upfront (5 pages worth)
+- Rank all 50 results based on relevance + diversity
+- Slice appropriate page from ranked pool (page 1: 0-12, page 2: 12-24, etc.)
+- Return actual total count instead of estimate
+- Added logging: `[semanticSearch] Pagination: page=X, showing Y-Z of N total results`
+
+**Benefits**:
+- Different products on each page (no more repeats)
+- Accurate result counts
+- Proper pagination through full result set
+- Up to 5 pages supported (60 results max)
+
+### 2. Navigation & Reset UX Improvements ✅
+
+**Problem Reported**:
+- Clicking Home/Logo was refreshing "also searching for" box (accidental behavior)
+- User liked the refresh feature but wanted it intentional
+- Home/Logo should reset to blank search page, not just refresh
+
+**Solution Implemented**:
+
+**A. Added Dedicated Refresh Button** (app/page.tsx, app/globals.css):
+- Circular refresh icon button next to "Also searching for" label
+- Controlled randomization via `fanoutSeed` state (not just re-render)
+- Seed-based hash function for deterministic shuffling
+- Smooth 180° rotation animation on hover
+- Scale-down effect on click for tactile feedback
+- Indigo accent color matching fanout box border
+
+**B. Fixed Home/Logo Navigation** (app/page.tsx, components/Navigation.tsx):
+- Created `handleReset()` function to clear all state
+- Resets: query, results, intent, uploadedImages, error, searchType, page, totalCount, fanoutSeed
+- Home link calls handleReset() → Returns to blank search page
+- Logo click calls handleReset() → Returns to blank search page
+- "New Search" button calls handleReset() → Consistent behavior
+- Works on desktop and mobile menus
+
+**C. State Management**:
+```javascript
+const [fanoutSeed, setFanoutSeed] = useState(0);
+
+const handleReset = () => {
+  // Clear ALL state - return to blank search
+  setQuery(''); setResults([]); setIntent(null);
+  setUploadedImages([]); setError(null); setSearchType(null);
+  setPage(1); setTotalCount(0); setFanoutSeed(0);
+};
+
+const handleRefreshFanout = () => {
+  // Just increment seed - refresh displayed queries
+  setFanoutSeed(prev => prev + 1);
+};
+```
+
+**CSS Styling** (app/globals.css):
+```css
+.fanout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fanout-refresh-btn {
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  color: #6366f1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fanout-refresh-btn:hover {
+  background: #f8f9fa;
+  border-color: #6366f1;
+  transform: rotate(180deg); /* Smooth rotation */
+}
+```
+
+### 3. Fixed Intent Extraction Bias ✅
+
+**Problem Reported**:
+- System constantly adding "understated", "not flashy", "not showing off" to interpretations
+- User never asked for these qualifiers
+- Happening even for queries like "glamorous dress" or "stunning outfit"
+
+**Root Cause** (lib/intent.ts lines 46-47):
+```javascript
+// BIASED EXAMPLES - Teaching AI wrong behavior:
+- Extract subtle meaning - "not trying to show anyone up" means elegant but understated
+- "Stunning but not showing anyone up" means sophisticated, refined, not flashy
+```
+
+These examples were training Claude to add "understated/not flashy" to every interpretation.
+
+**Solution - Updated System Prompt**:
+```javascript
+Important guidelines:
+- ONLY extract what the user explicitly stated - do NOT add style preferences they didn't mention
+- Make contextual inferences ONLY when clearly implied (e.g., "ball" → formal, "gym" → athletic)
+- NEVER default to "understated", "not flashy", or similar qualifiers unless the user said so
+- If the user says "stunning" or "glamorous", preserve that - don't tone it down
+```
+
+**Expected Behavior Now**:
+- User: "black dress for date night" → Extract: black, dress, date night, romantic (NO "understated")
+- User: "glamorous gown for ball" → Extract: glamorous, gown, formal, ball (PRESERVE "glamorous")
+- User: "workout clothes hot weather" → Extract: athletic, moisture-wicking (contextual inference OK)
+- User: "elegant without being flashy" → Extract: elegant, understated, refined (NOW it's correct)
+
+### 4. Page Size Optimization for Grid Layout ✅
+
+**Problem Reported**:
+- 10 items per page = 3 rows + 1 lonely item (looks incomplete)
+- Users might not realize there are more pages
+- Grid layout looks unbalanced
+
+**Solution**:
+Changed default page size from 10 to 12 items across entire codebase:
+- app/page.tsx: `useState(12)` - Frontend state
+- app/api/search/route.ts: `limit = 12` - API default
+- lib/search.ts semanticSearch: `limit = 12` - Main search default
+- lib/search.ts simpleSearch: `limit = 12` - Simple search default
+
+**Visual Improvement**:
+- Before: 10 items = 3 rows of 3 + 1 lonely item
+- After: 12 items = 4 complete rows of 3
+- Clean 4x3 grid layout on desktop
+- Makes pagination more obvious and professional
+
+**Pagination Pool Update**:
+- poolSize = limit * 5 = 12 * 5 = 60 results
+- Supports up to 5 pages (12 items each)
+
+================================================================================
+
+## Summary of Changes
+
+**Files Modified**:
+1. **lib/search.ts** (Major changes)
+   - Fixed pagination: fetch pool of 50-60 results, slice by page
+   - Removed unused `page` parameter from executeMultiSearch
+   - Added actual totalCount instead of estimated
+   - Changed default limit from 10 → 12
+   - Added pagination logging
+
+2. **app/page.tsx** (Navigation + state management)
+   - Added fanoutSeed state for controlled randomization
+   - Added handleReset() function (clear all state)
+   - Added handleRefreshFanout() function (increment seed)
+   - Pass onReset prop to Navigation component
+   - Updated "New Search" button to call handleReset()
+   - Added refresh button to fanout box with rotation animation
+   - Changed default pageSize from 10 → 12
+
+3. **components/Navigation.tsx** (Reset functionality)
+   - Added NavigationProps interface with onReset callback
+   - Added handleHomeClick() to intercept Home/Logo clicks
+   - Changed Link → <a> for Home link (to use handleHomeClick)
+   - Updated mobile menu to use same reset logic
+   - Logo and Home now properly reset to blank search
+
+4. **app/globals.css** (Refresh button styling)
+   - Added .fanout-header flexbox layout
+   - Added .fanout-refresh-btn styles
+   - Circular refresh icon button with white background
+   - 180° rotation animation on hover
+   - Scale-down effect on click
+   - Indigo accent color (#6366f1)
+
+5. **lib/intent.ts** (Remove bias)
+   - Removed biased examples about "understated/not flashy"
+   - Added explicit instruction: ONLY extract what user stated
+   - Added instruction: NEVER default to "understated" unless user said so
+   - Added instruction: Preserve "stunning/glamorous" if user says it
+   - Allow contextual inferences only when clearly implied
+
+6. **app/api/search/route.ts** (API default)
+   - Changed default limit from 24 → 12
+
+**Current System State**:
+- Database: 7,267 products (7,134 Impact + 133 CJ)
+- Text embeddings: 100% complete
+- Image embeddings: ~10-15% complete (running in background)
+- Pagination: Working correctly with actual counts
+- Navigation: Home/Logo/New Search all reset properly
+- Intent extraction: No longer adding unwanted qualifiers
+- Grid layout: Clean 4x3 layout (12 items per page)
+
+**User Experience Improvements**:
+1. ✅ Pagination shows different products on each page
+2. ✅ Accurate result counts (no more artificial 30)
+3. ✅ Refresh button for "also searching for" queries
+4. ✅ Home/Logo properly reset to blank search
+5. ✅ Intent extraction respects user's actual words
+6. ✅ Grid layout looks balanced (4 complete rows)
+
+**Next Steps**:
+- Image embeddings will complete automatically (no action needed)
+- Ready to begin Phase 1: Authentication & User Feedback System
+- See USER-FEEDBACK-MASTER-PLAN.md for implementation roadmap
+
+================================================================================

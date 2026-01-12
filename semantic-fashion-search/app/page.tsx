@@ -26,10 +26,29 @@ export default function Home() {
   const [intent, setIntent] = useState<ParsedIntent | null>(null);
   const [searchType, setSearchType] = useState<'text' | 'visual' | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
+  const [fanoutSeed, setFanoutSeed] = useState(0); // For controlled randomization
 
   const hasSearched = results.length > 0 || error !== null || loading || intent !== null;
+
+  // Reset to initial blank search state
+  const handleReset = () => {
+    setQuery('');
+    setUploadedImages([]);
+    setResults([]);
+    setError(null);
+    setIntent(null);
+    setSearchType(null);
+    setPage(1);
+    setTotalCount(0);
+    setFanoutSeed(0);
+  };
+
+  // Refresh the "also searching for" queries
+  const handleRefreshFanout = () => {
+    setFanoutSeed(prev => prev + 1);
+  };
 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery || searchQuery.trim().length < 3) {
@@ -183,7 +202,7 @@ export default function Home() {
 
   return (
     <div className="app">
-      <Navigation />
+      <Navigation onReset={handleReset} />
 
       <div className="container">
         {/* Hero Section */}
@@ -265,14 +284,38 @@ export default function Home() {
               {/* Show sample search queries from intent fan-out */}
               {intent?.searchQueries && intent.searchQueries.length > 1 && searchType === 'text' && (
                 <div className="search-fanout">
-                  <p className="fanout-label">Also searching these queries and more:</p>
+                  <div className="fanout-header">
+                    <p className="fanout-label">Also searching these queries and more:</p>
+                    <button
+                      className="fanout-refresh-btn"
+                      onClick={handleRefreshFanout}
+                      title="Show different queries"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M13.65 2.35C12.2 0.9 10.21 0 8 0 3.58 0 0.01 3.58 0.01 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                   <div className="fanout-queries">
                     {intent.searchQueries
                       .slice()
-                      .sort(() => Math.random() - 0.5)
+                      .sort(() => {
+                        // Seed-based randomization for controlled refresh
+                        const hash = (str: string) => {
+                          let h = fanoutSeed;
+                          for (let i = 0; i < str.length; i++) {
+                            h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+                          }
+                          return h;
+                        };
+                        return Math.sin(hash(Math.random().toString())) - 0.5;
+                      })
                       .slice(0, 3)
                       .map((sq, i) => (
-                        <span key={i} className="fanout-query">
+                        <span key={`${fanoutSeed}-${i}`} className="fanout-query">
                           "{sq.query}"
                         </span>
                       ))}
@@ -302,7 +345,7 @@ export default function Home() {
                 </div>
                 <button
                   className="new-search-btn"
-                  onClick={() => window.location.href = '/'}
+                  onClick={handleReset}
                 >
                   New Search
                 </button>

@@ -21,7 +21,7 @@ export async function semanticSearch(
   options: SearchOptions = {}
 ): Promise<SearchResponse> {
   const {
-    limit = 10,
+    limit = 12,
     page = 1,
     similarityThreshold = 0.3,  // Back to 0.3 with proper embeddings
     diversityFactor = 0.1,
@@ -38,35 +38,41 @@ export async function semanticSearch(
     intent = await extractIntent(query);
   }
 
-  // Execute searches for all queries
+  // Fetch a larger pool of results to enable proper pagination
+  // We fetch more than needed and paginate through them
+  const maxPages = 5; // Support up to 5 pages
+  const poolSize = limit * maxPages;
+
   const searchResults = await executeMultiSearch(
     intent.searchQueries,
-    limit,
-    page,
+    poolSize,
     similarityThreshold,
     enableImageValidation,
     imageValidationThreshold
   );
 
-  // Merge and rank results
-  const rankedResults = rankResults(
+  // Merge and rank ALL results from the pool
+  const allRankedResults = rankResults(
     searchResults,
     intent.searchQueries,
-    limit,
+    poolSize,
     diversityFactor
   );
 
-  // For totalCount: we don't know the exact total due to filtering
-  // Set it higher than results.length to enable pagination
-  // This allows "Load More" / pagination to work
-  const estimatedTotal = rankedResults.length < limit
-    ? rankedResults.length  // Last page
-    : rankedResults.length * 3;  // Estimate more pages available
+  // Calculate pagination
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedResults = allRankedResults.slice(startIndex, endIndex);
+
+  // Use actual total count from ranked results
+  const totalCount = allRankedResults.length;
+
+  console.log(`[semanticSearch] Pagination: page=${page}, showing ${startIndex}-${endIndex} of ${totalCount} total results`);
 
   return {
     query,
-    results: rankedResults,
-    totalCount: estimatedTotal,
+    results: paginatedResults,
+    totalCount,
     page,
     pageSize: limit,
     intent,
@@ -79,7 +85,6 @@ export async function semanticSearch(
 async function executeMultiSearch(
   queries: SearchQuery[],
   limit: number,
-  page: number,
   similarityThreshold: number,
   enableImageValidation: boolean = false,
   imageValidationThreshold: number = 0.6
@@ -335,7 +340,7 @@ function applyDiversity(products: Product[], factor: number): Product[] {
  */
 export async function simpleSearch(
   query: string,
-  limit: number = 10
+  limit: number = 12
 ): Promise<Product[]> {
   const supabase = getSupabaseClient(true) as any;
   const embedding = await generateEmbedding(query);

@@ -43,8 +43,10 @@ Important guidelines:
 - For complex queries, break down into multiple focused searches
 - Weight primary items higher (1.0) and accessories lower (0.6-0.8)
 - Priority 1 is highest, increase for secondary items
-- Extract subtle meaning - "not trying to show anyone up" means elegant but understated
-- "Stunning but not showing anyone up" means sophisticated, refined, not flashy
+- ONLY extract what the user explicitly stated - do NOT add style preferences they didn't mention
+- Make contextual inferences ONLY when clearly implied (e.g., "ball" → formal, "gym" → athletic)
+- NEVER default to "understated", "not flashy", or similar qualifiers unless the user said so
+- If the user says "stunning" or "glamorous", preserve that - don't tone it down
 - ALWAYS provide an explanation in the format described above, addressing the user directly`;
 
   const response = await anthropic.messages.create({
