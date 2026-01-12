@@ -11,6 +11,7 @@ interface SearchOptions {
   diversityFactor?: number;
   enableImageValidation?: boolean;
   imageValidationThreshold?: number;
+  allowSexyContent?: boolean; // Explicitly allow sexy/provocative content
 }
 
 /**
@@ -27,6 +28,7 @@ export async function semanticSearch(
     diversityFactor = 0.1,
     enableImageValidation = false,  // DISABLED - vision model broken, needs fixing
     imageValidationThreshold = 0.6,  // 60% image similarity required
+    allowSexyContent = false, // Default to filtering sexy content
   } = options;
 
   // Determine if we need full intent extraction or simple search
@@ -48,7 +50,8 @@ export async function semanticSearch(
     poolSize,
     similarityThreshold,
     enableImageValidation,
-    imageValidationThreshold
+    imageValidationThreshold,
+    allowSexyContent
   );
 
   // Merge and rank ALL results from the pool
@@ -193,7 +196,8 @@ async function executeMultiSearch(
   limit: number,
   similarityThreshold: number,
   enableImageValidation: boolean = false,
-  imageValidationThreshold: number = 0.6
+  imageValidationThreshold: number = 0.6,
+  allowSexyContent: boolean = false
 ): Promise<Map<string, Product[]>> {
   console.log('[executeMultiSearch] Starting with queries:', queries.map(q => q.query));
   console.log('[executeMultiSearch] Image validation:', enableImageValidation ? 'ENABLED' : 'DISABLED');
@@ -270,14 +274,11 @@ async function executeMultiSearch(
 
     // Filter by similarity threshold and convert to Product type
     console.log(`[executeMultiSearch] Filtering ${data.length} products with text threshold ${similarityThreshold}`);
-
-    // Check if query has explicit sexy intent
-    const queryHasSexyIntent = hasSexyIntent(searchQuery.query);
-    console.log(`[executeMultiSearch] Query sexy intent: ${queryHasSexyIntent ? 'YES' : 'NO'}`);
+    console.log(`[executeMultiSearch] Sexy content allowed: ${allowSexyContent ? 'YES' : 'NO'}`);
 
     let filteredProducts = data.filter((row: ProductRow & { similarity: number }) => {
       // FILTER 1: Content filtering - Remove sexy/provocative items unless explicitly requested
-      if (!queryHasSexyIntent && isSexyProduct(row.title, row.description || '')) {
+      if (!allowSexyContent && isSexyProduct(row.title, row.description || '')) {
         console.log(`[executeMultiSearch] ❌ Filtered sexy product (not requested): "${row.title?.slice(0, 60)}..."`);
         return false;
       }

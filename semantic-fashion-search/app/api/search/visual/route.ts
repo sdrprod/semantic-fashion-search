@@ -185,6 +185,21 @@ export async function POST(request: NextRequest) {
     }
 
     let finalSearchQuery = '';
+    let hasSexyIntent = false;
+
+    // Check sexy intent on ORIGINAL user query before GPT-4 transformation
+    if (textQuery && textQuery.trim().length > 0) {
+      const sexyKeywords = [
+        'sexy', 'lingerie', 'intimate', 'risque', 'provocative', 'enticing',
+        'skimpy', 'revealing', 'sultry', 'seductive', 'alluring', 'naughty',
+        'racy', 'steamy', 'sensual', 'erotic', 'burlesque', 'negligee',
+        'teddy', 'bodysuit', 'fishnet', 'lace bra', 'thong', 'garter',
+        'bedroom', 'boudoir', 'spicy', 'hot outfit', 'daring'
+      ];
+      const lowerQuery = textQuery.toLowerCase();
+      hasSexyIntent = sexyKeywords.some(keyword => lowerQuery.includes(keyword));
+      console.log(`[Visual Search API] User query sexy intent: ${hasSexyIntent ? 'YES' : 'NO'}`);
+    }
 
     // If images provided, analyze them with GPT-4 Vision
     if (files.length > 0) {
@@ -239,12 +254,14 @@ export async function POST(request: NextRequest) {
 
     // Use semantic search with the combined query
     console.log('[Visual Search API] Executing semantic search...');
+    console.log(`[Visual Search API] Passing sexy intent flag: ${hasSexyIntent}`);
     const startSemanticSearch = Date.now();
     const searchResponse = await semanticSearch(finalSearchQuery, {
       limit: 24,
       page: 1,
       similarityThreshold: 0.3,
       enableImageValidation: false, // Don't need image validation for visual search
+      allowSexyContent: hasSexyIntent, // Pass through the original user intent
     });
     const semanticSearchTime = Date.now() - startSemanticSearch;
     console.log(`[Visual Search API] Semantic search took ${semanticSearchTime}ms`);

@@ -25,10 +25,24 @@ export async function POST(request: NextRequest) {
 
     console.log('[Search API] Starting semantic search...');
 
+    // Check sexy intent on user query
+    let hasSexyIntent = false;
+    const sexyKeywords = [
+      'sexy', 'lingerie', 'intimate', 'risque', 'provocative', 'enticing',
+      'skimpy', 'revealing', 'sultry', 'seductive', 'alluring', 'naughty',
+      'racy', 'steamy', 'sensual', 'erotic', 'burlesque', 'negligee',
+      'teddy', 'bodysuit', 'fishnet', 'lace bra', 'thong', 'garter',
+      'bedroom', 'boudoir', 'spicy', 'hot outfit', 'daring'
+    ];
+    const lowerQuery = query.trim().toLowerCase();
+    hasSexyIntent = sexyKeywords.some(keyword => lowerQuery.includes(keyword));
+    console.log(`[Search API] User query sexy intent: ${hasSexyIntent ? 'YES' : 'NO'}`);
+
     // Perform semantic search with intent extraction
     const searchResponse = await semanticSearch(query.trim(), {
       limit: validatedLimit,
       page: validatedPage,
+      allowSexyContent: hasSexyIntent, // Pass through the user intent
     });
 
     console.log('[Search API] Search complete, results:', searchResponse.results.length);
