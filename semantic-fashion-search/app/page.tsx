@@ -295,9 +295,17 @@ export default function Home() {
           {!loading && !error && results.length > 0 && (
             <>
               <div className="results-header">
-                <p className="results-count">
-                  Showing {results.length} of {totalCount} results
-                </p>
+                <div className="results-info">
+                  <p className="results-count">
+                    Showing {results.length} of {totalCount} results
+                  </p>
+                </div>
+                <button
+                  className="new-search-btn"
+                  onClick={() => window.location.href = '/'}
+                >
+                  New Search
+                </button>
               </div>
 
               <div className="results-grid">
