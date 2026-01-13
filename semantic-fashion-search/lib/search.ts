@@ -40,10 +40,11 @@ export async function semanticSearch(
     intent = await extractIntent(query);
   }
 
-  // Fetch a larger pool of results to enable proper pagination
-  // We fetch more than needed and paginate through them
-  const maxPages = 5; // Support up to 5 pages
-  const poolSize = limit * maxPages;
+  // Fetch a MUCH larger pool of results to enable proper pagination
+  // We need extra because filtering reduces the count significantly
+  // Quality filtering + color filtering + price filtering can reduce by 50-70%
+  const maxPages = 10; // Support up to 10 pages (was 5)
+  const poolSize = limit * maxPages; // Fetch 120 results instead of 60
 
   const searchResults = await executeMultiSearch(
     intent.searchQueries,

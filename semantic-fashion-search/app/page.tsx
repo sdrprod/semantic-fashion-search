@@ -397,7 +397,11 @@ export default function Home() {
               <div className="results-header">
                 <div className="results-info">
                   <p className="results-count">
-                    Showing {results.length} of {totalCount} results
+                    {(() => {
+                      const start = (page - 1) * pageSize + 1;
+                      const end = Math.min(page * pageSize, totalCount);
+                      return `Showing results ${start}-${end} of ${totalCount}`;
+                    })()}
                   </p>
                 </div>
                 <button
