@@ -38,35 +38,55 @@ export async function POST(request: NextRequest) {
     hasSexyIntent = sexyKeywords.some(keyword => lowerQuery.includes(keyword));
     console.log(`[Search API] User query sexy intent: ${hasSexyIntent ? 'YES' : 'NO'}`);
 
-    // Generate cache key
+    // Generate cache key (page-agnostic - same key for all pages)
     const cacheKey = generateCacheKey(query.trim(), {
-      limit: validatedLimit,
-      page: validatedPage,
       allowSexyContent: hasSexyIntent,
     });
 
-    // Check cache first
-    const cachedResults = await getCachedSearch<SearchResponse>(cacheKey);
-    if (cachedResults) {
-      console.log('[Search API] Returning cached results ⚡');
-      return NextResponse.json(cachedResults);
+    // Check cache first for FULL result set
+    const cachedFullResults = await getCachedSearch<SearchResponse>(cacheKey);
+
+    if (cachedFullResults) {
+      console.log('[Search API] Cache HIT ⚡ - paginating from cached results');
+
+      // Paginate from cached full results
+      const startIndex = (validatedPage - 1) * validatedLimit;
+      const endIndex = startIndex + validatedLimit;
+      const paginatedResults = cachedFullResults.results.slice(startIndex, endIndex);
+
+      return NextResponse.json({
+        ...cachedFullResults,
+        results: paginatedResults,
+        page: validatedPage,
+        pageSize: validatedLimit,
+      });
     }
 
-    console.log('[Search API] Starting semantic search...');
+    console.log('[Search API] Cache MISS - starting semantic search...');
 
-    // Perform semantic search with intent extraction
+    // Perform semantic search - get ALL results (page 1 with large limit)
     const searchResponse = await semanticSearch(query.trim(), {
-      limit: validatedLimit,
-      page: validatedPage,
-      allowSexyContent: hasSexyIntent, // Pass through the user intent
+      limit: 120, // Fetch all results at once
+      page: 1,
+      allowSexyContent: hasSexyIntent,
     });
 
-    console.log('[Search API] Search complete, results:', searchResponse.results.length);
+    console.log('[Search API] Search complete, total results:', searchResponse.results.length);
 
-    // Cache the results (1 hour TTL)
+    // Cache the FULL result set (1 hour TTL)
     await setCachedSearch(cacheKey, searchResponse, 3600);
 
-    return NextResponse.json(searchResponse);
+    // Paginate the requested page from full results
+    const startIndex = (validatedPage - 1) * validatedLimit;
+    const endIndex = startIndex + validatedLimit;
+    const paginatedResults = searchResponse.results.slice(startIndex, endIndex);
+
+    return NextResponse.json({
+      ...searchResponse,
+      results: paginatedResults,
+      page: validatedPage,
+      pageSize: validatedLimit,
+    });
   } catch (err) {
     console.error('[Search API] Error:', err);
     console.error('[Search API] Error stack:', err instanceof Error ? err.stack : 'No stack trace');

@@ -19,6 +19,8 @@ const redis = new Redis({
 
 /**
  * Generate a stable cache key from search parameters
+ * NOTE: Does NOT include page number - we cache the full result set,
+ * then paginate from cache for all pages
  */
 export function generateCacheKey(
   query: string,
@@ -33,11 +35,10 @@ export function generateCacheKey(
   const normalizedQuery = query.toLowerCase().trim();
 
   // Create deterministic key from parameters
+  // IMPORTANT: Page number NOT included - all pages share same cache
   const keyParts = [
     'search',
     normalizedQuery,
-    `limit:${options.limit || 12}`,
-    `page:${options.page || 1}`,
     `threshold:${options.similarityThreshold || 0.3}`,
     `sexy:${options.allowSexyContent ? 'yes' : 'no'}`,
   ];

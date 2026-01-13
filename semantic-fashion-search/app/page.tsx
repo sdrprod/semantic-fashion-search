@@ -380,7 +380,15 @@ export default function Home() {
               {qualityWarning && (
                 <div className="quality-warning">
                   <div className="quality-warning-icon">ℹ️</div>
-                  <p className="quality-warning-text">{qualityWarning}</p>
+                  <div className="quality-warning-content">
+                    <p className="quality-warning-text">{qualityWarning}</p>
+                    <button
+                      className="quality-warning-btn"
+                      onClick={handleReset}
+                    >
+                      Start New Search
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -427,6 +435,16 @@ export default function Home() {
                   onPageSizeChange={handlePageSizeChange}
                 />
               )}
+
+              {/* New Search button at bottom of results */}
+              <div className="results-footer">
+                <button
+                  className="new-search-btn-bottom"
+                  onClick={handleReset}
+                >
+                  Start New Search
+                </button>
+              </div>
             </>
           )}
         </main>
