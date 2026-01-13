@@ -216,7 +216,8 @@ export default function Home() {
       const data = await response.json();
       setResults(data.results || []);
       setQualityWarning(data.qualityWarning || null);
-      setTotalCount(data.totalCount || data.results?.length || 0);
+      // DON'T update totalCount during pagination - it was set during initial search
+      // setTotalCount(data.totalCount || data.results?.length || 0);
     } catch (err) {
       console.error('Page load failed:', err);
       setError('Failed to load page. Please try again.');
