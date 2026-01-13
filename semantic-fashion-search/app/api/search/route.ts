@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { semanticSearch } from '@/lib/search';
+import { generateCacheKey, getCachedSearch, setCachedSearch } from '@/lib/redis';
+import type { SearchResponse } from '@/types';
 
 export async function POST(request: NextRequest) {
   console.log('[Search API] Request received');
@@ -23,8 +25,6 @@ export async function POST(request: NextRequest) {
     const validatedLimit = Math.min(Math.max(1, limit), 50);
     const validatedPage = Math.max(1, page);
 
-    console.log('[Search API] Starting semantic search...');
-
     // Check sexy intent on user query
     let hasSexyIntent = false;
     const sexyKeywords = [
@@ -38,6 +38,22 @@ export async function POST(request: NextRequest) {
     hasSexyIntent = sexyKeywords.some(keyword => lowerQuery.includes(keyword));
     console.log(`[Search API] User query sexy intent: ${hasSexyIntent ? 'YES' : 'NO'}`);
 
+    // Generate cache key
+    const cacheKey = generateCacheKey(query.trim(), {
+      limit: validatedLimit,
+      page: validatedPage,
+      allowSexyContent: hasSexyIntent,
+    });
+
+    // Check cache first
+    const cachedResults = await getCachedSearch<SearchResponse>(cacheKey);
+    if (cachedResults) {
+      console.log('[Search API] Returning cached results ⚡');
+      return NextResponse.json(cachedResults);
+    }
+
+    console.log('[Search API] Starting semantic search...');
+
     // Perform semantic search with intent extraction
     const searchResponse = await semanticSearch(query.trim(), {
       limit: validatedLimit,
@@ -46,6 +62,9 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('[Search API] Search complete, results:', searchResponse.results.length);
+
+    // Cache the results (1 hour TTL)
+    await setCachedSearch(cacheKey, searchResponse, 3600);
 
     return NextResponse.json(searchResponse);
   } catch (err) {

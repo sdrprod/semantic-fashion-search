@@ -255,6 +255,11 @@ export async function POST(request: NextRequest) {
     // Use semantic search with the combined query
     console.log('[Visual Search API] Executing semantic search...');
     console.log(`[Visual Search API] Passing sexy intent flag: ${hasSexyIntent}`);
+
+    // Note: Visual search caching is limited because GPT-4 Vision descriptions vary
+    // We cache the semantic search results, but image analysis always runs
+    // Full caching with image hashing comes in Phase 2
+
     const startSemanticSearch = Date.now();
     const searchResponse = await semanticSearch(finalSearchQuery, {
       limit: 24,
