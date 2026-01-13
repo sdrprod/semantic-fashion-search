@@ -47,7 +47,18 @@ Important guidelines:
 - Make contextual inferences ONLY when clearly implied (e.g., "ball" → formal, "gym" → athletic)
 - NEVER default to "understated", "not flashy", or similar qualifiers unless the user said so
 - If the user says "stunning" or "glamorous", preserve that - don't tone it down
-- ALWAYS provide an explanation in the format described above, addressing the user directly`;
+- ALWAYS provide an explanation in the format described above, addressing the user directly
+
+Contextual inference rules:
+- "brunch" or "lunch" → daytime appropriate, modest coverage, not revealing, comfortable, casual-to-smart-casual
+- "dinner" or "date night" → elegant, can be more glamorous, evening appropriate
+- "work" or "office" → professional, modest, business appropriate
+- "party" or "club" → fun, can be more daring, evening appropriate
+- "wedding guest" → elegant, formal, celebratory but not bridal colors
+- "beach" or "poolside" → resort wear, vacation vibes, lightweight
+- "casual" with occasion → comfortable, relaxed, everyday wear
+- "summer" → light fabrics, bright colors, breathable materials
+- "winter" → warm fabrics, layering pieces, deeper colors`;
 
   const response = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
@@ -94,10 +105,27 @@ export function isSimpleQuery(query: string): boolean {
     'without', 'similar to', 'like the'
   ];
 
+  // Context keywords that need intent extraction for better results
+  const contextKeywords = [
+    'outfit', // needs breakdown into pieces
+    'brunch', 'dinner', 'lunch', 'party', 'wedding', 'date', 'work', // occasions need context
+    'casual', 'formal', 'elegant', 'glamorous', 'professional', // style descriptors need expansion
+    'summer', 'winter', 'fall', 'spring', // seasonal needs color/fabric context
+  ];
+
   const lowerQuery = query.toLowerCase();
   const hasConversationalMarker = conversationalMarkers.some(marker =>
     lowerQuery.includes(marker)
   );
+
+  const hasContextKeyword = contextKeywords.some(keyword =>
+    lowerQuery.includes(keyword)
+  );
+
+  // Force intent extraction if query has context keywords
+  if (hasContextKeyword) {
+    return false;
+  }
 
   return query.length < 50 && !hasConversationalMarker;
 }

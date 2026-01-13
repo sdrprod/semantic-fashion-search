@@ -66,15 +66,23 @@ export async function semanticSearch(
   const qualityFilteredResults = allRankedResults.filter((product, index) => {
     let requiredSimilarity = similarityThreshold;
 
-    // Top 3 results: require +0.15 similarity boost for quality
-    if (index < 3) {
+    // Top result: require +0.25 similarity boost (minimum 0.55 for best match)
+    if (index === 0) {
+      requiredSimilarity = similarityThreshold + 0.25;
+    }
+    // Results 2-3: require +0.20 similarity boost (minimum 0.50)
+    else if (index < 3) {
+      requiredSimilarity = similarityThreshold + 0.20;
+    }
+    // Results 4-6: require +0.15 similarity boost (minimum 0.45)
+    else if (index < 6) {
       requiredSimilarity = similarityThreshold + 0.15;
     }
-    // Results 4-6: require +0.10 similarity boost
-    else if (index < 6) {
+    // Results 7-12: require +0.10 similarity boost (minimum 0.40)
+    else if (index < 12) {
       requiredSimilarity = similarityThreshold + 0.10;
     }
-    // Results 7+: use base threshold
+    // Results 13+: use base threshold (minimum 0.30)
 
     const passes = (product.similarity || 0) >= requiredSimilarity;
 
