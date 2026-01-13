@@ -14,6 +14,7 @@ export interface Product {
   merchantId?: string;
   merchantName?: string; // Fallback when brand is Unknown
   onSale?: boolean; // Whether product has "sale" or "on sale" in text
+  matchesColor?: boolean; // Whether product matches user-specified color (used during filtering)
 }
 
 // Search types
@@ -46,6 +47,11 @@ export interface ParsedIntent {
   occasion?: string;
   style?: string[];
   constraints?: string[];
+  color?: string | null; // Specific color mentioned by user
+  priceRange?: {
+    min: number | null;
+    max: number | null;
+  };
   primaryItem?: string;
   secondaryItems?: string[];
   searchQueries: SearchQuery[];

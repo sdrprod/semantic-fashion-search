@@ -24,6 +24,11 @@ Return your response as JSON with this structure:
   "occasion": "string or null",
   "style": ["array", "of", "style", "keywords"],
   "constraints": ["things", "to", "avoid"],
+  "color": "specific color mentioned (e.g., 'black', 'red', 'navy blue') or null if no color specified",
+  "priceRange": {
+    "min": number or null,
+    "max": number or null
+  },
   "primaryItem": "main item category",
   "secondaryItems": ["accessory", "items"],
   "searchQueries": [
@@ -48,6 +53,23 @@ Important guidelines:
 - NEVER default to "understated", "not flashy", or similar qualifiers unless the user said so
 - If the user says "stunning" or "glamorous", preserve that - don't tone it down
 - ALWAYS provide an explanation in the format described above, addressing the user directly
+
+COLOR EXTRACTION (CRITICAL):
+- If user specifies a color, extract it EXACTLY in the "color" field
+- Common colors: black, white, red, blue, navy, pink, green, yellow, orange, purple, brown, beige, cream, grey/gray, gold, silver
+- Multi-word colors: "navy blue", "forest green", "hot pink", "burgundy", "emerald green"
+- Color patterns: "floral", "striped", "polka dot", "animal print" should be in style, NOT color
+- If multiple colors mentioned: use primary color (e.g., "black and white dress" → "black")
+- If no specific color: set color to null
+
+PRICE RANGE EXTRACTION:
+- "under $X" or "less than $X" → {"min": null, "max": X}
+- "over $X" or "more than $X" → {"min": X, "max": null}
+- "$X to $Y" or "$X-$Y" or "between $X and $Y" → {"min": X, "max": Y}
+- "around $X" or "about $X" → {"min": X-10, "max": X+10}
+- "affordable" or "budget" or "cheap" → {"min": null, "max": 50}
+- "expensive" or "luxury" or "high-end" → {"min": 100, "max": null}
+- If no price mentioned: {"min": null, "max": null}
 
 Contextual inference rules:
 - "brunch" or "lunch" → daytime appropriate, modest coverage, not revealing, comfortable, casual-to-smart-casual

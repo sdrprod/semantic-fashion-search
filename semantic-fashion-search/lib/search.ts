@@ -102,26 +102,85 @@ export async function semanticSearch(
     `(filtered ${allRankedResults.length - qualityFilteredResults.length})`
   );
 
+  // Apply color filtering if user specified a color
+  let colorFilteredResults = qualityFilteredResults;
+  let colorMatchCount = 0;
+
+  if (intent.color) {
+    console.log(`[semanticSearch] 🎨 User specified color: "${intent.color}"`);
+
+    // Check each product for color match
+    colorFilteredResults = qualityFilteredResults.map((product, index) => {
+      const matchesColor = productMatchesColor(product, intent.color!);
+      if (matchesColor) colorMatchCount++;
+
+      return { ...product, matchesColor };
+    });
+
+    // Sort to prioritize color matches at the top
+    colorFilteredResults.sort((a, b) => {
+      // Both match or both don't match: maintain similarity order
+      if (a.matchesColor === b.matchesColor) {
+        return (b.similarity || 0) - (a.similarity || 0);
+      }
+      // Color matches come first
+      return b.matchesColor ? 1 : -1;
+    });
+
+    console.log(`[semanticSearch] 🎨 Color matches: ${colorMatchCount}/${colorFilteredResults.length}`);
+  }
+
+  // Apply price range filtering if user specified budget
+  let priceFilteredResults = colorFilteredResults;
+
+  if (intent.priceRange && (intent.priceRange.min !== null || intent.priceRange.max !== null)) {
+    const { min, max } = intent.priceRange;
+    console.log(`[semanticSearch] 💰 Price range filter: $${min || '0'} - $${max || '∞'}`);
+
+    priceFilteredResults = colorFilteredResults.filter(product => {
+      if (product.price === null || product.price === undefined) return false;
+
+      const aboveMin = min === null || product.price >= min;
+      const belowMax = max === null || product.price <= max;
+
+      return aboveMin && belowMax;
+    });
+
+    console.log(`[semanticSearch] 💰 Price filtering: ${colorFilteredResults.length} → ${priceFilteredResults.length} results`);
+  }
+
   // Calculate pagination
   const startIndex = (page - 1) * limit;
   const endIndex = startIndex + limit;
-  const paginatedResults = qualityFilteredResults.slice(startIndex, endIndex);
+  const paginatedResults = priceFilteredResults.slice(startIndex, endIndex);
 
-  // Use actual total count from quality-filtered results
-  const totalCount = qualityFilteredResults.length;
+  // Use actual total count from filtered results
+  const totalCount = priceFilteredResults.length;
 
   console.log(`[semanticSearch] Pagination: page=${page}, showing ${startIndex}-${endIndex} of ${totalCount} total results`);
 
   // Detect low quality results and add warning message
   let qualityWarning: string | undefined;
-  if (qualityFilteredResults.length > 0) {
-    const maxSimilarity = Math.max(...qualityFilteredResults.map(p => p.similarity || 0));
-    const avgSimilarity = qualityFilteredResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / qualityFilteredResults.length;
+  if (priceFilteredResults.length > 0) {
+    const maxSimilarity = Math.max(...priceFilteredResults.map(p => p.similarity || 0));
+    const avgSimilarity = priceFilteredResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / priceFilteredResults.length;
 
     // Show warning if best match is below 0.45 or average is below 0.35
     if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {
       qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
-      console.log(`[semanticSearch] Quality warning triggered - max: ${maxSimilarity.toFixed(3)}, avg: ${avgSimilarity.toFixed(3)}`);
+      console.log(`[semanticSearch] ⚠️ Quality warning: low similarity - max: ${maxSimilarity.toFixed(3)}, avg: ${avgSimilarity.toFixed(3)}`);
+    }
+
+    // CRITICAL: Show warning if user specified color but insufficient matches
+    if (intent.color && colorMatchCount < 6) {
+      qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
+      console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount}/6 for "${intent.color}")`);
+    }
+
+    // Show warning if price filtering removed too many results
+    if (intent.priceRange && priceFilteredResults.length < 6 && colorFilteredResults.length > priceFilteredResults.length) {
+      qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
+      console.log(`[semanticSearch] ⚠️ Quality warning: insufficient results in price range`);
     }
   }
 
@@ -167,6 +226,40 @@ function isSexyProduct(title: string, description: string): boolean {
 
   const combinedText = `${title} ${description}`.toLowerCase();
   return sexyTerms.some(term => combinedText.includes(term));
+}
+
+/**
+ * Check if product matches the specified color
+ * CRITICAL: User-specified colors MUST match in first 3-6 results
+ */
+function productMatchesColor(product: Product, color: string): boolean {
+  const combinedText = `${product.title} ${product.description}`.toLowerCase();
+  const normalizedColor = color.toLowerCase();
+
+  // Direct color match (e.g., "black", "red", "navy blue")
+  if (combinedText.includes(normalizedColor)) {
+    return true;
+  }
+
+  // Handle color variations and synonyms
+  const colorVariations: Record<string, string[]> = {
+    black: ['noir', 'ebony', 'jet black'],
+    white: ['ivory', 'cream', 'off-white', 'eggshell'],
+    red: ['crimson', 'scarlet', 'burgundy', 'wine', 'maroon'],
+    blue: ['navy', 'cobalt', 'royal blue', 'sky blue', 'azure'],
+    green: ['olive', 'emerald', 'forest green', 'sage', 'mint'],
+    pink: ['rose', 'blush', 'hot pink', 'fuchsia', 'magenta'],
+    purple: ['violet', 'lavender', 'plum', 'mauve', 'lilac'],
+    yellow: ['gold', 'mustard', 'lemon', 'canary'],
+    orange: ['rust', 'coral', 'peach', 'tangerine', 'burnt orange'],
+    brown: ['tan', 'beige', 'taupe', 'khaki', 'camel', 'chocolate'],
+    grey: ['gray', 'charcoal', 'slate', 'silver', 'pewter'],
+    gray: ['grey', 'charcoal', 'slate', 'silver', 'pewter'],
+  };
+
+  // Check variations
+  const variations = colorVariations[normalizedColor] || [];
+  return variations.some(variation => combinedText.includes(variation));
 }
 
 /**
