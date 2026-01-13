@@ -178,19 +178,41 @@ function decodeHtmlEntities(text: string): string {
  * Check if product is for men
  */
 function isMensProduct(title: string, description: string): boolean {
-  const mensTerms = [
-    "men's", 'mens', "mens'", 'for men', 'for him', 'men only',
-    'male', 'masculine', 'man ', 'gentleman', "gentleman's",
-    'boys', "boy's", 'men ', 'menswear', 'mens pants', 'mens shirt',
-    'mens jacket', 'mens suit', 'mens shoe', 'mens wear'
-  ];
-
   // Decode HTML entities first
   const decodedTitle = decodeHtmlEntities(title);
   const decodedDescription = decodeHtmlEntities(description);
   const combinedText = `${decodedTitle} ${decodedDescription}`.toLowerCase();
 
-  return mensTerms.some(term => combinedText.includes(term));
+  // Use word boundaries to avoid false positives like "womens" matching "mens"
+  const mensPatterns = [
+    /\bmen'?s\b/,           // "men's" or "mens" as whole word
+    /\bfor men\b/,
+    /\bfor him\b/,
+    /\bmen only\b/,
+    /\bmale\b/,
+    /\bmasculine\b/,
+    /\bgentleman'?s?\b/,    // "gentleman" or "gentleman's"
+    /\bboys?\b/,            // "boy" or "boys"
+    /\bboy'?s\b/,           // "boy's"
+    /\bmenswear\b/,
+  ];
+
+  // Check if text contains "women" or "woman" - if so, be more strict
+  const hasWomen = /\bwom[ae]n'?s?\b/.test(combinedText);
+
+  if (hasWomen) {
+    // If it mentions women, only flag if it ALSO explicitly mentions men
+    // and men appears more prominently
+    const menMatches = (combinedText.match(/\bmen'?s?\b/g) || []).length;
+    const womenMatches = (combinedText.match(/\bwom[ae]n'?s?\b/g) || []).length;
+
+    // Only flag as men's if men is mentioned more than women
+    if (menMatches <= womenMatches) {
+      return false;
+    }
+  }
+
+  return mensPatterns.some(pattern => pattern.test(combinedText));
 }
 
 /**

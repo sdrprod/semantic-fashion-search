@@ -45,18 +45,40 @@ function decodeHtmlEntities(text) {
  * Check if product is for men
  */
 function isMensProduct(title, description) {
-  const mensTerms = [
-    "men's", 'mens', "mens'", 'for men', 'for him', 'men only',
-    'male', 'masculine', 'man ', 'gentleman', "gentleman's",
-    'boys', "boy's", 'men ', 'menswear', 'mens pants', 'mens shirt',
-    'mens jacket', 'mens suit', 'mens shoe', 'mens wear'
-  ];
-
   const decodedTitle = decodeHtmlEntities(title);
   const decodedDescription = decodeHtmlEntities(description || '');
   const combinedText = `${decodedTitle} ${decodedDescription}`.toLowerCase();
 
-  return mensTerms.some(term => combinedText.includes(term));
+  // Use word boundaries to avoid false positives like "womens" matching "mens"
+  const mensPatterns = [
+    /\bmen'?s\b/,           // "men's" or "mens" as whole word
+    /\bfor men\b/,
+    /\bfor him\b/,
+    /\bmen only\b/,
+    /\bmale\b/,
+    /\bmasculine\b/,
+    /\bgentleman'?s?\b/,    // "gentleman" or "gentleman's"
+    /\bboys?\b/,            // "boy" or "boys"
+    /\bboy'?s\b/,           // "boy's"
+    /\bmenswear\b/,
+  ];
+
+  // Check if text contains "women" or "woman" - if so, be more strict
+  const hasWomen = /\bwom[ae]n'?s?\b/.test(combinedText);
+
+  if (hasWomen) {
+    // If it mentions women, only flag if it ALSO explicitly mentions men
+    // and men appears more prominently
+    const menMatches = (combinedText.match(/\bmen'?s?\b/g) || []).length;
+    const womenMatches = (combinedText.match(/\bwom[ae]n'?s?\b/g) || []).length;
+
+    // Only flag as men's if men is mentioned more than women
+    if (menMatches <= womenMatches) {
+      return false;
+    }
+  }
+
+  return mensPatterns.some(pattern => pattern.test(combinedText));
 }
 
 /**
@@ -117,17 +139,41 @@ async function cleanupBadProducts() {
   console.log('🧹 Starting cleanup of bad products...\n');
 
   try {
-    // Fetch all products
-    console.log('📦 Fetching all products from database...');
-    const { data: products, error: fetchError } = await supabase
+    // First, get total count
+    console.log('📦 Counting products in database...');
+    const { count, error: countError } = await supabase
       .from('products')
-      .select('*');
+      .select('*', { count: 'exact', head: true });
 
-    if (fetchError) {
-      throw new Error(`Failed to fetch products: ${fetchError.message}`);
+    if (countError) {
+      throw new Error(`Failed to count products: ${countError.message}`);
     }
 
-    console.log(`✅ Found ${products.length} total products\n`);
+    console.log(`📊 Total products in database: ${count}`);
+
+    // Fetch all products in batches (Supabase has 1000 row default limit)
+    console.log('📦 Fetching all products...');
+    const products = [];
+    const batchSize = 1000;
+    let offset = 0;
+
+    while (offset < count) {
+      console.log(`   Fetching batch ${Math.floor(offset / batchSize) + 1}/${Math.ceil(count / batchSize)}...`);
+
+      const { data: batch, error: fetchError } = await supabase
+        .from('products')
+        .select('*')
+        .range(offset, offset + batchSize - 1);
+
+      if (fetchError) {
+        throw new Error(`Failed to fetch products: ${fetchError.message}`);
+      }
+
+      products.push(...batch);
+      offset += batchSize;
+    }
+
+    console.log(`✅ Fetched ${products.length} total products\n`);
 
     // Analyze products
     const toDelete = [];
