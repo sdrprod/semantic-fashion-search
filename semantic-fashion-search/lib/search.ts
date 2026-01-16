@@ -131,14 +131,58 @@ export async function semanticSearch(
     console.log(`[semanticSearch] 🎨 Color matches: ${colorMatchCount}/${colorFilteredResults.length}`);
   }
 
+  // Apply category filtering if user specified a garment type
+  let categoryFilteredResults = colorFilteredResults;
+  let categoryMatchCount = 0;
+
+  // Get primary category from the first search query (highest priority)
+  const primaryCategory = intent.searchQueries && intent.searchQueries.length > 0
+    ? intent.searchQueries[0].category
+    : 'all';
+
+  if (primaryCategory && primaryCategory !== 'all') {
+    console.log(`[semanticSearch] 👔 User specified category: "${primaryCategory}"`);
+
+    // Check each product for category match
+    categoryFilteredResults = colorFilteredResults.map((product, index) => {
+      const matchesCategory = productMatchesCategory(product, primaryCategory);
+      if (matchesCategory) categoryMatchCount++;
+
+      return { ...product, matchesCategory };
+    });
+
+    // Sort to prioritize category matches at the top
+    categoryFilteredResults.sort((a, b) => {
+      // Both match or both don't match: maintain similarity order
+      if (a.matchesCategory === b.matchesCategory) {
+        return (b.similarity || 0) - (a.similarity || 0);
+      }
+      // Category matches come first
+      return b.matchesCategory ? 1 : -1;
+    });
+
+    console.log(`[semanticSearch] 👔 Category matches: ${categoryMatchCount}/${categoryFilteredResults.length}`);
+
+    // CRITICAL: If we have very few category matches in top results, filter out non-matches
+    const top12Results = categoryFilteredResults.slice(0, 12);
+    const top12CategoryMatches = top12Results.filter(p => p.matchesCategory).length;
+
+    // If less than 50% of top 12 results match category, aggressively filter
+    if (top12CategoryMatches < 6) {
+      console.log(`[semanticSearch] ⚠️ Low category match rate in top results (${top12CategoryMatches}/12) - filtering non-matches`);
+      categoryFilteredResults = categoryFilteredResults.filter(p => p.matchesCategory);
+      console.log(`[semanticSearch] 👔 After aggressive filtering: ${categoryFilteredResults.length} results`);
+    }
+  }
+
   // Apply price range filtering if user specified budget
-  let priceFilteredResults = colorFilteredResults;
+  let priceFilteredResults = categoryFilteredResults;
 
   if (intent.priceRange && (intent.priceRange.min !== null || intent.priceRange.max !== null)) {
     const { min, max } = intent.priceRange;
     console.log(`[semanticSearch] 💰 Price range filter: $${min || '0'} - $${max || '∞'}`);
 
-    priceFilteredResults = colorFilteredResults.filter(product => {
+    priceFilteredResults = categoryFilteredResults.filter(product => {
       if (product.price === null || product.price === undefined) return false;
 
       const aboveMin = min === null || product.price >= min;
@@ -147,7 +191,7 @@ export async function semanticSearch(
       return aboveMin && belowMax;
     });
 
-    console.log(`[semanticSearch] 💰 Price filtering: ${colorFilteredResults.length} → ${priceFilteredResults.length} results`);
+    console.log(`[semanticSearch] 💰 Price filtering: ${categoryFilteredResults.length} → ${priceFilteredResults.length} results`);
   }
 
   // Calculate pagination
@@ -227,6 +271,63 @@ function isSexyProduct(title: string, description: string): boolean {
 
   const combinedText = `${title} ${description}`.toLowerCase();
   return sexyTerms.some(term => combinedText.includes(term));
+}
+
+/**
+ * Check if product matches the specified category/garment type
+ * CRITICAL: Category mismatches should be penalized heavily (tops vs pants, etc.)
+ */
+function productMatchesCategory(product: Product, category: string): boolean {
+  const combinedText = `${product.title} ${product.description}`.toLowerCase();
+  const normalizedCategory = category.toLowerCase();
+
+  // Define category keywords and exclusions
+  const categoryPatterns: Record<string, { include: string[], exclude: string[] }> = {
+    tops: {
+      include: ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tank', 'cami', 'camisole', 'sweater', 'pullover', 'sweatshirt', 'hoodie', 'tunic', 'halter', 'crop top', 'bra top', 'sports bra'],
+      exclude: ['pants', 'legging', 'bottom', 'jean', 'trouser', 'short', 'skirt', 'dress', 'jumpsuit', 'romper', 'playsuit', 'overall']
+    },
+    bottoms: {
+      include: ['pants', 'legging', 'jean', 'trouser', 'short', 'skirt', 'culottes', 'capri', 'jogger', 'sweatpants', 'yoga pants', 'athletic pants'],
+      exclude: ['top', 'blouse', 'shirt', 'dress', 'jumpsuit', 'romper', 'overall']
+    },
+    dress: {
+      include: ['dress', 'gown', 'maxi', 'midi', 'mini dress', 'sundress', 'evening dress', 'cocktail dress', 'wrap dress', 'shift dress', 'bodycon', 'a-line dress'],
+      exclude: ['top', 'bottom', 'pants', 'skirt separate', 'two-piece', '2-piece']
+    },
+    shoes: {
+      include: ['shoe', 'boot', 'heel', 'sandal', 'sneaker', 'flat', 'pump', 'loafer', 'mule', 'slipper', 'wedge', 'ankle boot', 'knee boot'],
+      exclude: ['shoe bag', 'shoe organizer', 'shoe cleaner', 'insole', 'sock']
+    },
+    bags: {
+      include: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'satchel', 'crossbody', 'shoulder bag', 'backpack', 'messenger', 'hobo bag', 'bucket bag'],
+      exclude: ['luggage', 'suitcase', 'travel bag', 'gym bag', 'shoe bag', 'laundry bag']
+    },
+    outerwear: {
+      include: ['jacket', 'coat', 'blazer', 'cardigan', 'parka', 'bomber', 'trench', 'puffer', 'peacoat', 'windbreaker', 'anorak', 'duster'],
+      exclude: ['vest', 'dress', 'shirt jacket', 'overshirt']
+    },
+    accessories: {
+      include: ['jewelry', 'necklace', 'bracelet', 'earring', 'ring', 'scarf', 'belt', 'hat', 'cap', 'beanie', 'watch', 'sunglasses', 'glove'],
+      exclude: ['dress', 'top', 'pants', 'shoe']
+    }
+  };
+
+  const pattern = categoryPatterns[normalizedCategory];
+  if (!pattern) {
+    // Unknown category - don't filter
+    return true;
+  }
+
+  // Check for exclusions first (hard blocking)
+  const hasExclusion = pattern.exclude.some(term => combinedText.includes(term));
+  if (hasExclusion) {
+    return false;
+  }
+
+  // Check for inclusions
+  const hasInclusion = pattern.include.some(term => combinedText.includes(term));
+  return hasInclusion;
 }
 
 /**
