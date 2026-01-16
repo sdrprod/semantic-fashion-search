@@ -15,6 +15,26 @@ interface SearchOptions {
 }
 
 /**
+ * Detect if query is asking to see "everything" or "all items"
+ * These queries should show broad results without aggressive filtering
+ */
+function detectBroadQuery(query: string): boolean {
+  const broadPatterns = [
+    /show\s+me\s+everything/i,
+    /show\s+me\s+all/i,
+    /\ball\b.*\b(?:items?|products?|dresses?|tops?|pants?|shoes?|bags?)/i,
+    /everything\s+you\s+have/i,
+    /all\s+of\s+your/i,
+    /\bevery\b.*\b(?:items?|products?|dresses?|tops?|pants?|shoes?)/i,
+    /what.*do\s+you\s+have\s+in/i,
+    /browse/i,
+    /catalog/i,
+  ];
+
+  return broadPatterns.some(pattern => pattern.test(query));
+}
+
+/**
  * Perform semantic search with intent extraction
  */
 export async function semanticSearch(
@@ -30,6 +50,10 @@ export async function semanticSearch(
     imageValidationThreshold = 0.6,  // 60% image similarity required
     allowSexyContent = false, // Default to filtering sexy content
   } = options;
+
+  // Detect broad queries that want to see "everything" in a category/color
+  const isBroadQuery = detectBroadQuery(query);
+  console.log(`[semanticSearch] Query type: ${isBroadQuery ? 'BROAD (show everything)' : 'SPECIFIC (targeted)'}`);
 
   // Determine if we need full intent extraction or simple search
   let intent: ParsedIntent;
@@ -64,26 +88,34 @@ export async function semanticSearch(
   );
 
   // Apply tiered quality thresholds - higher bar for top results
+  // BUT: Be more lenient for broad queries (user wants to see everything)
   const qualityFilteredResults = allRankedResults.filter((product, index) => {
     let requiredSimilarity = similarityThreshold;
 
-    // Top result: require +0.25 similarity boost (minimum 0.55 for best match)
-    if (index === 0) {
-      requiredSimilarity = similarityThreshold + 0.25;
+    // For broad queries, lower the threshold significantly to show more results
+    if (isBroadQuery) {
+      requiredSimilarity = similarityThreshold - 0.1; // 0.2 instead of 0.3
     }
-    // Results 2-3: require +0.20 similarity boost (minimum 0.50)
-    else if (index < 3) {
-      requiredSimilarity = similarityThreshold + 0.20;
+    // For specific queries, apply tiered quality thresholds
+    else {
+      // Top result: require +0.25 similarity boost (minimum 0.55 for best match)
+      if (index === 0) {
+        requiredSimilarity = similarityThreshold + 0.25;
+      }
+      // Results 2-3: require +0.20 similarity boost (minimum 0.50)
+      else if (index < 3) {
+        requiredSimilarity = similarityThreshold + 0.20;
+      }
+      // Results 4-6: require +0.15 similarity boost (minimum 0.45)
+      else if (index < 6) {
+        requiredSimilarity = similarityThreshold + 0.15;
+      }
+      // Results 7-12: require +0.10 similarity boost (minimum 0.40)
+      else if (index < 12) {
+        requiredSimilarity = similarityThreshold + 0.10;
+      }
+      // Results 13+: use base threshold (minimum 0.30)
     }
-    // Results 4-6: require +0.15 similarity boost (minimum 0.45)
-    else if (index < 6) {
-      requiredSimilarity = similarityThreshold + 0.15;
-    }
-    // Results 7-12: require +0.10 similarity boost (minimum 0.40)
-    else if (index < 12) {
-      requiredSimilarity = similarityThreshold + 0.10;
-    }
-    // Results 13+: use base threshold (minimum 0.30)
 
     const passes = (product.similarity || 0) >= requiredSimilarity;
 
@@ -131,15 +163,23 @@ export async function semanticSearch(
     console.log(`[semanticSearch] 🎨 Color matches: ${colorMatchCount}/${colorFilteredResults.length}`);
 
     // CRITICAL: If we have very few color matches in top results, filter out non-matches
-    const top12Results = colorFilteredResults.slice(0, 12);
-    const top12ColorMatches = top12Results.filter(p => p.matchesColor).length;
+    // UNLESS it's a broad query (user wants to see everything in that color)
+    if (!isBroadQuery) {
+      const top12Results = colorFilteredResults.slice(0, 12);
+      const top12ColorMatches = top12Results.filter(p => p.matchesColor).length;
 
-    // If less than 50% of top 12 results match color, aggressively filter
-    // This prevents showing blue/red/yellow dresses when user asks for "black dresses"
-    if (top12ColorMatches < 6) {
-      console.log(`[semanticSearch] ⚠️ Low color match rate in top results (${top12ColorMatches}/12) - filtering non-matches`);
+      // If less than 50% of top 12 results match color, aggressively filter
+      // This prevents showing blue/red/yellow dresses when user asks for "black dresses"
+      if (top12ColorMatches < 6) {
+        console.log(`[semanticSearch] ⚠️ Low color match rate in top results (${top12ColorMatches}/12) - filtering non-matches`);
+        colorFilteredResults = colorFilteredResults.filter(p => p.matchesColor);
+        console.log(`[semanticSearch] 🎨 After aggressive filtering: ${colorFilteredResults.length} results`);
+      }
+    } else {
+      // For broad queries, ALWAYS filter by color but don't require high match rates
+      console.log(`[semanticSearch] 📋 Broad query: showing all color matches without aggressive filtering`);
       colorFilteredResults = colorFilteredResults.filter(p => p.matchesColor);
-      console.log(`[semanticSearch] 🎨 After aggressive filtering: ${colorFilteredResults.length} results`);
+      console.log(`[semanticSearch] 🎨 After broad filtering: ${colorFilteredResults.length} results`);
     }
   }
 
@@ -176,14 +216,20 @@ export async function semanticSearch(
     console.log(`[semanticSearch] 👔 Category matches: ${categoryMatchCount}/${categoryFilteredResults.length}`);
 
     // CRITICAL: If we have very few category matches in top results, filter out non-matches
-    const top12Results = categoryFilteredResults.slice(0, 12);
-    const top12CategoryMatches = top12Results.filter(p => p.matchesCategory).length;
+    // UNLESS it's a broad query (user wants to see everything, across all categories)
+    if (!isBroadQuery) {
+      const top12Results = categoryFilteredResults.slice(0, 12);
+      const top12CategoryMatches = top12Results.filter(p => p.matchesCategory).length;
 
-    // If less than 50% of top 12 results match category, aggressively filter
-    if (top12CategoryMatches < 6) {
-      console.log(`[semanticSearch] ⚠️ Low category match rate in top results (${top12CategoryMatches}/12) - filtering non-matches`);
-      categoryFilteredResults = categoryFilteredResults.filter(p => p.matchesCategory);
-      console.log(`[semanticSearch] 👔 After aggressive filtering: ${categoryFilteredResults.length} results`);
+      // If less than 50% of top 12 results match category, aggressively filter
+      if (top12CategoryMatches < 6) {
+        console.log(`[semanticSearch] ⚠️ Low category match rate in top results (${top12CategoryMatches}/12) - filtering non-matches`);
+        categoryFilteredResults = categoryFilteredResults.filter(p => p.matchesCategory);
+        console.log(`[semanticSearch] 👔 After aggressive filtering: ${categoryFilteredResults.length} results`);
+      }
+    } else {
+      // For broad queries, DON'T filter by category - show items from all categories
+      console.log(`[semanticSearch] 📋 Broad query: showing all categories without filtering`);
     }
   }
 
@@ -238,19 +284,31 @@ export async function semanticSearch(
   }
 
   // CRITICAL: Show warning if user specified color but insufficient matches (check regardless of result count)
-  if (intent.color && (colorMatchCount < 6 || colorFilteredResults.length < 12)) {
-    qualityWarning = warningMessage;
-    console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount} found, ${colorFilteredResults.length} after filtering for "${intent.color}")`);
+  // For broad queries, only warn if we have <12 total results (more lenient)
+  if (intent.color) {
+    if (isBroadQuery) {
+      // Broad query: only warn if very few results
+      if (colorFilteredResults.length < 12) {
+        qualityWarning = warningMessage;
+        console.log(`[semanticSearch] ⚠️ Quality warning (broad query): only ${colorFilteredResults.length} items in "${intent.color}"`);
+      }
+    } else {
+      // Specific query: warn if insufficient matches
+      if (colorMatchCount < 6 || colorFilteredResults.length < 12) {
+        qualityWarning = warningMessage;
+        console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount} found, ${colorFilteredResults.length} after filtering for "${intent.color}")`);
+      }
+    }
   }
 
-  // Show warning if price filtering removed too many results
-  if (intent.priceRange && priceFilteredResults.length < 6 && categoryFilteredResults.length > priceFilteredResults.length) {
+  // Show warning if price filtering removed too many results (not for broad queries)
+  if (!isBroadQuery && intent.priceRange && priceFilteredResults.length < 6 && categoryFilteredResults.length > priceFilteredResults.length) {
     qualityWarning = warningMessage;
     console.log(`[semanticSearch] ⚠️ Quality warning: insufficient results in price range`);
   }
 
-  // Show warning if category filtering removed too many results
-  if (primaryCategory && primaryCategory !== 'all' && categoryMatchCount < 6) {
+  // Show warning if category filtering removed too many results (not for broad queries)
+  if (!isBroadQuery && primaryCategory && primaryCategory !== 'all' && categoryMatchCount < 6) {
     qualityWarning = warningMessage;
     console.log(`[semanticSearch] ⚠️ Quality warning: insufficient category matches for "${primaryCategory}"`);
   }
