@@ -255,11 +255,12 @@ export async function semanticSearch(
 
   // CRITICAL: Apply vision-based re-ranking for queries with visual descriptors
   // This ensures "sexy boots" shows heeled/stiletto boots first, not work boots
+  // NOTE: Only analyze first 12 products (1 page) to avoid serverless timeout
   let visionRankedResults = priceFilteredResults;
   if (shouldUseVisionReranking(query) && priceFilteredResults.length > 0) {
     console.log(`[semanticSearch] 👁️ Query has visual descriptors - applying GPT-4 Vision re-ranking...`);
     try {
-      visionRankedResults = await rerankWithVision(priceFilteredResults, query, 24);
+      visionRankedResults = await rerankWithVision(priceFilteredResults, query, 12);
       console.log(`[semanticSearch] 👁️ Vision re-ranking complete`);
     } catch (error) {
       console.error('[semanticSearch] ❌ Vision re-ranking failed, using original order:', error);

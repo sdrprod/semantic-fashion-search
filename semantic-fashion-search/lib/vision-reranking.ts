@@ -111,13 +111,13 @@ Respond in JSON format:
  *
  * @param products - Initial search results ranked by text similarity
  * @param query - User's search query
- * @param maxToAnalyze - Maximum number of products to analyze (default: 24 for top 2 pages)
+ * @param maxToAnalyze - Maximum number of products to analyze (default: 12 for top 1 page, reduces serverless timeout risk)
  * @returns Re-ranked products with vision scores
  */
 export async function rerankWithVision(
   products: Product[],
   query: string,
-  maxToAnalyze: number = 24
+  maxToAnalyze: number = 12
 ): Promise<Product[]> {
   if (products.length === 0) {
     return products;
@@ -125,9 +125,9 @@ export async function rerankWithVision(
 
   console.log(`[Vision Rerank] Analyzing top ${Math.min(products.length, maxToAnalyze)} products for query: "${query}"`);
 
-  // Analyze top N products in parallel (batches of 5 to avoid rate limits)
+  // Analyze top N products in parallel (batches of 3 for consistent speed and rate limit safety)
   const productsToAnalyze = products.slice(0, maxToAnalyze);
-  const batchSize = 5;
+  const batchSize = 3;
   const analyzedProducts: (Product & { visionScore?: number; visionMatch?: boolean })[] = [];
 
   for (let i = 0; i < productsToAnalyze.length; i += batchSize) {
