@@ -218,27 +218,41 @@ export async function semanticSearch(
 
   // Detect low quality results and add warning message
   let qualityWarning: string | undefined;
-  if (priceFilteredResults.length > 0) {
+  const warningMessage = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
+
+  // Check for zero results FIRST (most critical)
+  if (priceFilteredResults.length === 0) {
+    qualityWarning = warningMessage;
+    console.log(`[semanticSearch] ⚠️ Quality warning: ZERO results after filtering`);
+  }
+  // Check quality metrics if we have results
+  else if (priceFilteredResults.length > 0) {
     const maxSimilarity = Math.max(...priceFilteredResults.map(p => p.similarity || 0));
     const avgSimilarity = priceFilteredResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / priceFilteredResults.length;
 
     // Show warning if best match is below 0.45 or average is below 0.35
     if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {
-      qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
+      qualityWarning = warningMessage;
       console.log(`[semanticSearch] ⚠️ Quality warning: low similarity - max: ${maxSimilarity.toFixed(3)}, avg: ${avgSimilarity.toFixed(3)}`);
     }
+  }
 
-    // CRITICAL: Show warning if user specified color but insufficient matches
-    if (intent.color && (colorMatchCount < 6 || colorFilteredResults.length < 12)) {
-      qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
-      console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount} found, ${colorFilteredResults.length} after filtering for "${intent.color}")`);
-    }
+  // CRITICAL: Show warning if user specified color but insufficient matches (check regardless of result count)
+  if (intent.color && (colorMatchCount < 6 || colorFilteredResults.length < 12)) {
+    qualityWarning = warningMessage;
+    console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount} found, ${colorFilteredResults.length} after filtering for "${intent.color}")`);
+  }
 
-    // Show warning if price filtering removed too many results
-    if (intent.priceRange && priceFilteredResults.length < 6 && colorFilteredResults.length > priceFilteredResults.length) {
-      qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
-      console.log(`[semanticSearch] ⚠️ Quality warning: insufficient results in price range`);
-    }
+  // Show warning if price filtering removed too many results
+  if (intent.priceRange && priceFilteredResults.length < 6 && categoryFilteredResults.length > priceFilteredResults.length) {
+    qualityWarning = warningMessage;
+    console.log(`[semanticSearch] ⚠️ Quality warning: insufficient results in price range`);
+  }
+
+  // Show warning if category filtering removed too many results
+  if (primaryCategory && primaryCategory !== 'all' && categoryMatchCount < 6) {
+    qualityWarning = warningMessage;
+    console.log(`[semanticSearch] ⚠️ Quality warning: insufficient category matches for "${primaryCategory}"`);
   }
 
   return {
