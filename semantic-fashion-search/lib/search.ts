@@ -129,6 +129,18 @@ export async function semanticSearch(
     });
 
     console.log(`[semanticSearch] 🎨 Color matches: ${colorMatchCount}/${colorFilteredResults.length}`);
+
+    // CRITICAL: If we have very few color matches in top results, filter out non-matches
+    const top12Results = colorFilteredResults.slice(0, 12);
+    const top12ColorMatches = top12Results.filter(p => p.matchesColor).length;
+
+    // If less than 50% of top 12 results match color, aggressively filter
+    // This prevents showing blue/red/yellow dresses when user asks for "black dresses"
+    if (top12ColorMatches < 6) {
+      console.log(`[semanticSearch] ⚠️ Low color match rate in top results (${top12ColorMatches}/12) - filtering non-matches`);
+      colorFilteredResults = colorFilteredResults.filter(p => p.matchesColor);
+      console.log(`[semanticSearch] 🎨 After aggressive filtering: ${colorFilteredResults.length} results`);
+    }
   }
 
   // Apply category filtering if user specified a garment type
@@ -217,9 +229,9 @@ export async function semanticSearch(
     }
 
     // CRITICAL: Show warning if user specified color but insufficient matches
-    if (intent.color && colorMatchCount < 6) {
+    if (intent.color && (colorMatchCount < 6 || colorFilteredResults.length < 12)) {
       qualityWarning = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
-      console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount}/6 for "${intent.color}")`);
+      console.log(`[semanticSearch] ⚠️ Quality warning: insufficient color matches (${colorMatchCount} found, ${colorFilteredResults.length} after filtering for "${intent.color}")`);
     }
 
     // Show warning if price filtering removed too many results
