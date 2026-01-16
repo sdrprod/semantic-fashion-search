@@ -15,6 +15,7 @@ export interface Product {
   merchantName?: string; // Fallback when brand is Unknown
   onSale?: boolean; // Whether product has "sale" or "on sale" in text
   matchesColor?: boolean; // Whether product matches user-specified color (used during filtering)
+  matchesCategory?: boolean; // Whether product matches user-specified category/garment type (used during filtering)
 }
 
 // Search types
