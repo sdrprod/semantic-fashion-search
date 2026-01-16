@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SearchBar } from '@/components/SearchBar';
 import { ImageUpload } from '@/components/ImageUpload';
 import { ProductCard } from '@/components/ProductCard';
@@ -17,7 +18,8 @@ const EXAMPLE_SEARCHES = [
   'Business casual blazer',
 ];
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
   const [actualSearchQuery, setActualSearchQuery] = useState(''); // The query actually used for search (may differ for visual search)
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
@@ -31,8 +33,19 @@ export default function Home() {
   const [pageSize, setPageSize] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
   const [fanoutSeed, setFanoutSeed] = useState(0); // For controlled randomization
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const hasSearched = results.length > 0 || error !== null || loading || intent !== null;
+
+  // Check for authorization errors
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'unauthorized') {
+      setAuthError('You do not have permission to access the admin area. Please contact an administrator if you need access.');
+      // Clear the error parameter from URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams]);
 
   // Reset to initial blank search state
   const handleReset = () => {
@@ -241,6 +254,22 @@ export default function Home() {
       <Navigation onReset={handleReset} />
 
       <div className="container">
+        {/* Authorization Error Message */}
+        {authError && (
+          <div style={{
+            background: '#fee',
+            border: '2px solid #fcc',
+            padding: '16px 20px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            color: '#c33',
+            fontSize: '15px',
+            fontWeight: 500,
+          }}>
+            {authError}
+          </div>
+        )}
+
         {/* Hero Section */}
         {!hasSearched && (
           <header className="hero">
@@ -454,5 +483,13 @@ export default function Home() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

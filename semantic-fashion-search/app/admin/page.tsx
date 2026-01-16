@@ -17,8 +17,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/admin/login');
+    } else if (status === 'authenticated') {
+      // Block viewers from accessing admin
+      const userRole = session?.user?.role;
+      if (userRole !== 'admin' && userRole !== 'editor') {
+        router.push('/?error=unauthorized');
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   useEffect(() => {
     // Fetch dashboard stats
@@ -53,6 +59,11 @@ export default function AdminDashboard() {
 
   const isAdmin = session.user?.role === 'admin';
   const isEditor = session.user?.role === 'editor' || isAdmin;
+
+  // Block viewers entirely - should never reach this point due to useEffect redirect
+  if (!isEditor && !isAdmin) {
+    return null;
+  }
 
   return (
     <div className="admin-container">
@@ -146,11 +157,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {!isEditor && (
-        <div className="message message-info">
-          You have viewer access. Contact an admin to request editor or admin privileges.
-        </div>
-      )}
     </div>
   );
 }

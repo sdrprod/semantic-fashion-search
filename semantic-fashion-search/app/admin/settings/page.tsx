@@ -31,8 +31,14 @@ export default function SettingsPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/admin/login');
+    } else if (status === 'authenticated') {
+      // Block viewers from accessing admin settings
+      const userRole = session?.user?.role;
+      if (userRole !== 'admin' && userRole !== 'editor') {
+        router.push('/?error=unauthorized');
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -92,17 +98,9 @@ export default function SettingsPage() {
 
   const isEditor = session.user?.role === 'editor' || session.user?.role === 'admin';
 
+  // Block viewers entirely - should never reach this point due to useEffect redirect and middleware
   if (!isEditor) {
-    return (
-      <div className="admin-container">
-        <div className="message message-error">
-          You don't have permission to access this page.
-        </div>
-        <Link href="/admin" className="btn btn-secondary">
-          Back to Dashboard
-        </Link>
-      </div>
-    );
+    return null;
   }
 
   return (

@@ -1,6 +1,3 @@
-'use client';
-
-import { SessionProvider } from 'next-auth/react';
 import './admin.css';
 
 export default function AdminLayout({
@@ -9,10 +6,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider>
-      <div className="admin-layout">
-        {children}
-      </div>
-    </SessionProvider>
+    <div className="admin-layout">
+      {children}
+    </div>
   );
 }

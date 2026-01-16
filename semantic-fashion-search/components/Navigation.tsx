@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 interface NavItem {
   label: string;
@@ -46,6 +47,7 @@ const navigationItems: NavItem[] = [
 export function Navigation({ onReset }: NavigationProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { data: session } = useSession();
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -122,6 +124,28 @@ export function Navigation({ onReset }: NavigationProps) {
           <Link href="/contact" className="nav-link-secondary">
             Contact
           </Link>
+          {session ? (
+            <>
+              <span className="nav-user-info">
+                {session.user?.name || session.user?.email}
+              </span>
+              <button
+                onClick={() => signOut()}
+                className="nav-link-secondary nav-auth-btn"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/signup" className="nav-link-secondary">
+                Sign Up
+              </Link>
+              <Link href="/admin/login" className="nav-link-secondary">
+                Sign In
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -185,6 +209,43 @@ export function Navigation({ onReset }: NavigationProps) {
               )}
             </div>
           ))}
+
+          {/* Mobile Auth */}
+          <div className="mobile-menu-section mobile-auth-section">
+            {session ? (
+              <>
+                <div className="mobile-user-info">
+                  {session.user?.name || session.user?.email}
+                </div>
+                <button
+                  onClick={() => {
+                    signOut();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="mobile-menu-link"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signup"
+                  className="mobile-menu-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign Up
+                </Link>
+                <Link
+                  href="/admin/login"
+                  className="mobile-menu-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       )}
     </nav>

@@ -1748,3 +1748,343 @@ Files modified:
 ```
 
 ================================================================================
+
+## Session: 2026-01-16 (Evening)
+### Started: ~19:00
+
+**Context**:
+- Session continued from previous work on pagination and search improvements
+- User feedback: "Never leave any user or admin on an island"
+- Authentication pages (login, signup, verify-email) had no way to return home
+
+================================================================================
+
+### Problem Identified: Stranded Users on Auth Pages
+
+**User Quote**: "There is no link to return home after signing out. All pages of the website should at least have a way to return to the home page. Never leave any user or admin on an island."
+
+**Pages Affected**:
+1. `/admin/login` - Login page (after sign out or direct navigation)
+2. `/signup` - Sign up page
+3. `/verify-email` - Email verification page
+
+**UX Issue**:
+- Users landing on auth pages had no navigation to home
+- After signing out, stuck on login page with no way back
+- Email verification flow didn't offer escape route
+- Only option was browser back button or manually typing URL
+
+================================================================================
+
+### Solution Implemented
+
+**Added "← Back to Home" Links** to all authentication pages:
+
+**1. Login Page** (`app/admin/login/page.tsx`):
+```typescript
+<div style={{ marginBottom: '20px', textAlign: 'center' }}>
+  <Link href="/" style={{
+    color: '#667eea',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: 600
+  }}>
+    ← Back to Home
+  </Link>
+</div>
+```
+- Location: Line 72-74 (top of login card)
+- Positioned above "Sign In" heading
+- Purple accent color (#667eea) matching site theme
+- Small, non-intrusive but clearly visible
+
+**2. Sign Up Page** (`app/signup/page.tsx`):
+```typescript
+<div style={{ marginBottom: '20px', textAlign: 'center' }}>
+  <Link href="/" style={{
+    color: '#667eea',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: 600
+  }}>
+    ← Back to Home
+  </Link>
+</div>
+```
+- Location: Line 63-65 (top of signup card)
+- Positioned above "Create Account" heading
+- Identical styling for consistency
+
+**3. Email Verification Page** (`app/verify-email/page.tsx`):
+```typescript
+<div style={{ marginBottom: '20px', textAlign: 'center' }}>
+  <Link href="/" style={{
+    color: '#667eea',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: 600
+  }}>
+    ← Back to Home
+  </Link>
+</div>
+```
+- Location: Line 105-107 (top of verification card)
+- Positioned above "Verify Your Email" heading
+- Consistent styling across all pages
+
+================================================================================
+
+### Technical Details
+
+**Styling Decisions**:
+- **Font size**: 14px (smaller than headings, non-invasive)
+- **Font weight**: 600 (semi-bold for visibility)
+- **Color**: #667eea (purple, matches site accent colors)
+- **Arrow**: ← (left arrow for "go back" metaphor)
+- **Hover**: Uses Next.js Link's default hover behavior
+- **Text decoration**: none (clean, modern look)
+- **Alignment**: center (matches card layout)
+- **Margin**: 20px bottom spacing
+
+**Component Structure**:
+All three pages follow identical pattern:
+1. Outer container with marginBottom for spacing
+2. Link component wrapping text
+3. Inline styles for consistency (no CSS class needed)
+4. Simple, declarative structure
+
+**Navigation Flow**:
+```
+Login Page (after sign out)
+├─ User sees "← Back to Home" at top
+├─ Clicks link → Returns to main search page (/)
+└─ Can start new search or browse
+
+Sign Up Page
+├─ User sees "← Back to Home" at top
+├─ Clicks link → Returns to main search page (/)
+└─ Can explore site before committing to signup
+
+Verify Email Page
+├─ User sees "← Back to Home" at top
+├─ Clicks link → Returns to main search page (/)
+└─ Can verify later (code saved in email)
+```
+
+================================================================================
+
+### Files Modified
+
+**1. app/admin/login/page.tsx**:
+- Lines 71-76: Added Back to Home link container
+- Positioned before h1.login-title
+- Inside login-card div
+
+**2. app/signup/page.tsx**:
+- Lines 62-67: Added Back to Home link container
+- Positioned before h1.login-title
+- Inside login-card div
+
+**3. app/verify-email/page.tsx**:
+- Lines 104-109: Added Back to Home link container
+- Positioned before h1.login-title
+- Inside login-card div (maxWidth: 480px)
+
+**No CSS Changes Required**:
+- Inline styles sufficient for this simple addition
+- Consistent with existing auth page styling patterns
+- No new CSS classes or global styles needed
+
+================================================================================
+
+### User Experience Improvements
+
+**Before**:
+- User signs out → Lands on login page → Stuck (no nav to home)
+- User on signup page → Changes mind → Must use browser back
+- User on verify page → Wants to delay verification → No escape route
+- **Result**: Frustrating dead-end pages
+
+**After**:
+- ✅ Every auth page has clear "Back to Home" link
+- ✅ Users can navigate freely without feeling trapped
+- ✅ Sign out flow is complete (can return to browsing)
+- ✅ Sign up process is non-committal (easy to exit)
+- ✅ Email verification can be postponed (return to explore)
+- **Result**: Smooth, respectful navigation throughout site
+
+**Accessibility**:
+- ✅ Semantic HTML (Next.js Link component)
+- ✅ Clear link text ("Back to Home" + arrow)
+- ✅ Keyboard accessible (standard link behavior)
+- ✅ Screen reader friendly (text describes action)
+- ✅ Visible focus states (browser defaults)
+
+================================================================================
+
+### Build & Deployment
+
+**Build Status**: ✅ SUCCESS
+```
+Route (app)                              Size     First Load JS
+┌ ○ /                                    17.9 kB         125 kB
+├ ○ /_not-found                          142 B          87.3 kB
+├ ○ /admin                               375 B           103 kB
+├ ○ /admin/login                         4.78 kB         109 kB  ← Modified
+├ ○ /admin/settings                      355 B           103 kB
+├ ○ /api/admin/generate-embeddings       0 B                0 B
+├ ○ /api/auth/[...nextauth]              0 B                0 B
+├ ○ /api/search                          0 B                0 B
+├ ○ /signup                              4.41 kB         109 kB  ← Modified
+└ ○ /verify-email                        3.21 kB         107 kB  ← Modified
+```
+
+**No Performance Impact**:
+- Link component is lightweight (Next.js native)
+- Inline styles have zero CSS overhead
+- No additional JavaScript bundles
+- Build size unchanged (rounding differences only)
+
+**Deployment**: Ready for production push
+
+================================================================================
+
+### Testing Checklist
+
+**Functionality**:
+- ✅ Login page shows "Back to Home" link
+- ✅ Signup page shows "Back to Home" link
+- ✅ Verify email page shows "Back to Home" link
+- ✅ All links navigate to / (home page)
+- ✅ Links work on desktop
+- ✅ Links work on mobile
+- ✅ Link styling matches design system
+
+**User Flows**:
+- ✅ Sign out → See "Back to Home" on login page → Click → Return to search
+- ✅ Visit signup → See "Back to Home" → Click → Return to search
+- ✅ Email verification → See "Back to Home" → Click → Return to search
+- ✅ Direct navigation to auth pages → Link always visible
+
+**Visual**:
+- ✅ Link positioned at top of card
+- ✅ Proper spacing (20px margin-bottom)
+- ✅ Purple color matches site theme
+- ✅ Left arrow (←) displays correctly
+- ✅ Text is legible and clear
+- ✅ Centered alignment looks clean
+
+================================================================================
+
+### Authentication System Status
+
+**Complete Authentication Flow**:
+1. ✅ Sign up with email/password (alternative to OAuth)
+2. ✅ Email verification with 6-digit codes
+3. ✅ Sign in with email/password or Google OAuth
+4. ✅ Role-based access control (admin/editor/viewer)
+5. ✅ Access blocking for non-authorized users
+6. ✅ Clear error messages for unauthorized access
+7. ✅ **NEW**: Navigation from all auth pages back to home
+
+**Database Tables**:
+- `users` - User accounts with roles
+- `accounts` - OAuth provider accounts
+- `sessions` - Active user sessions
+- `verification_codes` - Email verification codes (6-digit, 10min expiry)
+
+**Active Filters & Security**:
+- ✅ Email verification required for password signup
+- ✅ Password hashing with bcryptjs (12 rounds)
+- ✅ Admin panel blocked for non-admin/editor users
+- ✅ Session management via NextAuth.js
+- ✅ Secure credential storage in Supabase
+
+================================================================================
+
+### System Summary: Complete Authentication + Navigation
+
+**Authentication Pages**:
+1. **Login** (`/admin/login`)
+   - Google OAuth button
+   - Email/password form (toggle-able)
+   - Back to Home link ← NEW
+   - Sign up link at bottom
+   - Email verified success message
+
+2. **Sign Up** (`/signup`)
+   - Google OAuth button
+   - Email/password form (first/last name)
+   - Back to Home link ← NEW
+   - Sign in link at bottom
+   - Password requirements (8+ chars)
+
+3. **Verify Email** (`/verify-email`)
+   - 6-digit code input (monospace, centered)
+   - Resend code button
+   - Back to Home link ← NEW
+   - Wrong email? Sign up again link
+   - 10-minute expiration notice
+
+**Navigation Matrix**:
+```
+┌─────────────────────────────────────────────────────┐
+│ Every Auth Page                                      │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │  ← Back to Home                                 │ │ ← NEW
+│ └─────────────────────────────────────────────────┘ │
+│                                                      │
+│ [Page Content: Login/Signup/Verify]                 │
+│                                                      │
+│ [Footer Links: Signup/Login/Help]                   │
+└─────────────────────────────────────────────────────┘
+```
+
+**All Exit Routes**:
+- ✅ Logo click → Home
+- ✅ Navigation "Home" → Home
+- ✅ "New Search" button → Home
+- ✅ Quality warning button → Home
+- ✅ Auth pages "Back to Home" → Home
+- ✅ Unauthorized error → Stays on home, shows error
+- **No dead ends anywhere in application**
+
+================================================================================
+
+### Project Status: Authentication Complete
+
+**System Capabilities**:
+1. ✅ Text search (semantic, AI-powered)
+2. ✅ Visual search (GPT-4 Vision, up to 5 images)
+3. ✅ Hybrid search (text + images combined)
+4. ✅ Pagination (12 items/page, instant page 2+)
+5. ✅ Redis caching (1-hour TTL, 90% cost savings)
+6. ✅ Quality filtering (tiered thresholds)
+7. ✅ Real-time content filtering (sexy, men's, non-apparel, price)
+8. ✅ Intent extraction (conversational, friendly)
+9. ✅ **Authentication system (OAuth + email/password)**
+10. ✅ **Role-based access control (admin/editor/viewer)**
+11. ✅ **Complete navigation (no dead ends)**
+
+**Database**: 6,136 products
+- 100% text embeddings
+- 99.8% image embeddings
+- All women's fashion, apparel, accessories
+- $20+ price threshold enforced
+- Impact.com affiliate network
+- High quality, deduplicated
+
+**Authentication Users**:
+- Admin: support@myatlaz.com (role: admin)
+- Test viewer: Tested successfully, blocked from admin area
+- Email verification: Working with Resend API
+- OAuth: Google sign-in operational
+
+**Next Phase**: User feedback & personalization system
+- Phase 1: Already complete (authentication) ✅
+- Phase 2: Feedback collection (like/dislike buttons)
+- Phase 3: Learning engine (preference profiles)
+- Phase 4: Analytics dashboard
+- Phase 5: Advanced features (collaborative filtering)
+
+================================================================================

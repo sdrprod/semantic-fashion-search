@@ -35,3 +35,5 @@ lerna-debug.log*
 
 # Netlify
 .netlify/
+
+/src/generated/prisma

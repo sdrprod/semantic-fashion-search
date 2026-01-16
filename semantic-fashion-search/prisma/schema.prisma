@@ -1,0 +1,203 @@
+// Prisma Schema for Semantic Fashion Search
+// NextAuth.js + User Feedback + Personalization
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// NextAuth.js Models
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // For email/password auth (hashed with bcrypt)
+  role          String    @default("viewer") // "admin", "editor", "viewer"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       UserProfile?
+  feedbackItems UserFeedbackItem[]
+  searchSessions SearchSession[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// User Personalization Models
+// ============================================
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Learned preferences (JSON)
+  colorPreferences       Json? // { "black": 0.8, "red": 0.6, ... }
+  stylePreferences       Json? // { "casual": 0.9, "formal": 0.3, ... }
+  brandPreferences       Json? // { "Nike": 0.7, "Adidas": 0.6, ... }
+  categoryPreferences    Json? // { "dresses": 0.9, "shoes": 0.7, ... }
+
+  // Price preferences
+  preferredMinPrice     Float?
+  preferredMaxPrice     Float?
+  averageClickedPrice   Float?
+
+  // Metadata
+  totalSearches         Int      @default(0)
+  totalClicks           Int      @default(0)
+  totalFeedbackItems    Int      @default(0)
+  lastActiveAt          DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+// ============================================
+// Feedback & Learning Models
+// ============================================
+
+model UserFeedbackItem {
+  id        String   @id @default(cuid())
+  userId    String?  // Null for guest users (session-based)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessionId String   // Links to search session
+  productId String   // Product that was shown
+
+  // Feedback type
+  feedbackType String  // "more_like_this", "not_right", "agree", "disagree"
+
+  // Product details (cached for learning)
+  productTitle       String
+  productBrand       String?
+  productPrice       Float?
+  productCategory    String?
+  productTags        Json?   // Array of tags
+
+  // Search context
+  searchQuery        String
+  searchIntent       Json?   // Parsed intent from the search
+  resultPosition     Int     // Where in results this appeared (1-120)
+
+  // User's explanation (optional)
+  userComment        String? @db.Text
+
+  // Metadata
+  createdAt          DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([feedbackType])
+  @@map("user_feedback_items")
+}
+
+model SearchSession {
+  id        String   @id @default(cuid())
+  userId    String?  // Null for guest users
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Session tracking
+  sessionToken       String   // Unique session identifier
+
+  // Search details
+  searchQuery        String
+  searchType         String   // "text", "visual", "hybrid"
+  searchIntent       Json?    // Parsed intent
+
+  // Results
+  totalResults       Int
+  viewedPages        Int      @default(1)
+  clickedProducts    Json?    // Array of product IDs clicked
+
+  // Quality metrics
+  searchQualityRating String? // "excellent", "good", "fair", "poor", "not_even_close"
+
+  // Metadata
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@map("search_sessions")
+}
+
+// ============================================
+// Product Interaction Tracking
+// ============================================
+
+model ProductClick {
+  id        String   @id @default(cuid())
+  userId    String?  // Null for guest users
+
+  sessionId String   // Links to search session
+  productId String
+
+  // Product details (cached)
+  productTitle       String
+  productBrand       String?
+  productPrice       Float?
+  productUrl         String
+
+  // Context
+  searchQuery        String
+  resultPosition     Int  // Position in search results (1-120)
+
+  // Metadata
+  clickedAt          DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([productId])
+  @@map("product_clicks")
+}
