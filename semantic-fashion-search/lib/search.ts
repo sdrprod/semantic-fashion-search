@@ -268,13 +268,62 @@ export async function semanticSearch(
     }
   }
 
+  // FEATURE: Category-based grouping for multi-category searches
+  // If user specifies multiple categories (e.g., "clothing, shoes, and jewelry"),
+  // group results by category and show them in the order mentioned
+  let categoryGroupedResults = visionRankedResults;
+
+  if (intent.searchQueries && intent.searchQueries.length > 1) {
+    console.log(`[semanticSearch] 📦 Multi-category search detected (${intent.searchQueries.length} categories) - grouping results`);
+
+    // Create category groups based on search query order (preserves user's requested order)
+    const categoryGroups = new Map<string, Product[]>();
+
+    // Initialize groups in the order specified by user
+    intent.searchQueries.forEach(sq => {
+      categoryGroups.set(sq.category.toLowerCase(), []);
+    });
+
+    // Assign each product to its best matching category
+    visionRankedResults.forEach(product => {
+      const productText = `${product.title} ${product.description}`.toLowerCase();
+
+      // Try to match product to one of the specified categories
+      let bestCategory: string | null = null;
+      for (const sq of intent.searchQueries) {
+        const category = sq.category.toLowerCase();
+        if (productMatchesCategory(product, category)) {
+          bestCategory = category;
+          break; // Use first matching category to avoid duplicates
+        }
+      }
+
+      // If matched, add to that category group
+      if (bestCategory && categoryGroups.has(bestCategory)) {
+        categoryGroups.get(bestCategory)!.push(product);
+      }
+    });
+
+    // Concatenate groups in user-specified order
+    categoryGroupedResults = [];
+    let groupIndex = 0;
+    categoryGroups.forEach((products, category) => {
+      if (products.length > 0) {
+        console.log(`[semanticSearch] 📦 Group ${++groupIndex}: ${category} (${products.length} items)`);
+        categoryGroupedResults.push(...products);
+      }
+    });
+
+    console.log(`[semanticSearch] 📦 Total after grouping: ${categoryGroupedResults.length} products`);
+  }
+
   // Calculate pagination
   const startIndex = (page - 1) * limit;
   const endIndex = startIndex + limit;
-  const paginatedResults = visionRankedResults.slice(startIndex, endIndex);
+  const paginatedResults = categoryGroupedResults.slice(startIndex, endIndex);
 
   // Use actual total count from filtered results
-  const totalCount = visionRankedResults.length;
+  const totalCount = categoryGroupedResults.length;
 
   console.log(`[semanticSearch] Pagination: page=${page}, showing ${startIndex}-${endIndex} of ${totalCount} total results`);
 
@@ -283,14 +332,14 @@ export async function semanticSearch(
   const warningMessage = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
 
   // Check for zero results FIRST (most critical)
-  if (visionRankedResults.length === 0) {
+  if (categoryGroupedResults.length === 0) {
     qualityWarning = warningMessage;
     console.log(`[semanticSearch] ⚠️ Quality warning: ZERO results after filtering`);
   }
   // Check quality metrics if we have results
-  else if (visionRankedResults.length > 0) {
-    const maxSimilarity = Math.max(...visionRankedResults.map(p => p.similarity || 0));
-    const avgSimilarity = visionRankedResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / visionRankedResults.length;
+  else if (categoryGroupedResults.length > 0) {
+    const maxSimilarity = Math.max(...categoryGroupedResults.map(p => p.similarity || 0));
+    const avgSimilarity = categoryGroupedResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / categoryGroupedResults.length;
 
     // Show warning if best match is below 0.45 or average is below 0.35
     if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {
