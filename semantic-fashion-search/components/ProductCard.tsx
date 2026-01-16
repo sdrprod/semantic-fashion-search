@@ -9,6 +9,21 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
 
+  // Decode common HTML entities safely
+  const decodeHtmlEntities = (text: string): string => {
+    const entities: Record<string, string> = {
+      '&#039;': "'",
+      '&apos;': "'",
+      '&quot;': '"',
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&nbsp;': ' ',
+    };
+
+    return text.replace(/&#?\w+;/g, (match) => entities[match] || match);
+  };
+
   const formatPrice = (price: number | null, currency: string) => {
     if (price === null) return 'Price on request';
 
@@ -65,9 +80,9 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
       <div className="product-info">
-        {displayBrand && <p className="product-brand">{displayBrand}</p>}
-        <h3 className="product-title">{product.title}</h3>
-        {showDescription && <p className="product-description">{product.description}</p>}
+        {displayBrand && <p className="product-brand">{decodeHtmlEntities(displayBrand)}</p>}
+        <h3 className="product-title">{decodeHtmlEntities(product.title)}</h3>
+        {showDescription && <p className="product-description">{decodeHtmlEntities(product.description)}</p>}
         {product.onSale && (
           <p className="sale-notice">This item is currently on sale</p>
         )}
