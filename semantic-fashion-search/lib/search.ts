@@ -2,6 +2,7 @@ import { getSupabaseClient, ProductRow } from './supabase';
 import { generateEmbedding, generateEmbeddings } from './embeddings';
 import { extractIntent, isSimpleQuery, createSimpleIntent } from './intent';
 import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision-embeddings-api';
+import { rerankWithVision, shouldUseVisionReranking } from './vision-reranking';
 import type { Product, SearchResponse, ParsedIntent, SearchQuery } from '@/types';
 
 interface SearchOptions {
@@ -252,13 +253,27 @@ export async function semanticSearch(
     console.log(`[semanticSearch] 💰 Price filtering: ${categoryFilteredResults.length} → ${priceFilteredResults.length} results`);
   }
 
+  // CRITICAL: Apply vision-based re-ranking for queries with visual descriptors
+  // This ensures "sexy boots" shows heeled/stiletto boots first, not work boots
+  let visionRankedResults = priceFilteredResults;
+  if (shouldUseVisionReranking(query) && priceFilteredResults.length > 0) {
+    console.log(`[semanticSearch] 👁️ Query has visual descriptors - applying GPT-4 Vision re-ranking...`);
+    try {
+      visionRankedResults = await rerankWithVision(priceFilteredResults, query, 24);
+      console.log(`[semanticSearch] 👁️ Vision re-ranking complete`);
+    } catch (error) {
+      console.error('[semanticSearch] ❌ Vision re-ranking failed, using original order:', error);
+      visionRankedResults = priceFilteredResults;
+    }
+  }
+
   // Calculate pagination
   const startIndex = (page - 1) * limit;
   const endIndex = startIndex + limit;
-  const paginatedResults = priceFilteredResults.slice(startIndex, endIndex);
+  const paginatedResults = visionRankedResults.slice(startIndex, endIndex);
 
   // Use actual total count from filtered results
-  const totalCount = priceFilteredResults.length;
+  const totalCount = visionRankedResults.length;
 
   console.log(`[semanticSearch] Pagination: page=${page}, showing ${startIndex}-${endIndex} of ${totalCount} total results`);
 
@@ -267,14 +282,14 @@ export async function semanticSearch(
   const warningMessage = "We know this may not be exactly what you've asked for right now, and that's because we are continuing to add hundreds and sometimes thousands of new products daily. We don't have the best match(es) YET for that search, but we know exactly what you mean, and we are working on updating our inventory to make this experience better for you.";
 
   // Check for zero results FIRST (most critical)
-  if (priceFilteredResults.length === 0) {
+  if (visionRankedResults.length === 0) {
     qualityWarning = warningMessage;
     console.log(`[semanticSearch] ⚠️ Quality warning: ZERO results after filtering`);
   }
   // Check quality metrics if we have results
-  else if (priceFilteredResults.length > 0) {
-    const maxSimilarity = Math.max(...priceFilteredResults.map(p => p.similarity || 0));
-    const avgSimilarity = priceFilteredResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / priceFilteredResults.length;
+  else if (visionRankedResults.length > 0) {
+    const maxSimilarity = Math.max(...visionRankedResults.map(p => p.similarity || 0));
+    const avgSimilarity = visionRankedResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / visionRankedResults.length;
 
     // Show warning if best match is below 0.45 or average is below 0.35
     if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {

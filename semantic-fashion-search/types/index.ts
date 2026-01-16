@@ -16,6 +16,8 @@ export interface Product {
   onSale?: boolean; // Whether product has "sale" or "on sale" in text
   matchesColor?: boolean; // Whether product matches user-specified color (used during filtering)
   matchesCategory?: boolean; // Whether product matches user-specified category/garment type (used during filtering)
+  visionScore?: number; // GPT-4 Vision score (0-10) for visual similarity to query
+  visionMatch?: boolean; // Whether product visually matches query (visionScore >= 6)
 }
 
 // Search types
