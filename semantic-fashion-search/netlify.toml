@@ -6,9 +6,9 @@
   NODE_VERSION = "20"
 
 [functions]
-  # Increase timeout for vision-enhanced searches (max 26s on Pro plan, 10s on free)
+  # Function timeout is controlled by Netlify plan: 10s (free) or 26s (Pro)
+  # Next.js functions via @netlify/plugin-nextjs automatically use plan limits
   node_bundler = "esbuild"
-  timeout = 26
 
 # Next.js plugin for Netlify
 [[plugins]]
