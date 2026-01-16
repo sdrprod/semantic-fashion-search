@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend client when actually needed (not during build)
+let resendClient: Resend | null = null;
+function getResendClient() {
+  if (!resendClient) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not set');
+    }
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
 const APP_NAME = 'Semantic Fashion Search';
@@ -16,6 +27,7 @@ export async function sendVerificationEmail(
       email
     )}&code=${code}`;
 
+    const resend = getResendClient();
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
