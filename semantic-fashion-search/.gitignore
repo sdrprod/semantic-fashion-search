@@ -37,3 +37,4 @@ lerna-debug.log*
 .netlify/
 
 /src/generated/prisma
+# Force rebuild
