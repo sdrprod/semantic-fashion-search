@@ -958,8 +958,13 @@ async function executeMultiSearch(
     // Filter by similarity threshold and convert to Product type
     console.log(`[executeMultiSearch] Filtering ${data.length} products with text threshold ${similarityThreshold}`);
     console.log(`[executeMultiSearch] Sexy content allowed: ${allowSexyContent ? 'YES' : 'NO'}`);
+    console.log(`[executeMultiSearch] 🚨 EMERGENCY MODE: ALL QUALITY FILTERS DISABLED FOR DEBUGGING`);
 
     let filteredProducts = data.filter((row: ProductRow & { similarity: number }) => {
+      // 🚨 EMERGENCY: ALL FILTERS TEMPORARILY DISABLED TO DEBUG DEPLOYMENT ISSUE
+      // Once we verify products appear, we'll re-enable filters one by one
+
+      /* DISABLED FOR DEBUGGING
       // FILTER 1: Content filtering - Remove sexy/provocative items unless explicitly requested
       if (!allowSexyContent && isSexyProduct(row.title, row.description || '')) {
         console.log(`[executeMultiSearch] ❌ Filtered sexy product (not requested): "${row.title?.slice(0, 60)}..."`);
@@ -986,13 +991,15 @@ async function executeMultiSearch(
         console.log(`[executeMultiSearch] ❌ Filtered low-price product ($${row.price}): "${row.title?.slice(0, 60)}..."`);
         return false;
       }
+      */
 
       // FILTER 5: DHGate quality - Apply stricter threshold for DHGate vendors
+      // 🚨 EMERGENCY: SIMILARITY THRESHOLD DISABLED FOR DEBUGGING
       const isDHGate = row.product_url?.toLowerCase().includes('dhgate') ||
                        row.brand?.toLowerCase().includes('dhgate');
       const requiredThreshold = isDHGate ? similarityThreshold + 0.1 : similarityThreshold;
 
-      const passes = row.similarity >= requiredThreshold;
+      const passes = true; // 🚨 EMERGENCY: Always pass for debugging
 
       if (!passes && data.indexOf(row) < 3) {
         console.log(
