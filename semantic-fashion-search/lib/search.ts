@@ -13,6 +13,14 @@ interface QualityFilterSettings {
   enableNonApparelFilter: boolean;
 }
 
+// Database row type for search_settings
+interface SearchSettingsRow {
+  min_price_threshold: number;
+  enable_mens_filter: boolean;
+  enable_price_filter: boolean;
+  enable_non_apparel_filter: boolean;
+}
+
 let cachedSettings: QualityFilterSettings | null = null;
 let settingsCacheTime: number = 0;
 const SETTINGS_CACHE_TTL = 60000; // 1 minute
@@ -32,7 +40,7 @@ async function getQualityFilterSettings(): Promise<QualityFilterSettings> {
       .from('search_settings')
       .select('min_price_threshold, enable_mens_filter, enable_price_filter, enable_non_apparel_filter')
       .eq('id', '00000000-0000-0000-0000-000000000001')
-      .single();
+      .single<SearchSettingsRow>();
 
     if (error) {
       console.error('[getQualityFilterSettings] Database error:', error);
