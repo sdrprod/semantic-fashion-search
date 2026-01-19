@@ -244,24 +244,15 @@ export async function semanticSearch(
 
     console.log(`[semanticSearch] 🎨 Color matches: ${colorMatchCount}/${colorFilteredResults.length}`);
 
-    // CRITICAL: If we have very few color matches in top results, filter out non-matches
-    // UNLESS it's a broad query (user wants to see everything in that color)
-    if (!isBroadQuery) {
-      const top12Results = colorFilteredResults.slice(0, 12);
-      const top12ColorMatches = top12Results.filter(p => p.matchesColor).length;
-
-      // If less than 50% of top 12 results match color, aggressively filter
-      // This prevents showing blue/red/yellow dresses when user asks for "black dresses"
-      if (top12ColorMatches < 6) {
-        console.log(`[semanticSearch] ⚠️ Low color match rate in top results (${top12ColorMatches}/12) - filtering non-matches`);
-        colorFilteredResults = colorFilteredResults.filter(p => p.matchesColor);
-        console.log(`[semanticSearch] 🎨 After aggressive filtering: ${colorFilteredResults.length} results`);
-      }
-    } else {
-      // For broad queries, ALWAYS filter by color but don't require high match rates
-      console.log(`[semanticSearch] 📋 Broad query: showing all color matches without aggressive filtering`);
+    // CRITICAL: For color queries, ALWAYS filter strictly to only show matching colors
+    // Users expect "black dress" to show ONLY black dresses, not blue/red/yellow ones
+    if (colorMatchCount > 0) {
+      console.log(`[semanticSearch] 🎯 Applying strict color filter - removing non-matching items`);
       colorFilteredResults = colorFilteredResults.filter(p => p.matchesColor);
-      console.log(`[semanticSearch] 🎨 After broad filtering: ${colorFilteredResults.length} results`);
+      console.log(`[semanticSearch] 🎨 After strict color filtering: ${colorFilteredResults.length} results`);
+    } else {
+      // No color matches at all - show all results but warn
+      console.log(`[semanticSearch] ⚠️ No color matches found for "${intent.color}" - showing all results`);
     }
   }
 
