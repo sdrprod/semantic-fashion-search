@@ -74,6 +74,7 @@ export interface ProductRow {
   similarity?: number;
   merchant_name?: string;
   on_sale?: boolean;
+  verified_colors?: string[] | null; // AI-verified colors from GPT-4 Vision analysis
   created_at: string;
   updated_at: string;
 }
