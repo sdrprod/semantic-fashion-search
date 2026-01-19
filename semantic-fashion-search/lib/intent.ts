@@ -39,7 +39,7 @@ Return your response as JSON with this structure:
       "weight": 1.0
     }
   ],
-  "explanation": "Write 2-3 sentences in a warm, friendly tone like a fashion-savvy colleague helping a friend. Start with 'I can help you find...' or 'It sounds like you're looking for...' Describe the vibe, occasion, and key style elements in detail. Add enthusiasm and be descriptive about the aesthetic. End with 'Does that sound right?' or 'How does that sound?' to invite feedback. Be conversational and helpful, not robotic."
+  "explanation": "Write 2-3 sentences in a warm, friendly tone like a fashion-savvy colleague helping a friend. Start with 'I can help you find...' or 'It sounds like you're looking for...' Describe the vibe, occasion, and key style elements in detail. Add enthusiasm and be descriptive about the aesthetic. Be conversational and helpful, not robotic."
 }
 
 Important guidelines:
@@ -120,36 +120,9 @@ Contextual inference rules:
  * Generate a simple search query for straightforward inputs
  */
 export function isSimpleQuery(query: string): boolean {
-  // Consider it simple if it's short and doesn't have conversational markers
-  const conversationalMarkers = [
-    'i need', 'i want', 'looking for', 'help me', 'show me',
-    'going to', 'attending', 'for a', 'that', 'which', 'but not',
-    'without', 'similar to', 'like the'
-  ];
-
-  // Context keywords that need intent extraction for better results
-  const contextKeywords = [
-    'outfit', // needs breakdown into pieces
-    'brunch', 'dinner', 'lunch', 'party', 'wedding', 'date', 'work', // occasions need context
-    'casual', 'formal', 'elegant', 'glamorous', 'professional', // style descriptors need expansion
-    'summer', 'winter', 'fall', 'spring', // seasonal needs color/fabric context
-  ];
-
-  const lowerQuery = query.toLowerCase();
-  const hasConversationalMarker = conversationalMarkers.some(marker =>
-    lowerQuery.includes(marker)
-  );
-
-  const hasContextKeyword = contextKeywords.some(keyword =>
-    lowerQuery.includes(keyword)
-  );
-
-  // Force intent extraction if query has context keywords
-  if (hasContextKeyword) {
-    return false;
-  }
-
-  return query.length < 50 && !hasConversationalMarker;
+  // ALWAYS use full GPT-4 intent extraction for consistent, high-quality summaries
+  // This ensures every search gets detailed explanations and "Also searching for" examples
+  return false;
 }
 
 /**
@@ -186,6 +159,6 @@ export function createSimpleIntent(query: string): ParsedIntent {
         weight: 1.0,
       },
     ],
-    explanation: `I can help you find ${query}! I'll search through our collection to find pieces that match what you're looking for. Does that sound right?`,
+    explanation: `I can help you find ${query}! I'll search through our collection to find pieces that match what you're looking for.`,
   };
 }

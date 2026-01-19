@@ -11,6 +11,10 @@ interface SearchSettingsRow {
   max_page_size: number;
   category_weights: Record<string, number> | null;
   brand_boosts: Record<string, number> | null;
+  min_price_threshold: number;
+  enable_mens_filter: boolean;
+  enable_price_filter: boolean;
+  enable_non_apparel_filter: boolean;
   updated_at: string;
   updated_by: string | null;
 }
@@ -42,6 +46,10 @@ export async function GET() {
         maxPageSize: 50,
         categoryWeights: {},
         brandBoosts: {},
+        minPriceThreshold: 5.00,
+        enableMensFilter: true,
+        enablePriceFilter: true,
+        enableNonApparelFilter: true,
       });
     }
 
@@ -52,6 +60,10 @@ export async function GET() {
       maxPageSize: data.max_page_size,
       categoryWeights: data.category_weights || {},
       brandBoosts: data.brand_boosts || {},
+      minPriceThreshold: data.min_price_threshold,
+      enableMensFilter: data.enable_mens_filter,
+      enablePriceFilter: data.enable_price_filter,
+      enableNonApparelFilter: data.enable_non_apparel_filter,
     });
   } catch (err) {
     console.error('Settings fetch error:', err);
@@ -90,6 +102,10 @@ export async function PUT(request: NextRequest) {
       maxPageSize,
       categoryWeights,
       brandBoosts,
+      minPriceThreshold,
+      enableMensFilter,
+      enablePriceFilter,
+      enableNonApparelFilter,
     } = body;
 
     const supabase = getSupabaseClient(true);
@@ -118,6 +134,10 @@ export async function PUT(request: NextRequest) {
         max_page_size: maxPageSize,
         category_weights: categoryWeights,
         brand_boosts: brandBoosts,
+        min_price_threshold: minPriceThreshold,
+        enable_mens_filter: enableMensFilter,
+        enable_price_filter: enablePriceFilter,
+        enable_non_apparel_filter: enableNonApparelFilter,
         updated_at: new Date().toISOString(),
         updated_by: userId,
       } as any);

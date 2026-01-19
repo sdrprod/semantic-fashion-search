@@ -5,6 +5,77 @@ import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision
 import { rerankWithVision, shouldUseVisionReranking } from './vision-reranking';
 import type { Product, SearchResponse, ParsedIntent, SearchQuery } from '@/types';
 
+// Quality filter settings cache
+interface QualityFilterSettings {
+  minPriceThreshold: number;
+  enableMensFilter: boolean;
+  enablePriceFilter: boolean;
+  enableNonApparelFilter: boolean;
+}
+
+let cachedSettings: QualityFilterSettings | null = null;
+let settingsCacheTime: number = 0;
+const SETTINGS_CACHE_TTL = 60000; // 1 minute
+
+/**
+ * Fetch quality filter settings from database with caching
+ */
+async function getQualityFilterSettings(): Promise<QualityFilterSettings> {
+  // Return cached settings if still fresh
+  if (cachedSettings && Date.now() - settingsCacheTime < SETTINGS_CACHE_TTL) {
+    return cachedSettings;
+  }
+
+  try {
+    const supabase = getSupabaseClient(true);
+    const { data, error } = await supabase
+      .from('search_settings')
+      .select('min_price_threshold, enable_mens_filter, enable_price_filter, enable_non_apparel_filter')
+      .eq('id', '00000000-0000-0000-0000-000000000001')
+      .single();
+
+    if (error) {
+      console.error('[getQualityFilterSettings] Database error:', error);
+      // Return defaults if settings don't exist
+      return {
+        minPriceThreshold: 5.00,
+        enableMensFilter: true,
+        enablePriceFilter: true,
+        enableNonApparelFilter: true,
+      };
+    }
+
+    if (!data) {
+      console.warn('[getQualityFilterSettings] No settings found, using defaults');
+      return {
+        minPriceThreshold: 5.00,
+        enableMensFilter: true,
+        enablePriceFilter: true,
+        enableNonApparelFilter: true,
+      };
+    }
+
+    cachedSettings = {
+      minPriceThreshold: data.min_price_threshold,
+      enableMensFilter: data.enable_mens_filter,
+      enablePriceFilter: data.enable_price_filter,
+      enableNonApparelFilter: data.enable_non_apparel_filter,
+    };
+    settingsCacheTime = Date.now();
+
+    return cachedSettings;
+  } catch (error) {
+    console.error('[getQualityFilterSettings] Error fetching settings:', error);
+    // Return defaults on error
+    return {
+      minPriceThreshold: 5.00,
+      enableMensFilter: true,
+      enablePriceFilter: true,
+      enableNonApparelFilter: true,
+    };
+  }
+}
+
 interface SearchOptions {
   limit?: number;
   page?: number;
@@ -13,6 +84,7 @@ interface SearchOptions {
   enableImageValidation?: boolean;
   imageValidationThreshold?: number;
   allowSexyContent?: boolean; // Explicitly allow sexy/provocative content
+  userRatings?: { [productId: string]: number }; // User's personal ratings (1-5)
 }
 
 /**
@@ -50,6 +122,7 @@ export async function semanticSearch(
     enableImageValidation = false,  // DISABLED - vision model broken, needs fixing
     imageValidationThreshold = 0.6,  // 60% image similarity required
     allowSexyContent = false, // Default to filtering sexy content
+    userRatings = {}, // User's personal ratings (session or persistent)
   } = options;
 
   // Detect broad queries that want to see "everything" in a category/color
@@ -268,10 +341,108 @@ export async function semanticSearch(
     }
   }
 
+  // FEATURE: Rating-based filtering and boosting (personal + community)
+  let ratingFilteredResults = visionRankedResults;
+
+  // Only apply rating filtering if user has ratings or we can fetch community stats
+  const hasUserRatings = Object.keys(userRatings).length > 0;
+
+  if (hasUserRatings && visionRankedResults.length > 0) {
+    console.log(`[semanticSearch] ⭐ User has ${Object.keys(userRatings).length} ratings - applying personal filtering/boosting`);
+
+    // Step 1: Fetch community stats for all products in results
+    const productIds = visionRankedResults.map(p => p.id).join(',');
+    let communityStats: { [key: string]: any } = {};
+
+    try {
+      // Construct full URL for stats API
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const statsResponse = await fetch(`${baseUrl}/api/ratings/stats?productIds=${productIds}`);
+      if (statsResponse.ok) {
+        const data = await statsResponse.json();
+        communityStats = data.stats || {};
+        console.log(`[semanticSearch] ⭐ Fetched community stats for ${Object.keys(communityStats).length} products`);
+      }
+    } catch (error) {
+      console.error('[semanticSearch] ⚠️ Failed to fetch community stats:', error);
+    }
+
+    // Step 2: Apply personal filtering (hide ≤2 stars)
+    ratingFilteredResults = visionRankedResults.filter(product => {
+      const userRating = userRatings[product.id] || 0;
+
+      // If user rated this product ≤2 stars, hide it
+      if (userRating > 0 && userRating <= 2) {
+        console.log(`[semanticSearch] ⭐ Hiding product rated ${userRating} stars: "${product.title.slice(0, 50)}..."`);
+        return false;
+      }
+
+      return true;
+    });
+
+    console.log(`[semanticSearch] ⭐ Personal filtering: ${visionRankedResults.length} → ${ratingFilteredResults.length} results`);
+
+    // Step 3: Apply community filtering (51% rule - min 10 ratings)
+    ratingFilteredResults = ratingFilteredResults.filter(product => {
+      const stats = communityStats[product.id];
+
+      // If community wants to hide this product, hide it
+      if (stats?.shouldHide) {
+        console.log(`[semanticSearch] ⭐ Hiding community-flagged product: "${product.title.slice(0, 50)}..." (${stats.totalRatings} ratings, ${stats.percent2OrLess}% rated ≤2)`);
+        return false;
+      }
+
+      return true;
+    });
+
+    console.log(`[semanticSearch] ⭐ Community filtering: ${ratingFilteredResults.length} results after community rules`);
+
+    // Step 4: Apply personal + community boosting
+    ratingFilteredResults = ratingFilteredResults.map(product => {
+      const userRating = userRatings[product.id] || 0;
+      const stats = communityStats[product.id];
+
+      // Calculate personal boost
+      let personalBoost = 0;
+      if (userRating === 5) personalBoost = 0.15;
+      else if (userRating === 4) personalBoost = 0.10;
+      else if (userRating === 3) personalBoost = 0.05;
+
+      // Calculate community boost
+      const communityBoost = stats?.communityBoost || 0;
+
+      // Apply combined boost to similarity score
+      const totalBoost = personalBoost + communityBoost;
+      const adjustedSimilarity = (product.similarity || 0) + totalBoost;
+
+      if (totalBoost > 0) {
+        console.log(
+          `[semanticSearch] ⭐ Boosting "${product.title.slice(0, 40)}...": ` +
+          `personal +${personalBoost.toFixed(2)} (${userRating}⭐), ` +
+          `community +${communityBoost.toFixed(2)}, ` +
+          `total: ${product.similarity?.toFixed(3)} → ${adjustedSimilarity.toFixed(3)}`
+        );
+      }
+
+      return {
+        ...product,
+        similarity: adjustedSimilarity,
+        userRating, // Preserve for debugging
+        personalBoost, // Preserve for debugging
+        communityBoost, // Preserve for debugging
+      };
+    });
+
+    // Step 5: Re-sort by adjusted similarity
+    ratingFilteredResults.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+
+    console.log(`[semanticSearch] ⭐ Rating filtering complete: ${ratingFilteredResults.length} results with adjusted rankings`);
+  }
+
   // FEATURE: Category-based grouping for multi-category searches
   // If user specifies multiple categories (e.g., "clothing, shoes, and jewelry"),
   // group results by category and show them in the order mentioned
-  let categoryGroupedResults = visionRankedResults;
+  let categoryGroupedResults = ratingFilteredResults;
 
   if (intent.searchQueries && intent.searchQueries.length > 1) {
     console.log(`[semanticSearch] 📦 Multi-category search detected (${intent.searchQueries.length} categories) - grouping results`);
@@ -285,7 +456,7 @@ export async function semanticSearch(
     });
 
     // Assign each product to its best matching category
-    visionRankedResults.forEach(product => {
+    ratingFilteredResults.forEach(product => {
       const productText = `${product.title} ${product.description}`.toLowerCase();
 
       // Try to match product to one of the specified categories
@@ -409,17 +580,31 @@ function hasSexyIntent(query: string): boolean {
  * Check if product contains sexy/provocative content
  */
 function isSexyProduct(title: string, description: string): boolean {
-  const sexyTerms = [
-    'sexy', 'lingerie', 'intimate', 'revealing', 'sheer', 'see-through',
-    'transparent', 'mesh', 'fishnet', 'teddy', 'bodysuit', 'negligee',
-    'babydoll', 'chemise', 'garter', 'thong', 'g-string', 'crotchless',
+  // Strong sexy indicators (check title + description)
+  const strongSexyTerms = [
+    'sexy', 'lingerie', 'intimate', 'revealing', 'see-through',
+    'fishnet', 'teddy', 'negligee', 'babydoll', 'chemise',
+    'garter', 'thong', 'g-string', 'crotchless',
     'open bust', 'cupless', 'peek-a-boo', 'peekaboo', 'erotic', 'naughty',
-    'boudoir', 'bedroom', 'sultry', 'provocative', 'enticing', 'lace bra set',
+    'boudoir', 'sultry', 'provocative', 'enticing', 'lace bra set',
     'adult costume', 'roleplay', 'role play', 'burlesque', 'stripper'
   ];
 
+  // Weak indicators (only check if in TITLE - too many false positives in descriptions)
+  const weakSexyTerms = [
+    'sheer', 'transparent', 'mesh', 'bodysuit', 'bedroom'
+  ];
+
   const combinedText = `${title} ${description}`.toLowerCase();
-  return sexyTerms.some(term => combinedText.includes(term));
+  const titleOnly = title.toLowerCase();
+
+  // Check strong indicators in full text
+  const hasStrongIndicator = strongSexyTerms.some(term => combinedText.includes(term));
+
+  // Check weak indicators ONLY in title (vendors stuff "mesh" in descriptions)
+  const hasWeakIndicator = weakSexyTerms.some(term => titleOnly.includes(term));
+
+  return hasStrongIndicator || hasWeakIndicator;
 }
 
 /**
@@ -482,10 +667,58 @@ function productMatchesCategory(product: Product, category: string): boolean {
 /**
  * Check if product matches the specified color
  * CRITICAL: User-specified colors MUST match in first 3-6 results
+ *
+ * Phase 1 LLM Enhancement: Uses AI-verified colors when available (verifiedColors field),
+ * falls back to text-based matching for products not yet analyzed.
  */
 function productMatchesColor(product: Product, color: string): boolean {
-  const combinedText = `${product.title} ${product.description}`.toLowerCase();
   const normalizedColor = color.toLowerCase();
+
+  // PHASE 1: Use AI-verified colors if available (most accurate)
+  if (product.verifiedColors && product.verifiedColors.length > 0) {
+    // Check if any verified color matches the requested color
+    const hasDirectMatch = product.verifiedColors.some(
+      verifiedColor => verifiedColor.toLowerCase() === normalizedColor
+    );
+
+    if (hasDirectMatch) {
+      return true;
+    }
+
+    // Check color variations/synonyms for verified colors
+    const colorVariations: Record<string, string[]> = {
+      black: ['noir', 'ebony', 'jet black'],
+      white: ['ivory', 'cream', 'off-white', 'eggshell'],
+      red: ['crimson', 'scarlet', 'burgundy', 'wine', 'maroon'],
+      blue: ['navy', 'cobalt', 'royal blue', 'sky blue', 'azure'],
+      green: ['olive', 'emerald', 'forest green', 'sage', 'mint'],
+      pink: ['rose', 'blush', 'hot pink', 'fuchsia', 'magenta'],
+      purple: ['violet', 'lavender', 'plum', 'mauve', 'lilac'],
+      yellow: ['gold', 'mustard', 'lemon', 'canary'],
+      orange: ['rust', 'coral', 'peach', 'tangerine', 'burnt orange'],
+      brown: ['tan', 'beige', 'taupe', 'khaki', 'camel', 'chocolate'],
+      grey: ['gray', 'charcoal', 'slate', 'silver', 'pewter'],
+      gray: ['grey', 'charcoal', 'slate', 'silver', 'pewter'],
+    };
+
+    // Check if requested color is a variation of any verified color
+    const requestedVariations = colorVariations[normalizedColor] || [];
+    const hasVariationMatch = product.verifiedColors.some(verifiedColor =>
+      requestedVariations.includes(verifiedColor.toLowerCase())
+    );
+
+    if (hasVariationMatch) {
+      return true;
+    }
+
+    // Verified colors exist but don't match - return false
+    // This is the key improvement: we trust AI verification over text descriptions
+    return false;
+  }
+
+  // FALLBACK: Text-based matching for products not yet analyzed
+  // This maintains backward compatibility during transition period
+  const combinedText = `${product.title} ${product.description}`.toLowerCase();
 
   // Direct color match (e.g., "black", "red", "navy blue")
   if (combinedText.includes(normalizedColor)) {
@@ -534,6 +767,21 @@ function isMensProduct(title: string, description: string): boolean {
   const decodedTitle = decodeHtmlEntities(title);
   const decodedDescription = decodeHtmlEntities(description);
   const combinedText = `${decodedTitle} ${decodedDescription}`.toLowerCase();
+
+  // Check for unisex indicators - if product explicitly says it's for both, allow it
+  const unisexPatterns = [
+    /\bunisex\b/,
+    /\bfor men and women\b/,
+    /\bfor women and men\b/,
+    /\bmen & women\b/,
+    /\bwomen & men\b/,
+    /\bmens and womens\b/,
+    /\bwomens and mens\b/,
+  ];
+
+  if (unisexPatterns.some(pattern => pattern.test(combinedText))) {
+    return false; // It's unisex, don't filter
+  }
 
   // Use word boundaries to avoid false positives like "womens" matching "mens"
   const mensPatterns = [
@@ -625,6 +873,10 @@ async function executeMultiSearch(
   console.log('[executeMultiSearch] Starting with queries:', queries.map(q => q.query));
   console.log('[executeMultiSearch] Image validation:', enableImageValidation ? 'ENABLED' : 'DISABLED');
 
+  // Fetch quality filter settings
+  const qualitySettings = await getQualityFilterSettings();
+  console.log('[executeMultiSearch] Quality filter settings:', qualitySettings);
+
   const supabase = getSupabaseClient(true) as any;
   const results = new Map<string, Product[]>();
 
@@ -706,20 +958,23 @@ async function executeMultiSearch(
         return false;
       }
 
-      // FILTER 2: Men's products - Always filter out men's clothing
-      if (isMensProduct(row.title, row.description || '')) {
+      // FILTER 2: Men's products (configurable)
+      if (qualitySettings.enableMensFilter && isMensProduct(row.title, row.description || '')) {
         console.log(`[executeMultiSearch] ❌ Filtered men's product: "${row.title?.slice(0, 60)}..."`);
         return false;
       }
 
-      // FILTER 3: Non-apparel materials - Filter out raw fabric, upholstery, DIY materials
-      if (isNonApparelMaterial(row.title, row.description || '')) {
+      // FILTER 3: Non-apparel materials (configurable)
+      if (qualitySettings.enableNonApparelFilter && isNonApparelMaterial(row.title, row.description || '')) {
         console.log(`[executeMultiSearch] ❌ Filtered non-apparel material: "${row.title?.slice(0, 60)}..."`);
         return false;
       }
 
-      // FILTER 4: Price threshold - Minimum $20 for quality control
-      if (row.price !== null && row.price !== undefined && row.price < 20) {
+      // FILTER 4: Price threshold (configurable)
+      if (qualitySettings.enablePriceFilter &&
+          row.price !== null &&
+          row.price !== undefined &&
+          row.price < qualitySettings.minPriceThreshold) {
         console.log(`[executeMultiSearch] ❌ Filtered low-price product ($${row.price}): "${row.title?.slice(0, 60)}..."`);
         return false;
       }
@@ -808,6 +1063,7 @@ async function executeMultiSearch(
       similarity: row.similarity,
       merchantName: row.merchant_name,
       onSale: row.on_sale,
+      verifiedColors: row.verified_colors, // AI-verified actual colors from image analysis
     }));
 
     return { query: searchQuery.query, products };

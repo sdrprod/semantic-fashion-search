@@ -12,6 +12,10 @@ interface SearchSettings {
   maxPageSize: number;
   categoryWeights: Record<string, number>;
   brandBoosts: Record<string, number>;
+  minPriceThreshold: number;
+  enableMensFilter: boolean;
+  enablePriceFilter: boolean;
+  enableNonApparelFilter: boolean;
 }
 
 export default function SettingsPage() {
@@ -24,6 +28,10 @@ export default function SettingsPage() {
     maxPageSize: 50,
     categoryWeights: {},
     brandBoosts: {},
+    minPriceThreshold: 5.00,
+    enableMensFilter: true,
+    enablePriceFilter: true,
+    enableNonApparelFilter: true,
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -234,6 +242,85 @@ export default function SettingsPage() {
             />
           </div>
         ))}
+      </div>
+
+      <div className="admin-card">
+        <h2 className="admin-card-title">Quality Filters</h2>
+        <p className="admin-card-description">
+          Control which products appear in search results based on quality criteria.
+        </p>
+
+        <div className="form-group">
+          <label className="form-label">
+            Minimum Price Threshold
+            <span className="slider-value">${settings.minPriceThreshold.toFixed(2)}</span>
+          </label>
+          <input
+            type="range"
+            className="form-slider"
+            min="0"
+            max="50"
+            step="0.50"
+            value={settings.minPriceThreshold}
+            onChange={(e) =>
+              setSettings({ ...settings, minPriceThreshold: parseFloat(e.target.value) })
+            }
+          />
+          <p className="form-help">
+            Products below this price will be filtered out. Set to $0 to disable. Recommended: $5-$10 for quality control.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={settings.enablePriceFilter}
+              onChange={(e) =>
+                setSettings({ ...settings, enablePriceFilter: e.target.checked })
+              }
+              style={{ width: 'auto' }}
+            />
+            Enable Price Filter
+          </label>
+          <p className="form-help">
+            When enabled, products below the minimum price threshold will be hidden.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={settings.enableMensFilter}
+              onChange={(e) =>
+                setSettings({ ...settings, enableMensFilter: e.target.checked })
+              }
+              style={{ width: 'auto' }}
+            />
+            Filter Men's Products
+          </label>
+          <p className="form-help">
+            When enabled, products explicitly marketed for men will be hidden. Unisex items are always shown.
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={settings.enableNonApparelFilter}
+              onChange={(e) =>
+                setSettings({ ...settings, enableNonApparelFilter: e.target.checked })
+              }
+              style={{ width: 'auto' }}
+            />
+            Filter Non-Apparel Materials
+          </label>
+          <p className="form-help">
+            When enabled, raw fabrics, upholstery, and DIY materials will be hidden. Fashion accessories like bags and belts are always shown.
+          </p>
+        </div>
       </div>
 
       <div style={{ marginTop: '2rem' }}>
