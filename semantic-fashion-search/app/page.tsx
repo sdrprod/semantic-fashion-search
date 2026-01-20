@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { SearchBar } from '@/components/SearchBar';
 import { ImageUpload } from '@/components/ImageUpload';
 import { ProductCard } from '@/components/ProductCard';
@@ -10,6 +11,8 @@ import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { HowToUse } from '@/components/HowToUse';
 import { EmailSubscribe } from '@/components/EmailSubscribe';
+import { useSessionRatings } from '@/src/hooks/useSessionRatings';
+import { usePersistentRatings } from '@/src/hooks/usePersistentRatings';
 import type { Product, ParsedIntent } from '@/types';
 
 const EXAMPLE_SEARCHES = [
@@ -20,6 +23,7 @@ const EXAMPLE_SEARCHES = [
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const [query, setQuery] = useState('');
   const [actualSearchQuery, setActualSearchQuery] = useState(''); // The query actually used for search (may differ for visual search)
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
@@ -34,6 +38,13 @@ function HomeContent() {
   const [totalCount, setTotalCount] = useState(0);
   const [fanoutSeed, setFanoutSeed] = useState(0); // For controlled randomization
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Rating hooks - session (anonymous) and persistent (authenticated)
+  const sessionRatings = useSessionRatings();
+  const persistentRatings = usePersistentRatings({
+    userId: session?.user?.id || null,
+    autoFetch: true,
+  });
 
   const hasSearched = results.length > 0 || error !== null || loading || intent !== null;
 
@@ -89,6 +100,11 @@ function HomeContent() {
     // Otherwise, use text-only search
     setSearchType('text');
 
+    // Gather user ratings (session or persistent depending on auth state)
+    const currentRatings = session?.user?.id && persistentRatings.isLoaded
+      ? persistentRatings.ratings
+      : sessionRatings.ratings;
+
     try {
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -99,6 +115,7 @@ function HomeContent() {
           query: searchQuery.trim(),
           limit: pageSize,
           page: 1,
+          userRatings: currentRatings, // Include user's ratings for personalization
         }),
       });
 
@@ -209,6 +226,11 @@ function HomeContent() {
     setLoading(true);
     setPage(newPage);
 
+    // Gather user ratings (session or persistent depending on auth state)
+    const currentRatings = session?.user?.id && persistentRatings.isLoaded
+      ? persistentRatings.ratings
+      : sessionRatings.ratings;
+
     try {
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -219,6 +241,7 @@ function HomeContent() {
           query: actualSearchQuery, // Use the actual search query (may be generated from images)
           limit: pageSize,
           page: newPage,
+          userRatings: currentRatings, // Include user's ratings for personalization
         }),
       });
 
@@ -451,7 +474,12 @@ function HomeContent() {
 
               <div className="results-grid">
                 {results.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    sessionRatings={sessionRatings}
+                    persistentRatings={persistentRatings}
+                  />
                 ))}
               </div>
 
