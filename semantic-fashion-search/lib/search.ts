@@ -288,21 +288,15 @@ export async function semanticSearch(
 
     console.log(`[semanticSearch] 👔 Category matches: ${categoryMatchCount}/${categoryFilteredResults.length}`);
 
-    // CRITICAL: If we have very few category matches in top results, filter out non-matches
-    // UNLESS it's a broad query (user wants to see everything, across all categories)
-    if (!isBroadQuery) {
-      const top12Results = categoryFilteredResults.slice(0, 12);
-      const top12CategoryMatches = top12Results.filter(p => p.matchesCategory).length;
-
-      // If less than 50% of top 12 results match category, aggressively filter
-      if (top12CategoryMatches < 6) {
-        console.log(`[semanticSearch] ⚠️ Low category match rate in top results (${top12CategoryMatches}/12) - filtering non-matches`);
-        categoryFilteredResults = categoryFilteredResults.filter(p => p.matchesCategory);
-        console.log(`[semanticSearch] 👔 After aggressive filtering: ${categoryFilteredResults.length} results`);
-      }
+    // CRITICAL: For category queries, ALWAYS filter strictly to only show matching categories
+    // Users expect "black dress" to show ONLY dresses, not shoes/pants/bags
+    if (categoryMatchCount > 0) {
+      console.log(`[semanticSearch] 🎯 Applying strict category filter - removing non-matching items`);
+      categoryFilteredResults = categoryFilteredResults.filter(p => p.matchesCategory);
+      console.log(`[semanticSearch] 👔 After strict category filtering: ${categoryFilteredResults.length} results`);
     } else {
-      // For broad queries, DON'T filter by category - show items from all categories
-      console.log(`[semanticSearch] 📋 Broad query: showing all categories without filtering`);
+      // No category matches at all - show all results but warn
+      console.log(`[semanticSearch] ⚠️ No category matches found for "${primaryCategory}" - showing all results`);
     }
   }
 
