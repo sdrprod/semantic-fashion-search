@@ -32,6 +32,9 @@ export async function sendVerificationEmail(
       from: FROM_EMAIL,
       to: email,
       subject: `Verify your email for ${APP_NAME}`,
+      headers: {
+        'Content-Type': 'text/html; charset=UTF-8',
+      },
       html: `
         <!DOCTYPE html>
         <html>
