@@ -622,92 +622,106 @@ function isSexyProduct(title: string, description: string): boolean {
  */
 /**
  * Determine category match type: 'exact', 'partial', or 'none'
- * - exact: Pure category match (skirt = ONLY skirt)
- * - partial: Includes category (skirt = two-piece outfit with skirt)
- * - none: No match (completely unrelated)
+ * - exact: Pure category match (search "dress" → product IS a dress)
+ * - partial: Includes category (search "necklace" → jewelry set that includes necklace)
+ * - none: Completely unrelated (search "dress" → shoes/pants)
+ *
+ * CRITICAL: This is SEMANTIC and DYNAMIC - not hardcoded patterns
+ * - If user searches "t-shirt", we look for "t-shirt" or "tshirt" in the product
+ * - If found AND it's the main item → exact
+ * - If found AND it's part of a set → partial
+ * - If NOT found at all → none
  */
 function getCategoryMatchType(product: Product, category: string): 'exact' | 'partial' | 'none' {
-  const combinedText = `${product.title} ${product.description}`.toLowerCase();
+  const title = product.title.toLowerCase();
+  const description = (product.description || '').toLowerCase();
+  const combinedText = `${title} ${description}`;
   const normalizedCategory = category.toLowerCase();
 
-  // Define category patterns with exact/partial indicators
-  const categoryPatterns: Record<string, {
-    exact: string[],           // Must contain these for exact match
-    partial: string[],         // Multi-piece items that include the category
-    exclude: string[]          // Hard exclusions (never show)
-  }> = {
-    tops: {
-      exact: ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tank', 'cami', 'camisole', 'sweater', 'pullover', 'sweatshirt', 'hoodie', 'tunic', 'halter', 'crop top', 'bra top', 'sports bra'],
-      partial: ['two-piece top', 'top and bottom', 'matching set', 'co-ord set', 'outfit set'],
-      exclude: ['dress', 'jumpsuit', 'romper', 'robe', 'scarf']
-    },
-    bottoms: {
-      exact: ['pants', 'legging', 'jean', 'trouser', 'short', 'skirt', 'culottes', 'capri', 'jogger', 'sweatpants', 'yoga pants'],
-      partial: ['two-piece bottom', 'skirt suit', 'pant suit', 'bottom and top'],
-      exclude: ['dress', 'jumpsuit', 'romper', 'robe']
-    },
-    dress: {
-      exact: ['dress', 'gown', 'maxi', 'midi', 'mini dress', 'sundress', 'evening dress', 'cocktail dress', 'wrap dress', 'shift dress', 'bodycon', 'a-line dress', 'shirt dress', 'sweater dress'],
-      partial: [],  // Dresses are usually standalone
-      exclude: ['robe', 'swing robe', 'scarf', 'shawl', 'cardigan', 'top', 'skirt separate', 'pants', 'jumpsuit', 'romper']
-    },
-    shoes: {
-      exact: ['shoe', 'boot', 'heel', 'sandal', 'sneaker', 'flat', 'pump', 'loafer', 'mule', 'slipper', 'wedge', 'ankle boot', 'knee boot', 'oxford', 'derby', 'brogue'],
-      partial: [],  // Shoes are usually standalone
-      exclude: ['shoe bag', 'shoe organizer', 'shoe cleaner', 'insole', 'sock', 'shoe horn']
-    },
-    bags: {
-      exact: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'satchel', 'crossbody', 'shoulder bag', 'backpack', 'messenger', 'hobo bag', 'bucket bag', 'wristlet'],
-      partial: [],  // Bags are usually standalone
-      exclude: ['luggage', 'suitcase', 'travel bag', 'gym bag', 'shoe bag', 'laundry bag', 'garment bag']
-    },
-    outerwear: {
-      exact: ['jacket', 'coat', 'blazer', 'cardigan', 'parka', 'bomber', 'trench', 'puffer', 'peacoat', 'windbreaker', 'anorak', 'duster', 'overcoat'],
-      partial: ['suit jacket', 'blazer set', 'jacket and skirt'],
-      exclude: ['vest', 'dress']
-    },
-    accessories: {
-      exact: ['jewelry', 'necklace', 'bracelet', 'earring', 'ring', 'scarf', 'belt', 'hat', 'cap', 'beanie', 'watch', 'sunglasses', 'glove', 'wallet'],
-      partial: [],  // Accessories are usually standalone
-      exclude: ['dress', 'top', 'pants', 'shoe', 'bag']
-    }
-  };
+  // Generate search term variations for flexible matching
+  // e.g., "t-shirt" → ["t-shirt", "tshirt", "t shirt", "tee shirt"]
+  const searchTerms = generateSearchTermVariations(normalizedCategory);
 
-  const pattern = categoryPatterns[normalizedCategory];
-  if (!pattern) {
-    // Unknown category - treat as exact match
-    return 'exact';
-  }
+  // Check if ANY variation of the search term appears in the product
+  const containsSearchTerm = searchTerms.some(term => combinedText.includes(term));
 
-  // Check for hard exclusions first (immediately exclude)
-  const hasExclusion = pattern.exclude.some(term => combinedText.includes(term));
-  if (hasExclusion) {
+  if (!containsSearchTerm) {
+    // Search term not found at all → completely unrelated
     return 'none';
   }
 
-  // Check for exact match (pure category, no multi-piece indicators)
-  const hasExactMatch = pattern.exact.some(term => combinedText.includes(term));
+  // Multi-piece indicators (set, bundle, outfit, etc.)
+  const multiPieceIndicators = [
+    'set', 'piece', 'suit', 'outfit', 'bundle', 'pack', 'kit',
+    'matching', 'co-ord', 'coord', 'coordinating',
+    'includes', 'with', 'and', '+', 'combo', 'collection'
+  ];
 
-  // Check for multi-piece indicators
-  const multiPieceIndicators = ['two-piece', '2-piece', 'two piece', '2 piece', 'set', 'suit', 'outfit', 'matching', 'co-ord', 'coord'];
-  const isMultiPiece = multiPieceIndicators.some(term => combinedText.includes(term));
+  const isMultiPiece = multiPieceIndicators.some(indicator => combinedText.includes(indicator));
 
-  if (hasExactMatch && !isMultiPiece) {
+  // Unwanted context indicators (when term appears but in wrong context)
+  // e.g., "shoe organizer" when searching "shoe" or "dress form" when searching "dress"
+  const unwantedContexts = [
+    'organizer', 'cleaner', 'rack', 'holder', 'storage', 'box', 'container',
+    'hanger', 'display', 'mannequin', 'form', 'stand', 'picture', 'print',
+    'poster', 'photo', 'image', 'pattern', 'template', 'tutorial'
+  ];
+
+  const hasUnwantedContext = unwantedContexts.some(context => combinedText.includes(context));
+
+  if (hasUnwantedContext) {
+    // Term appears but in wrong context (e.g., "shoe organizer") → exclude
+    return 'none';
+  }
+
+  // Determine if it's the PRIMARY item or part of a set
+  if (isMultiPiece) {
+    // It's a set/bundle that includes the searched item
+    return 'partial';
+  } else {
+    // It's the primary item itself
     return 'exact';
   }
+}
 
-  // Check for partial match (multi-piece items that include the category)
-  if (hasExactMatch && isMultiPiece) {
-    return 'partial';
+/**
+ * Generate search term variations for flexible matching
+ * e.g., "t-shirt" → ["t-shirt", "tshirt", "t shirt", "tee shirt", "tee"]
+ */
+function generateSearchTermVariations(term: string): string[] {
+  const variations = [term]; // Always include original
+
+  // Common fashion term variations
+  const commonVariations: Record<string, string[]> = {
+    't-shirt': ['t-shirt', 'tshirt', 't shirt', 'tee shirt', 'tee'],
+    'tshirt': ['t-shirt', 'tshirt', 't shirt', 'tee shirt'],
+    'sweatshirt': ['sweat shirt', 'sweatshirt'],
+    'hoodie': ['hoodie', 'hooded sweatshirt', 'pullover hoodie'],
+    'sneaker': ['sneaker', 'trainer', 'athletic shoe'],
+    'handbag': ['handbag', 'hand bag', 'purse'],
+    'necklace': ['necklace', 'neck lace', 'pendant'],
+    'bracelet': ['bracelet', 'bangle', 'wrist band'],
+    'earring': ['earring', 'ear ring', 'earbob'],
+  };
+
+  // Check if we have predefined variations
+  if (commonVariations[term]) {
+    return [...new Set([...variations, ...commonVariations[term]])];
   }
 
-  // Check for explicit partial patterns
-  const hasPartialMatch = pattern.partial.some(term => combinedText.includes(term));
-  if (hasPartialMatch) {
-    return 'partial';
+  // Generate hyphen/space variations
+  if (term.includes('-')) {
+    variations.push(term.replace(/-/g, ' ')); // "t-shirt" → "t shirt"
+    variations.push(term.replace(/-/g, ''));   // "t-shirt" → "tshirt"
   }
 
-  return 'none';
+  if (term.includes(' ')) {
+    variations.push(term.replace(/\s+/g, '-')); // "t shirt" → "t-shirt"
+    variations.push(term.replace(/\s+/g, ''));   // "t shirt" → "tshirt"
+  }
+
+  // Remove duplicates
+  return [...new Set(variations)];
 }
 
 // Legacy function for backward compatibility - returns true if exact or partial match
