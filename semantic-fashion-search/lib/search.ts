@@ -268,32 +268,48 @@ export async function semanticSearch(
   if (primaryCategory && primaryCategory !== 'all') {
     console.log(`[semanticSearch] 👔 User specified category: "${primaryCategory}"`);
 
-    // Check each product for category match
-    categoryFilteredResults = colorFilteredResults.map((product, index) => {
-      const matchesCategory = productMatchesCategory(product, primaryCategory);
+    // Check each product for category match type (exact, partial, or none)
+    let exactMatchCount = 0;
+    let partialMatchCount = 0;
+
+    categoryFilteredResults = colorFilteredResults.map((product) => {
+      const categoryMatchType = getCategoryMatchType(product, primaryCategory);
+      const matchesCategory = categoryMatchType !== 'none';
+
+      if (categoryMatchType === 'exact') exactMatchCount++;
+      if (categoryMatchType === 'partial') partialMatchCount++;
       if (matchesCategory) categoryMatchCount++;
 
-      return { ...product, matchesCategory };
+      return { ...product, matchesCategory, categoryMatchType };
     });
 
-    // Sort to prioritize category matches at the top
+    // TIERED SORTING: Exact matches first, then partial matches, then by similarity
     categoryFilteredResults.sort((a, b) => {
-      // Both match or both don't match: maintain similarity order
-      if (a.matchesCategory === b.matchesCategory) {
-        return (b.similarity || 0) - (a.similarity || 0);
-      }
-      // Category matches come first
-      return b.matchesCategory ? 1 : -1;
+      const aType = (a as any).categoryMatchType;
+      const bType = (b as any).categoryMatchType;
+
+      // Tier 1: Exact matches (highest priority)
+      if (aType === 'exact' && bType !== 'exact') return -1;
+      if (bType === 'exact' && aType !== 'exact') return 1;
+
+      // Tier 2: Partial matches (medium priority)
+      if (aType === 'partial' && bType === 'none') return -1;
+      if (bType === 'partial' && aType === 'none') return 1;
+
+      // Within same tier: sort by similarity
+      return (b.similarity || 0) - (a.similarity || 0);
     });
 
-    console.log(`[semanticSearch] 👔 Category matches: ${categoryMatchCount}/${categoryFilteredResults.length}`);
+    console.log(`[semanticSearch] 👔 Category matches: ${exactMatchCount} exact, ${partialMatchCount} partial, ${categoryMatchCount} total`);
 
-    // CRITICAL: For category queries, ALWAYS filter strictly to only show matching categories
-    // Users expect "black dress" to show ONLY dresses, not shoes/pants/bags
+    // CRITICAL: Filter out 'none' matches (completely unrelated items)
+    // Keep exact and partial matches
     if (categoryMatchCount > 0) {
-      console.log(`[semanticSearch] 🎯 Applying strict category filter - removing non-matching items`);
+      console.log(`[semanticSearch] 🎯 Applying tiered category filter`);
+      console.log(`[semanticSearch]    - Tier 1: ${exactMatchCount} exact matches (pure category)`);
+      console.log(`[semanticSearch]    - Tier 2: ${partialMatchCount} partial matches (includes category)`);
       categoryFilteredResults = categoryFilteredResults.filter(p => p.matchesCategory);
-      console.log(`[semanticSearch] 👔 After strict category filtering: ${categoryFilteredResults.length} results`);
+      console.log(`[semanticSearch] 👔 After tiered filtering: ${categoryFilteredResults.length} results`);
     } else {
       // No category matches at all - show all results but warn
       console.log(`[semanticSearch] ⚠️ No category matches found for "${primaryCategory}" - showing all results`);
@@ -604,57 +620,100 @@ function isSexyProduct(title: string, description: string): boolean {
  * Check if product matches the specified category/garment type
  * CRITICAL: Category mismatches should be penalized heavily (tops vs pants, etc.)
  */
-function productMatchesCategory(product: Product, category: string): boolean {
+/**
+ * Determine category match type: 'exact', 'partial', or 'none'
+ * - exact: Pure category match (skirt = ONLY skirt)
+ * - partial: Includes category (skirt = two-piece outfit with skirt)
+ * - none: No match (completely unrelated)
+ */
+function getCategoryMatchType(product: Product, category: string): 'exact' | 'partial' | 'none' {
   const combinedText = `${product.title} ${product.description}`.toLowerCase();
   const normalizedCategory = category.toLowerCase();
 
-  // Define category keywords and exclusions
-  const categoryPatterns: Record<string, { include: string[], exclude: string[] }> = {
+  // Define category patterns with exact/partial indicators
+  const categoryPatterns: Record<string, {
+    exact: string[],           // Must contain these for exact match
+    partial: string[],         // Multi-piece items that include the category
+    exclude: string[]          // Hard exclusions (never show)
+  }> = {
     tops: {
-      include: ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tank', 'cami', 'camisole', 'sweater', 'pullover', 'sweatshirt', 'hoodie', 'tunic', 'halter', 'crop top', 'bra top', 'sports bra'],
-      exclude: ['pants', 'legging', 'bottom', 'jean', 'trouser', 'short', 'skirt', 'dress', 'jumpsuit', 'romper', 'playsuit', 'overall']
+      exact: ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tank', 'cami', 'camisole', 'sweater', 'pullover', 'sweatshirt', 'hoodie', 'tunic', 'halter', 'crop top', 'bra top', 'sports bra'],
+      partial: ['two-piece top', 'top and bottom', 'matching set', 'co-ord set', 'outfit set'],
+      exclude: ['dress', 'jumpsuit', 'romper', 'robe', 'scarf']
     },
     bottoms: {
-      include: ['pants', 'legging', 'jean', 'trouser', 'short', 'skirt', 'culottes', 'capri', 'jogger', 'sweatpants', 'yoga pants', 'athletic pants'],
-      exclude: ['top', 'blouse', 'shirt', 'dress', 'jumpsuit', 'romper', 'overall']
+      exact: ['pants', 'legging', 'jean', 'trouser', 'short', 'skirt', 'culottes', 'capri', 'jogger', 'sweatpants', 'yoga pants'],
+      partial: ['two-piece bottom', 'skirt suit', 'pant suit', 'bottom and top'],
+      exclude: ['dress', 'jumpsuit', 'romper', 'robe']
     },
     dress: {
-      include: ['dress', 'gown', 'maxi', 'midi', 'mini dress', 'sundress', 'evening dress', 'cocktail dress', 'wrap dress', 'shift dress', 'bodycon', 'a-line dress'],
-      exclude: ['top', 'bottom', 'pants', 'skirt separate', 'two-piece', '2-piece']
+      exact: ['dress', 'gown', 'maxi', 'midi', 'mini dress', 'sundress', 'evening dress', 'cocktail dress', 'wrap dress', 'shift dress', 'bodycon', 'a-line dress', 'shirt dress', 'sweater dress'],
+      partial: [],  // Dresses are usually standalone
+      exclude: ['robe', 'swing robe', 'scarf', 'shawl', 'cardigan', 'top', 'skirt separate', 'pants', 'jumpsuit', 'romper']
     },
     shoes: {
-      include: ['shoe', 'boot', 'heel', 'sandal', 'sneaker', 'flat', 'pump', 'loafer', 'mule', 'slipper', 'wedge', 'ankle boot', 'knee boot'],
-      exclude: ['shoe bag', 'shoe organizer', 'shoe cleaner', 'insole', 'sock']
+      exact: ['shoe', 'boot', 'heel', 'sandal', 'sneaker', 'flat', 'pump', 'loafer', 'mule', 'slipper', 'wedge', 'ankle boot', 'knee boot', 'oxford', 'derby', 'brogue'],
+      partial: [],  // Shoes are usually standalone
+      exclude: ['shoe bag', 'shoe organizer', 'shoe cleaner', 'insole', 'sock', 'shoe horn']
     },
     bags: {
-      include: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'satchel', 'crossbody', 'shoulder bag', 'backpack', 'messenger', 'hobo bag', 'bucket bag'],
-      exclude: ['luggage', 'suitcase', 'travel bag', 'gym bag', 'shoe bag', 'laundry bag']
+      exact: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'satchel', 'crossbody', 'shoulder bag', 'backpack', 'messenger', 'hobo bag', 'bucket bag', 'wristlet'],
+      partial: [],  // Bags are usually standalone
+      exclude: ['luggage', 'suitcase', 'travel bag', 'gym bag', 'shoe bag', 'laundry bag', 'garment bag']
     },
     outerwear: {
-      include: ['jacket', 'coat', 'blazer', 'cardigan', 'parka', 'bomber', 'trench', 'puffer', 'peacoat', 'windbreaker', 'anorak', 'duster'],
-      exclude: ['vest', 'dress', 'shirt jacket', 'overshirt']
+      exact: ['jacket', 'coat', 'blazer', 'cardigan', 'parka', 'bomber', 'trench', 'puffer', 'peacoat', 'windbreaker', 'anorak', 'duster', 'overcoat'],
+      partial: ['suit jacket', 'blazer set', 'jacket and skirt'],
+      exclude: ['vest', 'dress']
     },
     accessories: {
-      include: ['jewelry', 'necklace', 'bracelet', 'earring', 'ring', 'scarf', 'belt', 'hat', 'cap', 'beanie', 'watch', 'sunglasses', 'glove'],
-      exclude: ['dress', 'top', 'pants', 'shoe']
+      exact: ['jewelry', 'necklace', 'bracelet', 'earring', 'ring', 'scarf', 'belt', 'hat', 'cap', 'beanie', 'watch', 'sunglasses', 'glove', 'wallet'],
+      partial: [],  // Accessories are usually standalone
+      exclude: ['dress', 'top', 'pants', 'shoe', 'bag']
     }
   };
 
   const pattern = categoryPatterns[normalizedCategory];
   if (!pattern) {
-    // Unknown category - don't filter
-    return true;
+    // Unknown category - treat as exact match
+    return 'exact';
   }
 
-  // Check for exclusions first (hard blocking)
+  // Check for hard exclusions first (immediately exclude)
   const hasExclusion = pattern.exclude.some(term => combinedText.includes(term));
   if (hasExclusion) {
-    return false;
+    return 'none';
   }
 
-  // Check for inclusions
-  const hasInclusion = pattern.include.some(term => combinedText.includes(term));
-  return hasInclusion;
+  // Check for exact match (pure category, no multi-piece indicators)
+  const hasExactMatch = pattern.exact.some(term => combinedText.includes(term));
+
+  // Check for multi-piece indicators
+  const multiPieceIndicators = ['two-piece', '2-piece', 'two piece', '2 piece', 'set', 'suit', 'outfit', 'matching', 'co-ord', 'coord'];
+  const isMultiPiece = multiPieceIndicators.some(term => combinedText.includes(term));
+
+  if (hasExactMatch && !isMultiPiece) {
+    return 'exact';
+  }
+
+  // Check for partial match (multi-piece items that include the category)
+  if (hasExactMatch && isMultiPiece) {
+    return 'partial';
+  }
+
+  // Check for explicit partial patterns
+  const hasPartialMatch = pattern.partial.some(term => combinedText.includes(term));
+  if (hasPartialMatch) {
+    return 'partial';
+  }
+
+  return 'none';
+}
+
+// Legacy function for backward compatibility - returns true if exact or partial match
+function productMatchesCategory(product: Product, category: string): boolean {
+  const matchType = getCategoryMatchType(product, category);
+  return matchType === 'exact' || matchType === 'partial';
 }
 
 /**
