@@ -55,7 +55,6 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>
-        <script type="text/javascript" src="https://s.skimresources.com/js/297498X1784989.skimlinks.js"></script>
       </body>
     </html>
   );

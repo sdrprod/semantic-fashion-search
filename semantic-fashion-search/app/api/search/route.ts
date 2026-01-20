@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { query, limit = 12, page = 1, userRatings = {} } = body;
+    const { query, limit = 12, page = 1 } = body;
 
-    console.log('[Search API] Query params:', { query, limit, page, ratingsCount: Object.keys(userRatings).length });
+    console.log('[Search API] Query params:', { query, limit, page });
 
     // Validate query
     if (!query || typeof query !== 'string' || query.trim().length < 3) {
@@ -39,19 +39,11 @@ export async function POST(request: NextRequest) {
     console.log(`[Search API] User query sexy intent: ${hasSexyIntent ? 'YES' : 'NO'}`);
 
     // Generate cache key (page-agnostic - same key for all pages)
-    // NOTE: Cache key now includes a hash of userRatings so each user gets personalized results
-    const hasRatings = Object.keys(userRatings).length > 0;
-    const ratingsHash = hasRatings
-      ? Object.keys(userRatings).sort().join('-') // Simple hash of rated product IDs
-      : 'no-ratings';
-
     const cacheKey = generateCacheKey(query.trim(), {
       allowSexyContent: hasSexyIntent,
-      userRatingsHash: ratingsHash,
     });
 
     // Check cache first for FULL result set
-    // Note: Users with different ratings will have different cache keys
     const cachedFullResults = await getCachedSearch<SearchResponse>(cacheKey);
 
     if (cachedFullResults) {
@@ -77,7 +69,6 @@ export async function POST(request: NextRequest) {
       limit: 120, // Fetch all results at once
       page: 1,
       allowSexyContent: hasSexyIntent,
-      userRatings, // Pass user's personal ratings for filtering/boosting
     });
 
     console.log('[Search API] Search complete, total results:', searchResponse.results.length);
