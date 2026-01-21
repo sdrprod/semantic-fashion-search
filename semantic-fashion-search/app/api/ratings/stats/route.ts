@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
-import { redis } from '@/lib/redis';
+import redis from '@/lib/redis';
 
 interface ProductStats {
   productId: string;
