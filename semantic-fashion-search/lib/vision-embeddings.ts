@@ -1,21 +1,34 @@
-import { pipeline, env } from '@xenova/transformers';
+import { pipeline, env, RawImage } from '@xenova/transformers';
 
 // Configure transformers to cache models locally
 env.cacheDir = './.cache/transformers';
 
-// Lazy-load the CLIP model (only loads on first use)
-let clipModel: any = null;
+// Lazy-load the CLIP models (separate for text and images)
+let clipTextModel: any = null;
+let clipVisionModel: any = null;
 
 /**
- * Get or initialize the CLIP model
+ * Get or initialize the CLIP text model
  */
-async function getClipModel() {
-  if (!clipModel) {
-    console.log('[Vision] Loading CLIP model (first time may take a moment)...');
-    clipModel = await pipeline('feature-extraction', 'Xenova/clip-vit-base-patch32');
-    console.log('[Vision] CLIP model loaded successfully');
+async function getClipTextModel() {
+  if (!clipTextModel) {
+    console.log('[Vision] Loading CLIP text model (first time may take a moment)...');
+    clipTextModel = await pipeline('feature-extraction', 'Xenova/clip-vit-base-patch32');
+    console.log('[Vision] CLIP text model loaded successfully');
   }
-  return clipModel;
+  return clipTextModel;
+}
+
+/**
+ * Get or initialize the CLIP vision model
+ */
+async function getClipVisionModel() {
+  if (!clipVisionModel) {
+    console.log('[Vision] Loading CLIP vision model (first time may take a moment)...');
+    clipVisionModel = await pipeline('image-feature-extraction', 'Xenova/clip-vit-base-patch32');
+    console.log('[Vision] CLIP vision model loaded successfully');
+  }
+  return clipVisionModel;
 }
 
 /**
@@ -24,7 +37,7 @@ async function getClipModel() {
  */
 export async function generateTextVisionEmbedding(text: string): Promise<number[]> {
   try {
-    const model = await getClipModel();
+    const model = await getClipTextModel();
 
     // Generate embedding for the text as a visual concept
     const output = await model(text, {
@@ -52,18 +65,14 @@ export async function generateImageVisionEmbedding(imageUrl: string): Promise<nu
   try {
     console.log(`[Vision] Processing image: ${imageUrl.slice(0, 80)}...`);
 
-    // Download the image
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-    }
+    // Load image using RawImage (proper format for transformers.js)
+    const image = await RawImage.fromURL(imageUrl);
 
-    const imageBuffer = await response.arrayBuffer();
-    const imageBlob = new Blob([imageBuffer]);
+    // Get the vision model
+    const model = await getClipVisionModel();
 
-    // Convert to a format CLIP can process
-    const model = await getClipModel();
-    const output = await model(imageBlob, {
+    // Generate embedding
+    const output = await model(image, {
       pooling: 'mean',
       normalize: true,
     });
