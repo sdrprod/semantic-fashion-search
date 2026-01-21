@@ -1,0 +1,4453 @@
+Product Feed API Reference
+URL: https://ads.api.cj.com/query
+
+Overview
+This documentation provides technical specifications for CJ's GraphQL Product API, that enables you to access specific product information from an advertiser's product feed (catalog).
+
+This API has 2 parts – Mutations & Query.
+
+Product Import (Mutation)
+This feature is currently allowed for Shopping and Finance feeds only. It allows Advertisers to import product feed data into CJ. Advertisers can perform mutations to create new products, modify existing products, remove products from their CJ Product Feed via the API. This is especially useful for advertisers who make frequent updates to their product catalogs in smaller volumes and can avoid sending full product feeds.
+
+Product Search (Query)
+This feature is allowed for Product feeds of all Advertiser verticals (Shopping/ Travel/ Finance). It can be used by both Advertisers & Publishers. Publishers can especially benefit by using this API endpoint to access Product Feed Summary as well as Product details. See the Code samples for separate methods for Feed Summary & Product Search.
+
+Product Feed Summary Search (productFeeds)
+This query provides a summary view of feed information consisting of advertiser adId, Feed Name, productCount, lastUpdated etc. GraphQL functionality can be utilized to get the exact set of fields you want from the API. For an Advertiser, this query feature allows you to access all your product feeds summary information. For a Publisher, it allows to access all the product feed summary information for one or more advertisers (Joined and non-joined). This is recommended when you want to search for specific feeds before searching for specific products.
+Product Detail Search (products, shoppingProducts, travelExperienceProducts)
+These queries allow you to access specific product information from an advertiser’s product feed. This is recommended when you want to search low volumes of products on a near real-time basis. They allow you to search for all common fields for all products including advertiser id, keywords, name, category, etc. GraphQL functionality can be utilized to get the exact set of fields you want from the API.
+Product Feed (Subscription)
+This feature allows publishers to query the product feed once and receive the products from that feed as a streaming HTTP response. You can only extract one Product Feed at a time.
+
+Note: Product Feeds designated as private in the CJ Account Manager are not available through the Product Search.
+
+Product Import
+Pre-requisites:
+Personal Access Token: You need to get Personal Access Token from CJ Developer Portal. If you already use a CJ personal access token for authentication, a new token need not be created.
+CompanyId: You need CJ generated CompanyId. This will ensure you have the permission to query on behalf of that company.
+FAQs
+I have never sent a shopping feed file to CJ. Can I use the API to start sending the product feed for the first time?
+Yes. If you have not registered a shopping feed before, then you need to register a new feed with an API delivery option and use the newly created Ad Id in the API. To register a new feed go to Campaigns> Ad Assets> Product Feeds in CJ Account Manager.
+Is it mandatory to switch to this API from product feed files?
+No. CJ Product Import API provides a faster & modernized way to send product feed data and it is optional for advertisers to utilize this benefit to send product feeds.
+What do I need to start using the API to send products?
+Personal Access Token and Ad ID
+Should I register a new feed to use the API?
+If you have been previously sending in a file and want to either switch to the API or use both file and API, then you don't need to register a new feed to use the API. You can use the existing Ad ID of the CJ Shopping Feed.
+Where can I see my existing feed Ad ID?
+CJ Account Campaigns> Ad Assets> Product Feeds
+Will my Shopping Product API updates be visible in my product feed within CJ Account Manager?
+Updates to your Shopping Products will be visible in CJ Account Manager under Campaigns > Ad Assets >Products within few seconds after you receive a successful API response.
+Will my Finance Product API updates be visible in my product feed within CJ Account Manager?
+The information on your Finance Product Feeds will not be visible in the CJ Account Manager.
+When should I use Product feed file versus Product Import via API?
+APIs and Product feed files are both effective ways to send the product data to CJ depending on your product feed volume.
+If you have a low volume product feed, you can use the API for the first time import as well as subsequent imports with delta.
+If you have a high-volume product feed updated frequently, we recommend you import the full product file first time through batch. Subsequent updates for the feed can be sent only via API.
+Will my publishers be able to see the newly added products or updates to existing products?
+Today, CJ Publishers can view the product feed information through multiple channels. Changes made to a Product Feed are visible on the CJ Account Manager , CJ Product Search API as well as Publisher Product Export feeds.
+Can I use the API for building custom applications?
+Yes, integrating systems across businesses is a key benefit of any API. You can use the API to integrate with your internal product systems and automate the feed transfer process.
+What happens if I use both Batch files and APIs?
+We do not recommend using both the methods simultaneously as it may overwrite the feed data.
+How many products can I send in one API request?
+Please refer to section - Mutation Usage Caps/Limits to get the fastest API response.
+Shopping Code Samples
+Create Shopping Products
+Sample Creation GraphQL Mutation
+mutation {
+    createShoppingProducts( 
+        adId: "12345678", 
+        shoppingProducts: [
+            {
+                id: "P11", 
+                title: "New Earpods", 
+                description: "Noise cancellation enabled earpods", 
+                price: {
+                    amount: "111.5", 
+                    currency: "USD"
+                }, 
+                availability: "in stock", 
+                condition: "Used", 
+                link: "https://test.cj.com"
+            }
+        ]
+    ) {
+        response {
+            id
+            title
+            price {
+                amount
+            }
+        }
+        errors {
+            id
+            field
+            messages
+            warnings
+            originalValue
+        }
+    }
+}
+Sample Creation cURL
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{"query":"mutation { createShoppingProducts(adId: \"12345678\", shoppingProducts: [{id: \"P11\", title: \"New Earpods\", description: \"Noise cancellation enabled earpods\", price: {amount: \"111.5\", currency: \"USD\"}, availability: \"in stock\", condition: \"Used\", link: \"http://test.cj.com\"}]) { response { id title price{ amount } } errors { id field messages warnings originalValue } } } " }'
+Sample Creation Response
+{
+  "data": {
+    "createShoppingProducts": {
+    "response": [
+      {
+        "id":"P11", 
+        "title":"New Earpods", 
+        "price":{
+          "amount":"111.5"
+        }
+      }
+    ], 
+    "errors": []
+    }
+  }
+} 
+Update Shopping Products
+Sample Update GraphQL Mutation
+mutation {
+    updateShoppingProducts(
+        adId: "12345678", 
+        shoppingProducts: [
+            {
+                id: "P12", 
+                title: "Green earpods", 
+                description: "Noise cancellation enabled", 
+                price: {
+                    amount: "100", 
+                    currency: "USD"
+                }
+            }
+        ]
+    ) {
+        response {
+            price {
+                amount
+                currency
+            }
+            id
+            description
+            title
+        }
+        errors {
+            id
+            field
+            messages
+            warnings
+        }
+    }
+}
+Sample Update cURL
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{"query":"mutation {updateShoppingProducts ( adId: \"12345678\", shoppingProducts:[{id: \"P12\", title:\"Green earpods\", description:\"Noise cancellation enabled\" price: { amount:\"100\", currency:\"USD\" }}]) { response { price { amount currency } id description title } errors { id field messages warnings }}}" }'
+Sample Update Response
+{
+  "data":
+  {
+    "updateShoppingProducts": {
+      "response": [
+      {
+        "description":"Noise cancellation enabled", 
+        "price":{
+          "amount":"100",
+          "currency":"USD"
+        },
+        "id":"P12",
+        "title":"Green earpods"
+      }
+    ], 
+      "errors":[]
+    }
+  }
+}
+Finance Code Samples
+Create Credit Card Products
+Sample Creation GraphQL Mutation
+mutation {
+    createCreditCardProducts(
+        adId: "12345678"
+        creditCardProducts: [
+            {
+                id: "A1"
+                title: "CJ&reg; Rate Advantage Master Platinum&reg; Card"
+                imageLink: "https://cj.com"
+                description: "CJ Rate Advantage Master Platinum&reg; Cardⓒ"
+                destinationUrl: "https://cj.com"
+                creditRating: "Good - Excellent"
+                processingNetwork: "Visa"
+                marketingCopy: "&#8226; Enjoy CJ's lowest rate card &#8226; No annual fee, no penalty APR &#8226; CJ membership is available to active and former military and their eligible family membersⓒ"
+                availableApplications: "Internet, Mobile"
+                nonIntroPurchAPR: {
+                    aprValue: ["25.40"]
+                    aprType: FIXED
+                    aprDescription: "25.40% Fixed"
+                }
+                nonIntroTransAPR: {
+                    aprValue: ["9.40", "22.40"]
+                    aprType: VARIABLE
+                    aprDescription: "9.40% - 22.40% Variable"
+                }
+                balanceTransFee: {
+                    feeValueAmount: { amount: "10.0", currency: "USD" }
+                    feeDescription: "$10 balance transfers and cash advances"
+                }
+            }
+        ]
+    ) {
+        response {
+            id
+            title
+        }
+        errors {
+            id
+            field
+            warnings
+            messages
+        }
+    }
+}
+Sample CURL Request
+curl 'https://ads.api.cj.com/query' \
+ -X POST \
+ -H 'Authorization: Bearer <your-personal-access-token>' \
+ -d '{"query":"mutation { createCreditCardProducts( adId: \"12345678\" creditCardProducts: [ { id: \"A1\" title: \"CJ&reg; Rate Advantage Master Visa Platinum&reg; Card\" imageLink: \"https://cj.com\" description: \"CJ Rate Advantage Master Visa Platinum&reg; Cardⓒ\" destinationUrl: \"https://cj.com\" creditRating: \"Good - Excellent\" processingNetwork: \"Visa\" marketingCopy: \"&#8226; Enjoy CJ'\''s lowest rate card &#8226; No annual fee, no penalty APR &#8226; CJ membership is available to active and former military and their eligible family membersⓒ\" availableApplications: \"Internet, Mobile\" nonIntroPurchAPR: { aprValue: [\"25.40\"] aprType: FIXED aprDescription: \"25.40% Fixed\" } nonIntroTransAPR: { aprValue: [\"9.40\", \"22.40\"] aprType: VARIABLE aprDescription: \"9.40% - 22.40% Variable\" } balanceTransFee: { feeValueAmount: { amount: \"10.0\", currency: \"USD\" } feeDescription: \"$10 balance transfers and cash advances\" } } ] ) { response { id title } errors { id field warnings messages } } }"}'
+
+Sample Creation Response
+{
+  "data": {
+    "createCreditCardProducts": {
+      "response": [
+        {
+          "id": "A1",
+          "title": "CJ&reg; Rate Advantage Master Platinum&reg; Card"
+        }
+      ],
+      "errors": []
+    }
+  }
+}
+Update Credit Card Products
+Sample Update GraphQL Mutation
+mutation {
+    updateCreditCardProducts(
+        adId: "12345678"
+        creditCardProducts: [
+            {
+                id: "A1"
+                nonIntroPurchAPR: {
+                    aprValue: ["13.40"]
+                    aprType: FIXED
+                    aprDescription: "26.40% Fixed"
+                }
+                nonIntroTransAPR: {
+                    aprValue: ["10", "20"]
+                    aprType: VARIABLE
+                    aprDescription: "9.40% - 22.40% Variable"
+                }
+            }
+        ]
+    ) {
+        response {
+            id
+            nonIntroTransAPR{
+              aprValue
+            }
+          nonIntroPurchAPR{
+            aprValue
+          }
+        }
+        errors {
+            id
+            field
+            warnings
+            messages
+        }
+    }
+}
+Sample Update cURL
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{"query":"mutation { updateCreditCardProducts( adId: \"12345678\" creditCardProducts: [ { id: \"A1\" nonIntroPurchAPR: { aprValue: [\"13.40\"] aprType: FIXED aprDescription: \"26.40% Fixed\" } nonIntroTransAPR: { aprValue: [\"10\", \"20\"] aprType: VARIABLE aprDescription: \"9.40% - 22.40% Variable\" } } ] ) { response { id nonIntroTransAPR{ aprValue } nonIntroPurchAPR{ aprValue } } errors { id field warnings messages } } }"}'
+Sample Update Response
+{
+  "data": {
+    "updateCreditCardProducts": {
+      "response": [
+        {
+          "id": "2",
+          "nonIntroTransAPR": {
+            "aprValue": [
+              "[10, 20]"
+            ]
+          },
+          "nonIntroPurchAPR": {
+            "aprValue": [
+              "[13.40]"
+            ]
+          }
+        }
+      ],
+      "errors": []
+    }
+  }
+}
+Delete Products
+Sample Delete GraphQL Mutation
+mutation {
+    deleteProducts(
+        adId: 12345678, 
+        ids: ["20245", "20192"]
+    ) {
+        deleteProductsResponse {
+            id
+            messages
+        }
+        errors {
+            id
+            field
+            messages
+            warnings
+            originalValue
+        }
+    }
+}
+Sample Delete cURL
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{"query":"mutation { deleteProducts(adId:12345678,ids:[\"20245\",\"20192\",\"jahsdjk\"]){ deleteProductsResponse{ id messages } errors{ id field messages warnings originalValue }}}" }'
+Sample Delete Response
+{
+  "data": {
+    "deleteProducts": {
+      "deleteProductsResponse": [
+        {
+          "id": [
+            "20245"
+          ],
+          "messages": [
+            "Successfully deleted"
+          ]
+        },
+        {
+          "id": [
+            "20192"
+          ],
+          "messages": [
+            "Successfully deleted"
+          ]
+        }
+      ],
+      "errors": [ ]
+    }
+  }
+}
+Mutation usage caps/limits
+Limit the request to max 1,000 products in 1 request to get a good response time of 1-2 seconds.
+Any volume of data higher than 1,000 should be broken down in chunks of 1000 products as multiple API requests to get a timely response
+Call limit: 500 calls per 5 minutes.
+Errors
+Authentication/Authorization Errors
+Please make sure you are including your valid Personal Access Token.
+Please make sure you provide the correct CJ Shopping feed AID as an argument in the API request. We use this ad id to verify that the personal access token belongs to a user on the advertiser account and that you are authorized to make updates to the ad id/feed.
+Query Parsing Errors
+Feel free to use the GraphiQL App to test out your queries.
+Just go to https://ads.api.cj.com/ in your browser. Don't forget your Personal Access Token in the top left corner.
+Product Search
+Pre-requisites
+Personal Access Token: You need to get Personal Access Token from CJ Developer Portal. If you already use a CJ personal access token for authentication, a new token need not be created.
+companyId: You need CJ generated CompanyId. This will ensure you have the permission to query on behalf of that company.
+partnerIds: As a publisher you need CJ generated CompanyId of the advertiser whose feeds you are interested in. You can specify multiple advertiser company Ids. If you do not specify then all the feeds of all the advertisers is fetched. For an advertiser, this argument is ignored.
+Code Samples for Product Feed Summary
+Sample Query as an advertiser
+{
+    shoppingProductFeeds(companyId: 999) {
+        totalCount
+        count
+        resultList {
+            adId
+            feedName
+            advertiserId
+            productCount
+            advertiserCountry
+            lastUpdated
+            advertiserName
+            language
+            currency
+            sourceFeedType
+        }
+    }
+}
+Sample Query cURL Request as an advertiser
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{ shoppingProductFeeds(companyId: "999") {totalCount, count, resultList { adId, feedName, advertiserId, productCount, advertiserCountry, lastUpdated, advertiserName, language, currency, sourceFeedType} } }'
+Sample Query as a publisher
+{
+    productFeeds(companyId: 999, partnerIds: [111, 222]) {
+        totalCount
+        count
+        resultList {
+            adId
+            feedName
+            advertiserId
+            productCount
+            advertiserCountry
+            lastUpdated
+            advertiserName
+            language
+            currency
+            sourceFeedType
+        }
+    }
+}
+Sample Query cURL Request as a publisher
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{ shoppingProductFeeds(companyId: "999", partnerIds: ["111", "222"]) {totalCount, count, resultList { adId, feedName, advertiserId, productCount, advertiserCountry, lastUpdated, advertiserName, language, currency, sourceFeedType} } }'
+Sample Response
+{
+  "data": {
+    "productFeeds": {
+      "totalCount": 2,
+      "count": 2,
+      "resultList": [
+        {
+          "sourceFeedType": "GOOGLE",
+          "productCount": 10,
+          "advertiserCountry": "US",
+          "lastUpdated": "2022-05-10T10:32:41.437Z",
+          "advertiserName": "CJDemo",
+          "language": "en",
+          "currency": "USD",
+          "feedName": "Product Test Feed",
+          "adId": "12345678",
+          "advertiserId": "111"
+        },
+        {
+          "sourceFeedType": "GOOGLE",
+          "productCount": 12,
+          "advertiserCountry": "US",
+          "lastUpdated": "2022-04-12T09:45:41.557Z",
+          "advertiserName": "CJDemo",
+          "language": "en",
+          "currency": "USD",
+          "feedName": "k_test_feed",
+          "adId": "12345679",
+          "advertiserId": "222"
+        }
+      ]
+    }
+  }
+}
+Code Samples for Product Detail Search
+Sample Query for Shopping & Travel Experience products
+{
+    products(companyId: "999") {
+        resultList {
+            advertiserId,
+            catalogId,
+            id,
+            title,
+            description,
+            price {
+                amount,
+                currency
+            }
+            linkCode(pid: "9999999") {
+                clickUrl
+            }
+        }
+    }
+}
+Sample Query cURL Request
+curl https://ads.api.cj.com/query \
+  -XPOST \
+  -H "Authorization: Bearer <your-personal-access-token>" \
+  -d '{ products(companyId: "999") {resultList { advertiserId, catalogId, id, title, description, price {amount, currency} linkCode(pid: "9999999") {clickUrl } }  } }'
+Sample Search Response
+{
+  "data": {
+    "products": {
+      "resultList": [
+        {
+          "description": "The description of the product",
+          "price": {
+            "amount": "135.00",
+            "currency": "GBP"
+          },
+          "id": "123456",
+          "catalogId": "1111",
+          "title": "The Product's Title",
+          "linkCode": {
+            "clickUrl": "https://www.kqzyfj.com/click-9999999-00000000?url=https%3A%2F%2Fwww.cj.com&cjsku=123456"
+          },
+          "advertiserId": "1113122"
+        },
+        {
+          "description": "This is another product.",
+          "price": {
+            "amount": "63.00",
+            "currency": "GBP"
+          },
+          "id": "654321",
+          "catalogId": "1111",
+          "title": "The Second Product",
+          "linkCode": {
+            "clickUrl": "https://www.kqzyfj.com/click-9999999-00000000?url=https%3A%2F%2Fwww.cj.com&cjsku=654321"
+          },
+          "advertiserId": "1113122"
+        }
+      ]
+    }
+  }
+}
+Sample Query for Finance products
+query{
+    financeProducts(companyId: 999, adIds:[12345678]) {
+        resultList {
+            id
+            title
+            linkCode(pid: "9999999") {
+                clickUrl
+            }
+            ...creditCard
+        }
+    }
+}
+fragment creditCard on CreditCard {
+    creditRating
+    marketingCopy
+}
+Sample Query cURL Request
+curl https://ads.api.cj.com/query \
+  -XPOST \
+  -H "Authorization: Bearer <your-personal-access-token>" \
+  -d '{"query":"query{ financeProducts(companyId: 999, adIds:[12345678]) { resultList { id title ...creditCard } } } fragment creditCard on CreditCard { creditRating marketingCopy }"}'
+Sample Search Response
+{
+  "data": {
+    "financeProducts": {
+      "resultList": [
+        {
+          "id": "A1",
+          "title": "CJ&reg; Rate Advantage Master Platinum&reg; Card",
+          "creditRating": "Good - Excellent",
+          "marketingCopy": "&#8226; Enjoy CJ's lowest rate card &#8226; No annual fee, no penalty APR &#8226; CJ membership is available to active and former military and their eligible family membersⓒ",
+          "linkCode": {
+            "clickUrl": "https://www.kqzyfj.com/click-9999999-00000000?url=https%3A%2F%2Fwww.cj.com&cjsku=A1"
+          }
+        },
+        {
+          "id": "A2",
+          "title": "CJ&reg; Rate Advantage Visa Platinum&reg; Card",
+          "creditRating": "Good - Excellent",
+          "marketingCopy": "&#8226; Enjoy CJ's lowest rate card &#8226; No annual fee, no penalty APR &#8226; CJ membership is available to active and former military and their eligible family membersⓒ",
+          "linkCode": {
+            "clickUrl": "https://www.kqzyfj.com/click-9999999-00000000?url=https%3A%2F%2Fwww.cj.com&cjsku=A2"
+          }
+        }
+      ]
+    }
+  }
+}
+Product Feed
+Pre-requisites
+Personal Access Token: You need to get Personal Access Token from CJ Developer Portal. If you already use a CJ personal access token for authentication, a new token need not be created.
+companyId: You need CJ generated CompanyId. This will ensure you have the permission to query on behalf of that company.
+adId: You need to specify the Product Feed's identifier using this attribute to receive the subscription for the feed.
+Code Samples for Product Feed Subscription
+Sample Subscription Query
+subscription {
+    shoppingProductCatalog(companyId: 999, adId: 12345678) {
+        id
+        adId
+        description
+    }
+}
+Sample Subscription cURL Request
+curl 'https://ads.api.cj.com/query' \
+  -X POST \
+  -H 'Authorization: Bearer <your-personal-access-token>' \
+  -d '{ subscription(companyId: "999") { id, adId, description } }'
+Sample Subscription Response
+{
+  "data": {
+    "shoppingProductCatalog": [
+      {
+        "id": "123456",
+        "adId": "12345678",
+        "description": "The description of the product"
+      }
+    ]
+  }
+}
+Pagination
+The Product Details Search API supports pagination and has the following behavior:
+
+Default Record Limit: Returns up to 1,000 records.
+Maximum Limit per Query: 10,000 records.
+To retrieve more than 10,000 records, use Next Page or Subscription Query (see below).
+Pagination for ≤10,000 Records
+To paginate in chunks (e.g., 50 records at a time), use the offset and limit parameters:
+
+Example:
+
+{
+  "offset": 1,
+  "limit": 50
+}
+The next page:
+
+{
+  "offset": 51,
+  "limit": 50
+}
+Repeat this by incrementing offset by the limit until all records are retrieved.
+
+Response Fields to Check:
+totalCount: Total number of records matching the query.
+limit: Number of records requested.
+count: Number of records returned in the current page.
+Pagination for >10,000 Records
+Option 1: Products Search API
+To fetch more than 10,000 results, the offset parameter is not used. Instead, use the page and limit parameters:
+
+Step 1: First request (up to 10,000 records):
+
+{
+  "limit": 10000
+}
+Step 2: Next request (get the next 10,000 using page from the previous response):
+
+{
+  "limit": 10000,
+  "page": "<nextPageTokenFromPreviousResponse>"
+}
+offset should not be specified in this mode.
+Repeat using the page token provided in each response to continue paginating.
+Option 2: Subscription Query (Full Product Feed)
+If you want to retrieve all records from an advertiser without paging through the API manually:
+
+Use the Subscription Query to request the full product feed directly.
+Search Query usage caps/limits
+Call limit: 500 calls per 5 minutes
+
+Search Errors
+Authentication/Authorization Errors
+Please make sure you are including your valid Personal Access Token.
+Please make sure you have included the correct companyId argument, and that you have permission to query on behalf of that company.
+If you are a publisher and are searching for Link Code, please make sure you are using a valid PID that is owned by the company specified in the companyId field.
+If you are a publisher , you can use only one PID per request.
+Query Parsing Errors
+Feel free to use the GraphiQL App to test out your queries
+Just go to https://ads.api.cj.com in your browser.
+Don't forget your Personal Access Token in the top left corner.
+Queries
+financeCreditCardProducts : FinanceCreditCardProducts!
+This query allows you to search for all common fields for all finance credit card product
+
+Argument	Type	Description
+adIds	[ID!]	
+Restrict search results based on these adIds.
+
+beforeLastUpdated	String	
+Fetch all products from since last updated
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+categories	String	
+Relevant card categories
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+itemListIds	[ID!]	
+Restrict search resuts to products from a list of item list IDs
+
+keywords	[String!]	
+Restrict search results based on these keywords
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+partnerName	String	
+For a publisher, restrict search results based on these partner names. For an advertiser, this argument is ignored.
+
+partnerStatus	PartnerStatus	
+For a publisher, restrict search results based on your relationship status with an advertiser. Valid values: 'joined' or 'not-joined'. For an advertiser, this argument is ignored.
+
+productIds	[ID!]	
+Unique product identifiers
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+sinceLastUpdated	String	
+Fetch all products from since last updated
+
+title	String	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+usageType	String	
+Consumer, Business etc
+
+financeProducts : FinanceProducts!
+This query allows you to search for all common fields for all finance products
+
+Argument	Type	Description
+adIds	[ID!]	
+Restrict search results based on these adIds.
+
+beforeLastUpdated	String	
+Fetch all products from since last updated
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+categories	String	
+Relevant card categories
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+itemListIds	[ID!]	
+Restrict search resuts to products from a list of item list IDs
+
+keywords	[String!]	
+Restrict search results based on these keywords
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+partnerName	String	
+For a publisher, restrict search results based on these partner names. For an advertiser, this argument is ignored.
+
+partnerStatus	PartnerStatus	
+For a publisher, restrict search results based on your relationship status with an advertiser. Valid values: 'joined' or 'not-joined'. For an advertiser, this argument is ignored.
+
+productIds	[ID!]	
+Unique product identifiers
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+sinceLastUpdated	String	
+Fetch all products from since last updated
+
+title	String	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+usageType	String	
+Consumer, Business etc
+
+productFeeds : ProductFeeds!
+This query allows you to search for adIds/Product Feed
+
+Argument	Type	Description
+advertiserCountry	String	
+For a publisher, restrict search results based on advertiser countries. For an advertiser, this argument is ignored.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+feedType	FeedType	
+For a publisher, restrict search results based on feed type. For an advertiser, this argument is ignored.
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+products : Products!
+This query allows you to search for all common fields for all products
+
+Argument	Type	Description
+adIds	[ID!]	
+Restrict search results based on these adIds.
+
+advertiserCountries	[String!]	
+For a publisher, restrict search results based on advertiser countries. For an advertiser, this argument is ignored.
+
+availability	Availability	
+For a publisher, restrict search results based on product availability. For an advertiser, this argument is ignored.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+currency	String	
+Restrict search results based on the type of currency
+
+excludePartnerIds	[ID!]	
+For a publisher, exclude search results based on these partner ids. For an advertiser, this argument is ignored.
+
+excludeProductIds	[ID!]	
+Exclude search results based on these unique product identifiers
+
+excludeServiceableAreas	[String!]	
+For a publisher, exclude search results based on advertiser serviceable areas. For an advertiser, this argument is ignored.
+
+highPrice	Float	
+Restrict search results based on high price
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+itemListId	ID	
+Restrict search results based on the item list ID
+
+itemListIds	[ID!]	
+Restrict search resuts to products from a list of item list IDs
+
+keywords	[String!]	
+Restrict search results based on these keywords
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+lowPrice	Float	
+Restrict search results based on low price
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+page	String	
+Search after page parameters for pagination
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+partnerStatus	PartnerStatus	
+For a publisher, restrict search results based on your relationship status with an advertiser. Valid values: 'joined' or 'not-joined'. For an advertiser, this argument is ignored.
+
+productIds	[ID!]	
+Unique product identifiers
+
+serviceableAreas	[String!]	
+For a publisher, restrict search results based on advertiser serviceable areas. For an advertiser, this argument is ignored.
+
+sortBy	SortBy	
+The field by which results should be sorted.
+
+sortOrder	SortOrder	
+The order in which results should be sorted. Specify 'ASC' for ascending or 'DESC' for descending order.
+
+productsFromApplication : Products!
+This query is for CJ registered applications only. For more information please contact CJ Developer Experience Group (dx at cj.com) to discuss your needs.
+
+Argument	Type	Description
+adIds	[ID!]	
+Restrict search results based on these adIds.
+
+advertiserId	ID!	
+Advertiser that owns the products searched for
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+productIds	[ID!]	
+Unique product identifiers
+
+shoppingProductFeeds : ShoppingProductFeeds!
+This query allows you to search for adIds/Product Feed
+
+Argument	Type	Description
+advertiserCountry	String	
+For a publisher, restrict search results based on advertiser countries. For an advertiser, this argument is ignored.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+shoppingProducts : ShoppingProducts!
+This query allows you to search for all fields for all Shopping products
+
+Argument	Type	Description
+adIds	[ID!]	
+Restrict search results based on these adIds.
+
+advertiserCountries	[String!]	
+For a publisher, restrict search results based on advertiser countries. For an advertiser, this argument is ignored.
+
+availability	Availability	
+For a publisher, restrict search results based on product availability. For an advertiser, this argument is ignored.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+currency	String	
+Restrict search results based on the type of currency
+
+googleProductCategoryIds	[ID!]	
+Restrict search results based on these Google-defined product category IDs https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
+
+googleProductCategoryNames	[String!]	
+Restrict search results based on these Google-defined product category names https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
+
+gtin	String	
+Your products Global Trade Item Number (GTIN)
+
+highPrice	Float	
+Restrict search results based on high price
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+itemListId	ID	
+Restrict search results based on the item list ID
+
+itemListIds	[ID!]	
+Restrict search resuts to products from a list of item list IDs
+
+keywords	[String!]	
+Restrict search results based on these keywords
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+lowPrice	Float	
+Restrict search results based on low price
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+partnerStatus	PartnerStatus	
+For a publisher, restrict search results based on your relationship status with an advertiser. Valid values: 'joined' or 'not-joined'. For an advertiser, this argument is ignored.
+
+productIds	[ID!]	
+Unique product identifiers
+
+serviceableAreas	[String!]	
+For a publisher, restrict search results based on advertiser serviceable areas. For an advertiser, this argument is ignored.
+
+shoppingProductsFromApplication : ShoppingProducts!
+This query is for CJ registered applications only. For more information please contact CJ Developer Experience Group (dx at cj.com) to discuss your needs.
+
+Argument	Type	Description
+advertiserId	ID!	
+Advertiser that owns the products searched for
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+productIds	[ID!]	
+Unique product identifiers
+
+travelExperienceProducts : TravelExperienceProducts!
+This query allows you to search for all fields for all TravelExperience products
+
+Argument	Type	Description
+adIds	[ID!]	
+Restrict search results based on these adIds.
+
+advertiserCountries	[String!]	
+For a publisher, restrict search results based on advertiser countries. For an advertiser, this argument is ignored.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+currency	String	
+Restrict search results based on the type of currency
+
+highPrice	Float	
+Restrict search results based on high price
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+itemListId	ID	
+Restrict search results based on the item list ID
+
+itemListIds	[ID!]	
+Restrict search resuts to products from a list of item list IDs
+
+keywords	[String!]	
+Restrict search results based on these keywords
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+lowPrice	Float	
+Restrict search results based on low price
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+partnerIds	[ID!]	
+For a publisher, restrict search results based on these partner ids. For an advertiser, this argument is ignored.
+
+partnerStatus	PartnerStatus	
+For a publisher, restrict search results based on your relationship status with an advertiser. Valid values: 'joined' or 'not-joined'. For an advertiser, this argument is ignored.
+
+productIds	[ID!]	
+Unique product identifiers
+
+serviceableAreas	[String!]	
+For a publisher, restrict search results based on advertiser serviceable areas. For an advertiser, this argument is ignored.
+
+travelExperienceProductsFromApplication : TravelExperienceProducts!
+This query is for CJ registered applications only. For more information please contact CJ Developer Experience Group (dx at cj.com) to discuss your needs.
+
+Argument	Type	Description
+advertiserId	ID!	
+Advertiser that owns the products searched for
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+limit	Int	
+The maximum number of results to display. Default is 1,000. Cannot specify a limit greater than 10,000.
+
+offset	Int	
+The record number of the first record to display. For example setting Offset to 10 will display results starting with the tenth result. Use in conjunction with Limit to control pagination.
+
+productIds	[ID!]	
+Unique product identifiers
+
+Mutations
+createCreditCardProducts : CreateCreditCardProductResponse!
+This allows you to create credit card products
+
+Argument	Type	Description
+adId	ID!	
+Advertisers link id
+
+creditCardProducts	[CreateCreditCardProductRequest!]!	
+new credit card Product Request interface
+
+createShoppingProducts : CreateShoppingProductResponse!
+This allows you to create shopping products
+
+Argument	Type	Description
+adId	ID!	
+Advertisers link id
+
+shoppingProducts	[CreateShoppingProductRequest!]!	
+new shopping Product Request interface
+
+deleteProducts : DeleteProductResponse!
+This allows you to delete shopping products
+
+Argument	Type	Description
+adId	ID!	
+Advertisers link id
+
+ids	[ID!]!	
+delete shopping Product Request interface
+
+updateCreditCardProducts : UpdateCreditCardProductResponse!
+This allows you to update credit card products
+
+Argument	Type	Description
+adId	ID!	
+Advertisers link id
+
+creditCardProducts	[UpdateCreditCardProductRequest!]!	
+update credit card Product Request interface
+
+updateShoppingProducts : UpdateShoppingProductResponse!
+This allows you to update shopping products
+
+Argument	Type	Description
+adId	ID!	
+Advertisers link id
+
+shoppingProducts	[UpdateShoppingProductRequest!]!	
+update shopping Product Request interface
+
+Subscriptions
+checksumFromApplication : IdChecksum!
+This query is for CJ registered applications only. For more information please contact CJ Developer Experience Group (dx at cj.com) to discuss your needs.
+
+Argument	Type	Description
+adId	ID!	
+Product feed ad id
+
+advertiserId	ID!	
+Advertiser that owns the products searched for
+
+financeProductCatalog : FinanceProduct!
+This query allows you to request to download an advertiser's entire product feed of Finance products. Please note that some advertisers' product feeds may take some time to complete due to the large number of products in the feed.
+
+Argument	Type	Description
+adId	ID!	
+This is a required field, please specify the adId for the product feed you wish to download.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+productFeedsFromApplication : ProductFeedsResult!
+This query allows you to request to download many advertiser's entire product feed of Shopping products. Please note that some advertisers' product feeds may take some time to complete due to the large number of products in the feed.
+
+Argument	Type	Description
+adIds	[ID]	
+Restrict search results based on these adIds.
+
+companyIds	[ID!]	
+This is a required field, please specify your company ids (cid).
+
+sinceLastUpdated	String	
+Fetch all products feeds from since last updated
+
+shoppingProductCatalog : Shopping!
+This query allows you to request to download an advertiser's entire product feed of Shopping products. Please note that some advertisers' product feeds may take some time to complete due to the large number of products in the feed.
+
+Argument	Type	Description
+adId	ID!	
+This is a required field, please specify the adId for the product feed you wish to download.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+travelExperienceProductCatalog : TravelExperience!
+This query allows you to request to download an advertiser's entire product feed of TravelExperience products. Please note that some advertisers' product feeds may take some time to complete due to the large number of products in the feed.
+
+Argument	Type	Description
+adId	ID!	
+This is a required field, please specify the adId for the product feed you wish to download.
+
+companyId	ID!	
+This is a required field, please specify your company id (cid).
+
+includeDeletedProducts	Boolean	
+Include deleted products in the search results if set to true
+
+Objects
+APR
+Annual Percentage Rate
+
+Field	Type	Description
+aprDescription	String	
+APR Description
+
+aprType	String!	
+APR Type
+
+aprValue	String!	
+APR Value
+
+AdditionalFee
+The additional fee information for a Travel Experience advertisable
+
+Field	Type	Description
+amount	AmountWithCurrency!	
+Details about any additional fees
+
+id	ID	
+Unique identifier, eg. property ID, concert ID, package ID, event ID
+
+name	String	
+Name of additional fees
+
+Address
+The address information for a Travel Experience advertisable
+
+Field	Type	Description
+city	String	
+Location city
+
+country	String	
+Location country
+
+latitude	String	
+Location latitude
+
+longitude	String	
+Location longitude
+
+phoneNumber	String	
+Contact phone number
+
+provinceState	String	
+Location state or province
+
+regionName	String	
+Location region
+
+streetAddress	String	
+Location street name and number
+
+zipCode	String	
+Location zip or postal code
+
+AmountWithCurrency
+A decimal amount and the associated currency for a money field, e.g. price
+
+Field	Type	Description
+amount	DecimalNumber!	
+The amount
+
+currency	String	
+The ISO 4217 code for the associated currency
+
+Certification
+Allows user to describe certifications required by local regulations associated with a product
+
+Field	Type	Description
+certificationAuthority	String!	
+Authority issuing the certification
+
+certificationCode	String	
+Code of the certification
+
+certificationName	String!	
+Name of the certification
+
+certificationValue	String	
+Value of the certification
+
+CreateCreditCardProductResponse
+Response object for createCreditCardProducts mutation query
+
+Field	Type	Description
+errors	[ProductMutationError!]	
+Defines the error
+
+response	[CreditCardProductCreateResponse!]	
+Array of product that were successfully processed for creation
+
+CreateShoppingProductResponse
+Response object for createShoppingProducts mutation query
+
+Field	Type	Description
+errors	[ProductMutationError!]	
+Defines the error
+
+response	[ShoppingProductCreateResponse!]	
+Array of product that were successfully processed for creation
+
+CreditCard
+An advertisable finance creditCard product
+
+Implements
+FinanceProduct
+Field	Type	Description	Arguments
+adId	ID!	
+Advertisers feed id
+
+additionalCopy	String	
+How additional copy should be displayed. Please make sure all bullets are HTML encoded
+
+advertiserId	ID!	
+Advertisers account id (CID)
+
+advertiserName	String!	
+Advertisers Name
+
+annualMemFee	Fee	
+Annual member fee value
+
+availableApplications	String!	
+List of available support applications
+
+balanceTransFee	Fee!	
+Balance transfer fee value
+
+cardName	String	
+The name of the card/offer, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded.
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+cashAdvanceAPR	APR	
+This field gives the information on the Cash Advance APR details related to the product.
+
+cashAdvanceFee	Fee	
+How cash advance fee should be displayed
+
+cashGracePeriod	Period	
+How cash grace period should be displayed
+
+categories	String	
+Relevant card categories
+
+creditRating	String!	
+Excellent, Good, etc
+
+customField1	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField2	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField3	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField4	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField5	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customPromotion	String	
+How custom promotion should be displayed
+
+description	String!	
+Description of the card/ product.
+
+destinationUrl	String!	
+The URL of the page at which a shopper can buy the product.
+
+detailsRatesFeesUrl	String	
+URL for terms and additional details.
+
+foreignTransFee	Fee	
+Foreign transaction fee value
+
+id	ID!	
+Unique product identifier assigned by the advertiser
+
+imageLink	String!	
+Main Product image URL
+
+introAnnualMemFee	Fee	
+Introductory annual member fee value
+
+introAnnualMemFeePeriod	Period	
+How introductory annual member fee period should be displayed
+
+introPurchAPR	APR	
+This field gives the information on the Introductory purchase APR details related to the product.
+
+introPurchAPRPeriod	Period	
+How introductory purchase APR period should be displayed
+
+introTransAPRPeriod	Period	
+How introductory transfer APR period should be displayed
+
+introTransferAPR	APR	
+This field gives the information on the Introductory transfer APR details related to the product.
+
+isDeleted	Boolean!	
+Whether the product has been deleted by the advertiser
+
+itemListId	ID	
+Restrict search results based on the item list ID
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+lastUpdated	Instant!	
+Last updated date of product
+
+latePaymentFee	Fee	
+Late payment fee value
+
+linkCode	LinkCode	
+The link code for the product
+
+Argument	Type	Description
+pid	ID!	
+Promotional property ID to use in link code
+
+shopperId	ID	
+Shopper ID
+
+marketingCopy	String!	
+How marketing member fropy should be displayed. Please make sure all bullets are HTML encoded
+
+minimumDeposit	String	
+How minimum deposit should be displayed
+
+mobileCopy	String	
+How mobile copy should be displayed. Please make sure all bullets are HTML encoded
+
+nonIntroPurchAPR	APR	
+How non-introductory purchase APR should be displayed
+
+nonIntroTransAPR	APR!	
+How non-introductory transfer APR should be displayed
+
+overLimitFee	Fee	
+Over limit fee value
+
+penaltyAPR	APR	
+This field gives the information on the Penalty APR details related to the product.
+
+processingNetwork	String!	
+MasterCard/Visa/American Express/Discover. Please make sure all symbols are HTML encoded.
+
+prohibitedCategories	String	
+List of non-approved categories
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+publisherGroupName	String	
+Advertisers publisher group name by Id
+
+purchGracePeriod	Period	
+How purchase grace period should be displayed
+
+recommendedSiteType	String	
+List of recommended or approved site types
+
+regularAPR	APR	
+This field gives the information on the Regular APR details related to the product.
+
+returnPaymentFee	Fee	
+Return payment fee value
+
+rewards1	Reward	
+This field specifies the Rewards offered on the card
+
+rewards2	Reward	
+This field specifies the Rewards offered on the card
+
+rewards3	Reward	
+This field specifies the Rewards offered on the card
+
+rewards4	Reward	
+This field specifies the Rewards offered on the card
+
+rewardsBonus	String	
+Numeric value of rewards. If relevant, number should be paired with the appropriate symbol. ($,%, etc.
+
+rewardsBonusTerms	String	
+Reward Bonus terms, must be verbatim.
+
+sourceFeedType	String	
+The type of the feed the product belongs to (i.e. shopping, travel)
+
+title	String!	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+transferGracePeriod	Period	
+How transfer grace period should be displayed
+
+usageType	String	
+Consumer, Business etc
+
+CreditCardProductCreateResponse
+An advertisable credit card product
+
+Field	Type	Description
+additionalCopy	String	
+How additional copy should be displayed. Please make sure all bullets are HTML encoded
+
+annualMemFee	Fee	
+Annual member fee value
+
+availableApplications	String!	
+List of available support applications
+
+balanceTransFee	Fee!	
+Balance transfer fee value
+
+cardName	String	
+The name of the card/offer, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded.
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+cashAdvanceAPR	APR	
+This field gives the information on the Cash Advance APR details related to the product.
+
+cashAdvanceFee	Fee	
+How cash advance fee should be displayed
+
+cashGracePeriod	Period	
+How cash grace period should be displayed
+
+categories	String	
+Relevant card categories
+
+creditRating	String!	
+Excellent, Good, etc
+
+customField1	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField2	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField3	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField4	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField5	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customPromotion	String	
+How custom promotion should be displayed
+
+description	String!	
+Description of the card/ product.
+
+destinationUrl	String!	
+The URL of the page at which a shopper can buy the product.
+
+detailsRatesFeesUrl	String	
+URL for terms and additional details.
+
+foreignTransFee	Fee	
+Foreign transaction fee value
+
+id	ID!	
+Unique product identifier assigned by the advertiser
+
+imageLink	String!	
+Main Product image URL
+
+introAnnualMemFee	Fee	
+Introductory annual member fee value
+
+introAnnualMemFeePeriod	Period	
+How introductory annual member fee period should be displayed
+
+introPurchAPR	APR	
+This field gives the information on the Introductory purchase APR details related to the product.
+
+introPurchAPRPeriod	Period	
+How introductory purchase APR period should be displayed
+
+introTransAPRPeriod	Period	
+How introductory transfer APR period should be displayed
+
+introTransferAPR	APR	
+This field gives the information on the Introductory transfer APR details related to the product.
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+latePaymentFee	Fee	
+Late payment fee value
+
+marketingCopy	String!	
+How marketing member copy should be displayed. Please make sure all bullets are HTML encoded
+
+minimumDeposit	String	
+How minimum deposit should be displayed
+
+mobileCopy	String	
+How mobile copy should be displayed. Please make sure all bullets are HTML encoded
+
+nonIntroPurchAPR	APR!	
+How non-introductory purchase APR should be displayed
+
+nonIntroTransAPR	APR!	
+How non-introductory transfer APR should be displayed
+
+overLimitFee	Fee	
+Over limit fee value
+
+penaltyAPR	APR	
+This field gives the information on the Penalty APR details related to the product.
+
+processingNetwork	String!	
+MasterCard/Visa/American Express/Discover. Please make sure all symbols are HTML encoded.
+
+prohibitedCategories	String	
+List of non-approved categories
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+purchGracePeriod	Period	
+How purchase grace period should be displayed
+
+recommendedSiteType	String	
+List of recommended or approved site types
+
+regularAPR	APR	
+This field gives the information on the Regular APR details related to the product.
+
+returnPaymentFee	Fee	
+Return payment fee value
+
+rewards1	Reward	
+This field specifies the Rewards offered on the card
+
+rewards2	Reward	
+This field specifies the Rewards offered on the card
+
+rewards3	Reward	
+This field specifies the Rewards offered on the card
+
+rewards4	Reward	
+This field specifies the Rewards offered on the card
+
+rewardsBonus	String	
+Numeric value of rewards. If relevant, number should be paired with the appropriate symbol. ($,%, etc.
+
+rewardsBonusTerms	String	
+Reward Bonus terms, must be verbatim.
+
+title	String!	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+transferGracePeriod	Period	
+How transfer grace period should be displayed
+
+usageType	String	
+Consumer, Business etc
+
+CreditCardProductUpdateResponse
+An advertisable update credit card product
+
+Field	Type	Description
+additionalCopy	String	
+How additional copy should be displayed. Please make sure all bullets are HTML encoded
+
+annualMemFee	Fee	
+Annual member fee value
+
+availableApplications	String	
+List of available support applications
+
+balanceTransFee	Fee	
+Balance transfer fee value
+
+cardName	String	
+The name of the card/offer, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded.
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+cashAdvanceAPR	APR	
+This field gives the information on the Cash Advance APR details related to the product.
+
+cashAdvanceFee	Fee	
+How cash advance fee should be displayed
+
+cashGracePeriod	Period	
+How cash grace period should be displayed
+
+categories	String	
+Relevant card categories
+
+creditRating	String	
+Excellent, Good, etc
+
+customField1	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField2	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField3	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField4	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField5	CustomField	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customPromotion	String	
+How custom promotion should be displayed
+
+description	String	
+Description of the card/ product.
+
+destinationUrl	String	
+The URL of the page at which a shopper can buy the product.
+
+detailsRatesFeesUrl	String	
+URL for terms and additional details.
+
+foreignTransFee	Fee	
+Foreign transaction fee value
+
+id	ID!	
+Unique product identifier assigned by the advertiser
+
+imageLink	String	
+Main Product image URL
+
+introAnnualMemFee	Fee	
+Introductory annual member fee value
+
+introAnnualMemFeePeriod	Period	
+How introductory annual member fee period should be displayed
+
+introPurchAPR	APR	
+This field gives the information on the Introductory purchase APR details related to the product.
+
+introPurchAPRPeriod	Period	
+How introductory purchase APR period should be displayed
+
+introTransAPRPeriod	Period	
+How introductory transfer APR period should be displayed
+
+introTransferAPR	APR	
+This field gives the information on the Introductory transfer APR details related to the product.
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+latePaymentFee	Fee	
+Late payment fee value
+
+marketingCopy	String	
+How marketing member copy should be displayed. Please make sure all bullets are HTML encoded
+
+minimumDeposit	String	
+How minimum deposit should be displayed
+
+mobileCopy	String	
+How mobile copy should be displayed. Please make sure all bullets are HTML encoded
+
+nonIntroPurchAPR	APR	
+How non-introductory purchase APR should be displayed
+
+nonIntroTransAPR	APR	
+How non-introductory transfer APR should be displayed
+
+overLimitFee	Fee	
+Over limit fee value
+
+penaltyAPR	APR	
+This field gives the information on the Penalty APR details related to the product.
+
+processingNetwork	String	
+MasterCard/Visa/American Express/Discover. Please make sure all symbols are HTML encoded.
+
+prohibitedCategories	String	
+List of non-approved categories
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+purchGracePeriod	Period	
+How purchase grace period should be displayed
+
+recommendedSiteType	String	
+List of recommended or approved site types
+
+regularAPR	APR	
+This field gives the information on the Regular APR details related to the product.
+
+returnPaymentFee	Fee	
+Return payment fee value
+
+rewards1	Reward	
+This field specifies the Rewards offered on the card
+
+rewards2	Reward	
+This field specifies the Rewards offered on the card
+
+rewards3	Reward	
+This field specifies the Rewards offered on the card
+
+rewards4	Reward	
+This field specifies the Rewards offered on the card
+
+rewardsBonus	String	
+Numeric value of rewards. If relevant, number should be paired with the appropriate symbol. ($,%, etc.
+
+rewardsBonusTerms	String	
+Reward Bonus terms, must be verbatim.
+
+title	String	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+transferGracePeriod	Period	
+How transfer grace period should be displayed
+
+usageType	String	
+Consumer, Business etc
+
+CustomField
+Custom Field
+
+Field	Type	Description
+customFieldName	String!	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customFieldType	String!	
+Type of the custom field.
+
+customFieldValue	String!	
+Value of the custom field.
+
+DeleteProductResponse
+Response object for deleteShoppingProducts mutation query
+
+Field	Type	Description
+deleteProductsResponse	[DeleteSummary!]	
+Array of Delete Summary which provides status of every product deleted.
+
+errors	[ProductMutationError!]	
+Defines the error
+
+DeleteSummary
+Delete object for every id
+
+Field	Type	Description
+id	[ID!]!	
+Unique product identifier
+
+messages	[String!]!	
+The messages returned as part of the delete request
+
+Fee
+FEE
+
+Field	Type	Description
+feeDescription	String	
+Fee Description
+
+feeValueAmount	FinanceAmountWithCurrency	
+Fee Value Amount
+
+feeValuePercent	String	
+Fee Value Percent
+
+FinanceAmountWithCurrency
+A string amount and the associated currency for a money field for finance, e.g. fee
+
+Field	Type	Description
+amount	String!	
+The amount
+
+currency	String	
+The ISO 4217 code for the associated currency
+
+FinanceCreditCardProducts
+The search results of a financeCreditCardProducts query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+resultList	[CreditCard!]!	
+Array of credit card
+
+totalCount	Int!	
+The total number of records found for your query
+
+FinanceProducts
+The search results of a finance products query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+resultList	[FinanceProduct!]!	
+Array of products
+
+totalCount	Int!	
+The total number of records found for your query
+
+GoogleProductCategory
+Google Product Category
+
+Field	Type	Description
+id	Int	
+Google product category id
+
+name	String	
+Google product category name
+
+IdChecksum
+Field	Type	Description
+id	String!	
+For internal use only
+
+itemListId	String	
+For internal use only
+
+md5Sum	String	
+For internal use only
+
+Installment
+Installment
+
+Field	Type	Description
+amount	AmountWithCurrency	
+Amount
+
+months	Int	
+Months
+
+LinkCode
+LinkCode
+
+Field	Type	Description
+clickUrl	String	
+The click URL for the product
+
+html	LinkType	
+The product link code in html
+
+imageUrl	String	
+The image URL for the product
+
+LinkType
+LinkType
+
+Field	Type	Description
+form	String	
+The code for promoting the product using a form element
+
+image	String	
+The code for promoting the product using an image element
+
+text	String	
+The code for promoting the product with a text link
+
+LoyaltyPoints
+Loyalty points
+
+Field	Type	Description
+name	String	
+Name
+
+points	Int	
+Points
+
+ratio	DecimalNumber	
+Ratio
+
+Period
+Period
+
+Field	Type	Description
+periodDescription	String!	
+Description of the period value
+
+periodType	String!	
+Type of the duration which is either day/month/year
+
+periodValue	String!	
+duration of the period
+
+ProductDetail
+ProductDetail field
+
+Field	Type	Description
+attributeName	String!	
+Whether the ProductDetail attributeName
+
+attributeValue	String!	
+Whether the ProductDetail attributeValue
+
+sectionName	String	
+Whether the ProductDetail sectionName
+
+ProductFeed
+An advertisable product feed
+
+Field	Type	Description
+adId	ID!	
+Product Feed id
+
+advertiserCountry	String	
+Country with which product feed was created
+
+advertiserId	String	
+Advertisers ID
+
+advertiserName	String	
+Advertisers Name
+
+currency	String	
+Currency
+
+feedName	String	
+Feed Name
+
+language	String	
+Language
+
+lastUpdated	Instant	
+Last Updated Date
+
+productCount	Int	
+Product Count
+
+sourceFeedType	String	
+The type of the feed the product belongs to (i.e. shopping, travel)
+
+ProductFeeds
+The search results of a product feed query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+resultList	[ProductFeed!]!	
+Array of product feed
+
+totalCount	Int!	
+The total number of records found for your query
+
+ProductFeedsResult
+Field	Type	Description
+adId	String!	
+Advertisers link id
+
+lastUpdated	String	
+Last updated date of product feed
+
+productCount	Int	
+Product Count for product feed
+
+ProductMutationError
+Error object for every field
+
+Field	Type	Description
+field	String	
+The field returned as part of the request error
+
+id	ID!	
+Unique product identifier
+
+messages	[String!]	
+The messages returned as part of the request error
+
+originalValue	String	
+The original value of field as part of request
+
+warnings	[String!]	
+The warnings returned as part of the request error
+
+Products
+The search results of a products query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+nextPage	String	
+The nextPage used for paginate
+
+resultList	[Product!]!	
+Array of products
+
+totalCount	Int!	
+The total number of records found for your query
+
+Reward
+Reward Response Field
+
+Field	Type	Description
+rewardRate	String	
+Reward rate must be verbatim.
+
+rewardTerms	String	
+Terms on which the reward can be redeemed.
+
+rewardType	String	
+Reward type must be verbatim.
+
+Shipping
+The shipping information for an advertisable product
+
+Field	Type	Description
+country	String	
+Shipping country code (2 digit code)
+
+locationGroupName	String	
+Shipping location group name
+
+locationId	ID	
+Shipping location identifier
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+maximumTransitTime	String	
+maximum number of days between when a product is handed off to a shipping carrier and when it's delivered to the customer
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+minimumTransitTime	String	
+minimum number of days between when a product is handed off to a shipping carrier and when it's delivered to the customer
+
+postalCode	String	
+Shipping postal code
+
+price	ShippingAmountWithCurrency!	
+Fixed shipping cost, including VAT if required
+
+region	String	
+Shipping region delivery area
+
+service	String	
+Shipping service class or shipping speed
+
+ShippingAmountWithCurrency
+A decimal amount and the associated currency for a money field for shipping, e.g. price
+
+Field	Type	Description
+amount	DecimalNumber	
+The amount
+
+currency	String	
+The ISO 4217 code for the associated currency
+
+Shopping
+An advertisable Shopping product
+
+Implements
+Product
+Field	Type	Description	Arguments
+adId	ID!	
+Advertisers link id
+
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+adsRedirect	String	
+Product's adsRedirect
+
+adult	String	
+Indicates if a product includes sexually suggestive content
+
+advertiserCountry	String	
+Country that the advertiser is in
+
+advertiserId	ID!	
+Advertisers account id (CID)
+
+advertiserName	String!	
+Advertisers Name
+
+ageGroup	String	
+Product’s targeted demographic (apparel products only) Values: newborn, infant, toddler, kids, adult
+
+availability	String	
+Product's availability Values: IN_STOCK, OUT_OF_STOCK, PREORDER, BACKORDER
+
+availabilityDate	Instant	
+The date a preordered item becomes available
+
+brand	String	
+Product's brand
+
+catalogId	ID	
+Product feed catalog id
+
+certification	Certification	
+Allows user to describe certifications required by local regulations associated with a product
+
+color	String	
+Product’s color(s) (apparel products only)
+
+condition	String	
+Product’s condition  Values: new, refurbished, used
+
+costOfGoodsSold	AmountWithCurrency	
+Product's costOfGoodsSold
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+description	String!	
+Detailed product description
+
+energyEfficiencyClass	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMax	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMin	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+expirationDate	Instant	
+The date that your product stops being available
+
+gender	String	
+Product’s targeted gender (apparel products only) Values: male, female, unisex
+
+googleProductCategory	GoogleProductCategory	
+The Google-defined category for the product
+
+gtin	String	
+Your products Global Trade Item Number (GTIN)
+
+id	ID!	
+Unique product identifier
+
+identifierExists	String	
+Will be displayed if the new product doesn’t have a: GTIN and brand or MPN and brand Values: yes, no, blank (default to yes)
+
+imageLink	String	
+Main image URL
+
+installment	Installment	
+Details of an installment payment plan (BZ only)
+
+isBundle	String	
+Indicates a product is a custom group of different products featuring one main product (e.g., a product sold in a bundle with related accessories)
+
+isDeleted	Boolean!	
+Whether the product has been deleted by the advertiser
+
+itemGroupId	ID	
+Product’s parent-level ID. (Required for apparel products and only used if you have a set of products that come in different versions, for example apparel in different sizes and colors)
+
+itemListId	ID	
+Id associated with an advertisers item list
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+lastUpdated	Instant!	
+Last updated date of product
+
+link	String	
+Landing page URL
+
+linkCode	LinkCode	
+The link code for the product
+
+Argument	Type	Description
+pid	ID!	
+Promotional property ID to use in link code
+
+shopperId	ID	
+Shopper ID
+
+loyaltyPoints	LoyaltyPoints	
+The number and type of loyalty points a customer receives when buying a product (JP only)
+
+material	String	
+Product’s fabric or material
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+mpn	String	
+Product's manufacturer part number
+
+multipack	Int	
+The number of identical products sold together as a multipack
+
+pattern	String	
+Product’s pattern or graphic print (apparel products only)
+
+price	AmountWithCurrency!	
+Standard pricing
+
+productDetail	ProductDetail	
+Product's productDetail
+
+productHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productHighlight	[String!]	
+Product's productHighlight
+
+productLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productType	[String!]	
+Product category that you define for your product
+
+productWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+salePrice	AmountWithCurrency	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	Instant	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	Instant	
+Start date when the product’s sale price applies, if applicable
+
+serviceableAreas	String	
+Servicable areas of the product (2 digit country code)
+
+shipping	Shipping	
+Shipping cost
+
+shippingHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shipsFromCountry	String	
+Product's shipsFromCountry
+
+shoppingAdsExcludedCountry	String	
+Product's shoppingAdsExcludedCountry
+
+size	String	
+Products size (apparel products only)
+
+sizeSystem	String	
+The country of the size system your product is sized in values: US, UK, EU, DE, FR, JP, CN, IT, BR, MEX, AU
+
+sizeType	String	
+Apparel product's cut Values: regular, petite, plus, big and tall, maternity
+
+sourceFeedType	String	
+The type of the feed the product belongs to (i.e. shopping, travel)
+
+subscriptionCost	SubscriptionCost	
+Product's costOfGoodsSold
+
+targetCountry	String	
+The primary country where your products are available for sale, or to be shipped to
+
+tax	Tax	
+Product sales tax details
+
+title	String	
+Name of product
+
+transitTimeLabel	String	
+Product's transitTimeLabel
+
+unitPricingBaseMeasure	String	
+The product’s base measure for pricing (e.g. 100ml means the price is calculated based on a 100ml units). Optional when you submit unit_pricing_measure. Integer + unit
+
+unitPricingMeasure	String	
+The measure and dimension of your product as it is sold Numeric value + unit, eg. 1.5kg, 30sqft
+
+ShoppingProductCreateResponse
+An advertisable Shopping product
+
+Field	Type	Description
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+adsRedirect	String	
+Product's adsRedirect
+
+adult	String	
+Indicates if a product includes sexually suggestive content
+
+ageGroup	String	
+Product’s targeted demographic (apparel products only) Values: newborn, infant, toddler, kids, adult
+
+availability	String!	
+Product's availability Values: IN_STOCK, OUT_OF_STOCK, PREORDER
+
+availabilityDate	String	
+The date a preordered item becomes available
+
+brand	String	
+Product's brand
+
+certification	Certification	
+Allows user to describe certifications required by local regulations associated with a product
+
+color	String	
+Product’s color(s) (apparel products only)
+
+condition	String!	
+Product’s condition Values: new, refurbished, used
+
+costOfGoodsSold	AmountWithCurrency	
+Product's costOfGoodsSold
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+description	String!	
+Detailed product description
+
+energyEfficiencyClass	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMax	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMin	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+expirationDate	String	
+The date that your product stops being available
+
+gender	String	
+Product’s targeted gender (apparel products only) Values: male, female, unisex
+
+googleProductCategory	GoogleProductCategory	
+The Google-defined category for the product
+
+gtin	String	
+Your products Global Trade Item Number (GTIN)
+
+id	ID!	
+Unique product identifier
+
+identifierExists	String	
+Will be displayed if the new product doesn’t have a: GTIN and brand or MPN and brand Values: yes, no, blank (default to yes)
+
+imageLink	String	
+Main image URL
+
+installment	Installment	
+Details of an installment payment plan (BZ only)
+
+isBundle	String	
+Indicates a product is a custom group of different products featuring one main product (e.g., a product sold in a bundle with related accessories)
+
+itemGroupId	ID	
+Product’s parent-level ID. (Required for apparel products and only used if you have a set of products that come in different versions, for example apparel in different sizes and colors)
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+link	String!	
+Landing page URL
+
+loyaltyPoints	LoyaltyPoints	
+The number and type of loyalty points a customer receives when buying a product (JP only)
+
+material	String	
+Product’s fabric or material
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+mpn	String	
+Product's manufacturer part number
+
+multipack	Int	
+The number of identical products sold together as a multipack
+
+pattern	String	
+Product’s pattern or graphic print (apparel products only)
+
+price	AmountWithCurrency!	
+Standard pricing
+
+productDetail	ProductDetail	
+Product's productDetail
+
+productHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productHighlight	[String!]	
+Product's productHighlight
+
+productLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productType	[String!]	
+Product category that you define for your product
+
+productWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+salePrice	AmountWithCurrency	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	String	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	String	
+Start date when the product’s sale price applies, if applicable
+
+shipping	Shipping	
+Shipping cost
+
+shippingHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shipsFromCountry	String	
+Product's shipsFromCountry
+
+shoppingAdsExcludedCountry	String	
+Product's shoppingAdsExcludedCountry
+
+size	String	
+Products size (apparel products only)
+
+sizeSystem	String	
+The country of the size system your product is sized in values: US, UK, EU, DE, FR, JP, CN, IT, BR, MEX, AU
+
+sizeType	String	
+Apparel product's cut Values: regular, petite, plus, big and tall, maternity
+
+subscriptionCost	SubscriptionCost	
+Product's subscriptionCost
+
+tax	Tax	
+Product sales tax details
+
+title	String!	
+Name of product
+
+transitTimeLabel	String	
+Product's transitTimeLabel
+
+unitPricingBaseMeasure	String	
+The product’s base measure for pricing (e.g. 100ml means the price is calculated based on a 100ml units). Optional when you submit unit_pricing_measure. Integer + unit
+
+unitPricingMeasure	String	
+The measure and dimension of your product as it is sold Numeric value + unit, eg. 1.5kg, 30sqft
+
+ShoppingProductFeeds
+The search results of a product feed query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+resultList	[ProductFeed!]!	
+Array of product feed
+
+totalCount	Int!	
+The total number of records found for your query
+
+ShoppingProductUpdateResponse
+An advertisable Shopping product update response
+
+Field	Type	Description
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+adsRedirect	String	
+Product's adsRedirect
+
+adult	String	
+Indicates if a product includes sexually suggestive content
+
+ageGroup	String	
+Product’s targeted demographic (apparel products only) Values: newborn, infant, toddler, kids, adult
+
+availability	String	
+Product's availability Values: IN_STOCK, OUT_OF_STOCK, PREORDER
+
+availabilityDate	String	
+The date a preordered item becomes available
+
+brand	String	
+Product's brand
+
+certification	Certification	
+Allows user to describe certifications required by local regulations associated with a product
+
+color	String	
+Product’s color(s) (apparel products only)
+
+condition	String	
+Product’s condition Values: new, refurbished, used
+
+costOfGoodsSold	AmountWithCurrency	
+Product's costOfGoodsSold
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+description	String	
+Detailed product description
+
+energyEfficiencyClass	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMax	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMin	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+expirationDate	String	
+The date that your product stops being available
+
+gender	String	
+Product’s targeted gender (apparel products only) Values: male, female, unisex
+
+googleProductCategory	GoogleProductCategory	
+The Google-defined category for the product
+
+gtin	String	
+Your products Global Trade Item Number (GTIN)
+
+id	ID!	
+Unique product identifier
+
+identifierExists	String	
+Will be displayed if the new product doesn’t have a: GTIN and brand or MPN and brand Values: yes, no, blank (default to yes)
+
+imageLink	String	
+Main image URL
+
+installment	Installment	
+Details of an installment payment plan (BZ only)
+
+isBundle	String	
+Indicates a product is a custom group of different products featuring one main product (e.g., a product sold in a bundle with related accessories)
+
+itemGroupId	ID	
+Product’s parent-level ID. (Required for apparel products and only used if you have a set of products that come in different versions, for example apparel in different sizes and colors)
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+link	String	
+Landing page URL
+
+loyaltyPoints	LoyaltyPoints	
+The number and type of loyalty points a customer receives when buying a product (JP only)
+
+material	String	
+Product’s fabric or material
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+mpn	String	
+Product's manufacturer part number
+
+multipack	Int	
+The number of identical products sold together as a multipack
+
+pattern	String	
+Product’s pattern or graphic print (apparel products only)
+
+price	AmountWithCurrency	
+Standard pricing
+
+productDetail	ProductDetail	
+Product's productDetail
+
+productHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productHighlight	[String!]	
+Product's productHighlight
+
+productLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productType	[String!]	
+Product category that you define for your product
+
+productWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+salePrice	AmountWithCurrency	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	String	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	String	
+Start date when the product’s sale price applies, if applicable
+
+shipping	Shipping	
+Shipping cost
+
+shippingHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shipsFromCountry	String	
+Product's shipsFromCountry
+
+shoppingAdsExcludedCountry	String	
+Product's shoppingAdsExcludedCountry
+
+size	String	
+Products size (apparel products only)
+
+sizeSystem	String	
+The country of the size system your product is sized in values: US, UK, EU, DE, FR, JP, CN, IT, BR, MEX, AU
+
+sizeType	String	
+Apparel product's cut Values: regular, petite, plus, big and tall, maternity
+
+subscriptionCost	SubscriptionCost	
+Product's subscriptionCost
+
+tax	Tax	
+Product sales tax details
+
+title	String	
+Name of product
+
+transitTimeLabel	String	
+Product's transitTimeLabel
+
+unitPricingBaseMeasure	String	
+The product’s base measure for pricing (e.g. 100ml means the price is calculated based on a 100ml units). Optional when you submit unit_pricing_measure. Integer + unit
+
+unitPricingMeasure	String	
+The measure and dimension of your product as it is sold Numeric value + unit, eg. 1.5kg, 30sqft
+
+ShoppingProducts
+The search results of a shoppingProducts query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+resultList	[Shopping!]!	
+Array of Shopping products
+
+totalCount	Int!	
+The total number of records found for your query
+
+SubscriptionCost
+SubscriptionCost field
+
+Field	Type	Description
+amount	AmountWithCurrency!	
+Whether the SubscriptionCost attributeValue
+
+period	String!	
+Whether the SubscriptionCost sectionName
+
+periodLength	Int!	
+Whether the SubscriptionCost attributeName
+
+Tax
+Tax field
+
+Field	Type	Description
+countryCode	String	
+The two letter country code of the country the product can be delivered to
+
+locationGroupName	String	
+The location name in which the tax rate applies
+
+locationId	ID	
+The location id in which the tax rate applies
+
+postalCode	String	
+The postal code in which the tax rate applies
+
+rate	DecimalNumber	
+The product's tax rate as a percent
+
+region	String	
+The region in which the tax rate applies
+
+taxShip	String	
+Whether the advertiser charges a tax on the shipping cost
+
+TravelExperience
+An advertisable Travel and Experience product
+
+Implements
+Product
+Field	Type	Description	Arguments
+accessibility	String	
+Comma-separated list of accessability features at the property
+
+adId	ID!	
+Advertisers link id
+
+additionalFees	[AdditionalFee!]	
+Details abo ut any additional fees
+
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+address	Address	
+Details about location
+
+advertiserCountry	String	
+Country that the advertiser is in
+
+advertiserId	ID!	
+Advertisers account id (CID)
+
+advertiserName	String!	
+Advertisers Name
+
+ageRestrictions	String	
+Indicates if the product has age restrictions
+
+allInclusive	String	
+Whether your product's price includes food and activities
+
+amenities	String	
+Provide a comma-separated list of amenities at the property
+
+availabilityEnd	Instant	
+Sale availability end date
+
+availabilityStart	Instant	
+Sale availability start date
+
+baths	DecimalNumber	
+Number of bathrooms in your hotel or vacation property
+
+bedrooms	Int	
+Number of bedrooms in your hotel or vacation property
+
+beds	Int	
+Number of beds in your hotel or vacation property
+
+bedsDescription	String	
+Description of the types of beds in your hotel or vacation property
+
+brand	String	
+Product's brand
+
+brandId	String	
+Brand Identifier
+
+cancellableOnline	String	
+Indicates if product be cancelled online
+
+catalogId	ID	
+Product feed catalog id
+
+categoryId	ID	
+Advertiser defined category id
+
+categoryName	String	
+Advertiser defined category name
+
+class	String	
+The class or type of product
+
+customIdentifier1	String	
+Advertiser defined additional category or identifier
+
+customIdentifier2	String	
+Advertiser defined additional category or identifier
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+customerSegment	String	
+Indicates if the product is targeted to personal or business travelers
+
+description	String!	
+Detailed product description
+
+destinationCity	String	
+Destination city name
+
+destinationCode	String	
+Destination ID or IATA code
+
+destinationCountry	String	
+Destination country code (two digit code)
+
+destinationLatitude	String	
+Destination latitude code
+
+destinationLongitude	String	
+Destination longitude code
+
+destinationName	String	
+Destination or arrival location name
+
+diningOptions	String	
+Dining or restaurant options on your property
+
+duration	String	
+Duration of product
+
+fareType	String	
+Flight fare type
+
+flightType	String	
+Flight type
+
+freeBreakfast	String	
+Indicates whether the product includes free breakfast
+
+freeCancellation	String	
+Indicates whether the product can be cancelled without penalty or fees
+
+freeInternet	String	
+Indicates whether the product includes free internet
+
+fromPrice	String	
+Indicates if the price field is a starting or best price
+
+id	ID!	
+Unique product identifier
+
+imageLink	String	
+Main image URL
+
+includedActivities	String	
+List of the activities that are included with the product
+
+includedGuestsCount	Int	
+The number of guests included in your product
+
+isDeleted	Boolean!	
+Whether the product has been deleted by the advertiser
+
+itemListId	ID	
+Id associated with an advertisers item list
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+itinerary	String	
+Your cruise or tour itinerary
+
+lastUpdated	Instant!	
+Last updated date of product
+
+link	String	
+Landing page URL
+
+linkCode	LinkCode	
+The link code for the product
+
+Argument	Type	Description
+pid	ID!	
+Promotional property ID to use in link code
+
+shopperId	ID	
+Shopper ID
+
+locationId	ID	
+Location identifier
+
+locationName	String	
+Location name
+
+loyaltyRedeemable	String	
+Indicates whether customers can pay for this product with loyalty points
+
+margin	String	
+The margin you make on this product (advertiser only)
+
+mileage	String	
+Your rental car mileage options
+
+minimumStayDuration	String	
+Hotel or property minimum stay
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+nearbyAttractions	String	
+List of attractions near the product's property
+
+originCity	String	
+Origin city name
+
+originCode	String	
+Origin ID or IATA code
+
+originCountry	String	
+Origin country code (2 digit code)
+
+originLatitude	String	
+Origin latitude code
+
+originLongitude	String	
+Origin Longitude code
+
+originName	String	
+Origin or departure location name
+
+paymentOptions	String	
+Payment options for product
+
+performers	String	
+A list of performers or teams playing at this event
+
+petPolicy	String	
+Indicates whether the property allows pets
+
+petPolicyDescription	String	
+Description of the pet policy
+
+pointsPrice	DecimalNumber	
+Price of product in loyalty points
+
+price	AmountWithCurrency!	
+Standard pricing
+
+promotion	String	
+Promotional or marketing language
+
+proximityAirport	String	
+The closest airport to your property
+
+proximityCity	String	
+The closest city or metro area to your property
+
+roomType	String	
+Type of room
+
+salePrice	AmountWithCurrency	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	Instant	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	Instant	
+Start date when the product’s sale price applies, if applicable
+
+serviceableAreas	String	
+Servicable areas of the product (2 digit country code)
+
+shipping	Shipping	
+Shipping cost
+
+sourceFeedType	String	
+The type of the feed the product belongs to (i.e. shopping, travel)
+
+starRating	String	
+Hotel or property star rating
+
+stops	String	
+Number of stops on your flight or cruise
+
+targetCountry	String	
+The primary country where the product is available for sale, or to be shipped to
+
+taxFees	AmountWithCurrency	
+The amount of taxes and fees on top of the price of your product
+
+title	String	
+Name of product
+
+travelEndDate	Instant	
+Travel end date
+
+travelStartDate	Instant	
+Travel start date
+
+travelType	String	
+Primary category (hotel, air, etc.) Must be one the following values: air, car, activity, cruise, event, hotel, package, restaurant, travel_guides, vacation_rental, other
+
+upgradePrice	DecimalNumber	
+Upgrade price and description
+
+TravelExperienceProducts
+The search results of a travelExperienceProducts query
+
+Field	Type	Description
+count	Int!	
+The number of records returned
+
+limit	Int!	
+Total number of records returned per page
+
+resultList	[TravelExperience!]!	
+Array of TravelExperience products
+
+totalCount	Int!	
+The total number of records found for your query
+
+UpdateCreditCardProductResponse
+Response object for updateCreditCardProducts mutation query
+
+Field	Type	Description
+errors	[ProductMutationError!]	
+Defines the error
+
+response	[CreditCardProductUpdateResponse!]	
+Array of product that were successfully processed for creation
+
+UpdateShoppingProductResponse
+Response object for updateShoppingProducts mutation query
+
+Field	Type	Description
+errors	[ProductMutationError!]	
+Defines the error
+
+response	[ShoppingProductUpdateResponse!]	
+Array of product that were successfully processed for updation
+
+Input Objects
+APRInput
+Annual Percentage Rate
+
+Field	Type	Description
+aprDescription	String	
+APR Description
+
+aprValue	String!	
+APR Value
+
+aprType	String!	
+APR Type
+
+AmountWithCurrencyInput
+A decimal amount and the associated currency for a money field, e.g. price
+
+Field	Type	Description
+amount	DecimalNumber!	
+The amount
+
+currency	String	
+The ISO 4217 code for the associated currency
+
+CertificationInput
+Certification Input
+
+Field	Type	Description
+certificationAuthority	String!	
+Authority issuing the certification
+
+certificationName	String!	
+Name of the certification
+
+certificationCode	String	
+Code of the certification
+
+certificationValue	String	
+Value of the certification
+
+CreateCreditCardProductRequest
+An advertisable credit card product
+
+Field	Type	Description
+id	ID!	
+Unique product identifier assigned by the advertiser
+
+title	String!	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+imageLink	String!	
+Main Product image URL
+
+description	String!	
+Description of the card/ product.
+
+destinationUrl	String!	
+The URL of the page at which a shopper can buy the product.
+
+creditRating	String!	
+Excellent, Good, etc
+
+processingNetwork	String!	
+MasterCard/Visa/American Express/Discover. Please make sure all symbols are HTML encoded.
+
+marketingCopy	String!	
+How marketing member copy should be displayed. Please make sure all bullets are HTML encoded
+
+availableApplications	String!	
+List of available support applications
+
+nonIntroPurchAPR	APRInput!	
+How non-introductory purchase APR should be displayed
+
+nonIntroTransAPR	APRInput!	
+How non-introductory transfer APR should be displayed
+
+balanceTransFee	FeeInput!	
+Balance transfer fee value
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+usageType	String	
+Consumer, Business etc
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+minimumDeposit	String	
+How minimum deposit should be displayed
+
+categories	String	
+Relevant card categories
+
+mobileCopy	String	
+How mobile copy should be displayed. Please make sure all bullets are HTML encoded
+
+additionalCopy	String	
+How additional copy should be displayed. Please make sure all bullets are HTML encoded
+
+customPromotion	String	
+How custom promotion should be displayed
+
+rewardsBonus	String	
+Numeric value of rewards. If relevant, number should be paired with the appropriate symbol. ($,%, etc.
+
+rewardsBonusTerms	String	
+Reward Bonus terms, must be verbatim.
+
+prohibitedCategories	String	
+List of non-approved categories
+
+recommendedSiteType	String	
+List of recommended or approved site types
+
+detailsRatesFeesUrl	String	
+URL for terms and additional details.
+
+cardName	String	
+The name of the card/offer, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded.
+
+penaltyAPR	APRInput	
+This field gives the information on the Penalty APR details related to the product.
+
+cashAdvanceAPR	APRInput	
+This field gives the information on the Cash Advance APR details related to the product.
+
+regularAPR	APRInput	
+This field gives the information on the Regular APR details related to the product.
+
+introPurchAPR	APRInput	
+This field gives the information on the Introductory purchase APR details related to the product.
+
+introTransferAPR	APRInput	
+This field gives the information on the Introductory transfer APR details related to the product.
+
+cashAdvanceFee	FeeInput	
+How cash advance fee should be displayed
+
+latePaymentFee	FeeInput	
+Late payment fee value
+
+returnPaymentFee	FeeInput	
+Return payment fee value
+
+overLimitFee	FeeInput	
+Over limit fee value
+
+foreignTransFee	FeeInput	
+Foreign transaction fee value
+
+annualMemFee	FeeInput	
+Annual member fee value
+
+introAnnualMemFee	FeeInput	
+Introductory annual member fee value
+
+purchGracePeriod	PeriodInput	
+How purchase grace period should be displayed
+
+introAnnualMemFeePeriod	PeriodInput	
+How introductory annual member fee period should be displayed
+
+introPurchAPRPeriod	PeriodInput	
+How introductory purchase APR period should be displayed
+
+introTransAPRPeriod	PeriodInput	
+How introductory transfer APR period should be displayed
+
+transferGracePeriod	PeriodInput	
+How transfer grace period should be displayed
+
+cashGracePeriod	PeriodInput	
+How cash grace period should be displayed
+
+customField1	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField2	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField3	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField4	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField5	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+rewards1	RewardInput	
+This field specifies the Rewards offered on the card
+
+rewards2	RewardInput	
+This field specifies the Rewards offered on the card
+
+rewards3	RewardInput	
+This field specifies the Rewards offered on the card
+
+rewards4	RewardInput	
+This field specifies the Rewards offered on the card
+
+publisherGroupName	String	
+Use this field to specify publisher group name
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+CreateShoppingProductRequest
+An advertisable Shopping product
+
+Field	Type	Description
+id	ID!	
+Unique product identifier
+
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+brand	String	
+Product's brand
+
+certification	CertificationInput	
+Certification
+
+description	String!	
+Detailed product description
+
+title	String!	
+Name of product
+
+googleProductCategory	GoogleProductCategoryInput	
+The Google-defined category for the product
+
+price	AmountWithCurrencyInput!	
+Standard pricing
+
+salePrice	AmountWithCurrencyInput	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	String	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	String	
+Start date when the product’s sale price applies, if applicable
+
+shipping	ShippingInput	
+Shipping cost
+
+shippingWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+availability	String!	
+Product's availability Values: IN_STOCK, OUT_OF_STOCK, PREORDER
+
+availabilityDate	String	
+The date a preordered item becomes available
+
+expirationDate	String	
+The date that your product stops being available
+
+unitPricingMeasure	String	
+The measure and dimension of your product as it is sold Numeric value + unit, eg. 1.5kg, 30sqft
+
+unitPricingBaseMeasure	String	
+The product’s base measure for pricing (e.g. 100ml means the price is calculated based on a 100ml units). Optional when you submit unit_pricing_measure. Integer + unit
+
+installment	InstallmentInput	
+Details of an installment payment plan (BZ only)
+
+imageLink	String	
+Main image URL
+
+link	String!	
+Landing page URL
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+itemGroupId	ID	
+Product’s parent-level ID. (Required for apparel products and only used if you have a set of products that come in different versions, for example apparel in different sizes and colors)
+
+loyaltyPoints	LoyaltyPointsInput	
+The number and type of loyalty points a customer receives when buying a product (JP only)
+
+productType	[String!]	
+Product category that you define for your product
+
+gtin	String	
+Your products Global Trade Item Number (GTIN)
+
+mpn	String	
+Product's manufacturer part number
+
+identifierExists	String	
+Will be displayed if the new product doesn’t have a: GTIN and brand or MPN and brand Values: yes, no, blank (default to yes)
+
+condition	String!	
+Product’s condition Values: new, refurbished, used
+
+adult	String	
+Indicates if a product includes sexually suggestive content
+
+multipack	Int	
+The number of identical products sold together as a multipack
+
+isBundle	String	
+Indicates a product is a custom group of different products featuring one main product (e.g., a product sold in a bundle with related accessories)
+
+energyEfficiencyClass	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMin	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMax	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+ageGroup	String	
+Product’s targeted demographic (apparel products only) Values: newborn, infant, toddler, kids, adult
+
+color	String	
+Product’s color(s) (apparel products only)
+
+gender	String	
+Product’s targeted gender (apparel products only) Values: male, female, unisex
+
+material	String	
+Product’s fabric or material
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+pattern	String	
+Product’s pattern or graphic print (apparel products only)
+
+size	String	
+Products size (apparel products only)
+
+sizeType	String	
+Apparel product's cut Values: regular, petite, plus, big and tall, maternity
+
+sizeSystem	String	
+The country of the size system your product is sized in values: US, UK, EU, DE, FR, JP, CN, IT, BR, MEX, AU
+
+tax	TaxInput	
+Product sales tax details
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+productDetail	ProductDetailInput	
+Product's productDetail
+
+productHighlight	[String!]	
+Product's productHighlight
+
+adsRedirect	String	
+Product's adsRedirect
+
+shoppingAdsExcludedCountry	String	
+Product's shoppingAdsExcludedCountry
+
+shipsFromCountry	String	
+Product's shipsFromCountry
+
+transitTimeLabel	String	
+Product's transitTimeLabel
+
+costOfGoodsSold	AmountWithCurrencyInput	
+Product's costOfGoodsSold
+
+subscriptionCost	SubscriptionCostInput	
+Product's costOfGoodsSold
+
+productLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+CustomFieldInput
+Custom Field
+
+Field	Type	Description
+customFieldName	String!	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customFieldType	String!	
+Type of the custom field.
+
+customFieldValue	String!	
+Value of the custom field.
+
+FeeInput
+FEE
+
+Field	Type	Description
+feeDescription	String	
+Fee Description
+
+feeValuePercent	String	
+Fee Value Percent
+
+feeValueAmount	FinanceAmountWithCurrencyInput	
+Fee Value Amount
+
+FinanceAmountWithCurrencyInput
+A string amount and the associated currency for money input fields of finance, e.g. fee
+
+Field	Type	Description
+amount	String!	
+The amount
+
+currency	String	
+The ISO 4217 code for the associated currency
+
+GoogleProductCategoryInput
+Google Product Category Input
+
+Field	Type	Description
+name	String	
+Google product category name
+
+id	Int	
+Google product category id
+
+InstallmentInput
+Installment
+
+Field	Type	Description
+months	Int	
+Months
+
+amount	AmountWithCurrencyInput	
+Amount
+
+LoyaltyPointsInput
+Loyalty points
+
+Field	Type	Description
+name	String	
+Name
+
+points	Int	
+Points
+
+ratio	DecimalNumber	
+Ratio
+
+PeriodInput
+Period
+
+Field	Type	Description
+periodDescription	String!	
+Description of the period value
+
+periodValue	String!	
+duration of the period
+
+periodType	String!	
+Type of the duration which is either day/month/year
+
+ProductDetailInput
+ProductDetail field
+
+Field	Type	Description
+sectionName	String	
+Whether the ProductDetail sectionName
+
+attributeName	String!	
+Whether the ProductDetail attributeName
+
+attributeValue	String!	
+Whether the ProductDetail attributeValue
+
+RewardInput
+Reward Input Field
+
+Field	Type	Description
+rewardRate	String	
+Reward rate must be verbatim.
+
+rewardType	String	
+Reward type must be verbatim.
+
+rewardTerms	String	
+Terms on which the reward can be redeemed.
+
+ShippingAmountWithCurrencyInput
+A decimal amount and the associated currency for a money field for shipping, e.g. price
+
+Field	Type	Description
+amount	DecimalNumber	
+The amount
+
+currency	String	
+The ISO 4217 code for the associated currency
+
+ShippingInput
+The shipping information for an advertisable product
+
+Field	Type	Description
+price	ShippingAmountWithCurrencyInput!	
+Fixed shipping cost, including VAT if required
+
+service	String	
+Shipping service class or shipping speed
+
+locationGroupName	String	
+Shipping location group name
+
+region	String	
+Shipping region delivery area
+
+postalCode	String	
+Shipping postal code
+
+locationId	ID	
+Shipping location identifier
+
+country	String	
+Shipping country code (2 digit code)
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+minimumTransitTime	String	
+minimum number of days between when a product is handed off to a shipping carrier and when it's delivered to the customer
+
+maximumTransitTime	String	
+maximum number of days between when a product is handed off to a shipping carrier and when it's delivered to the customer
+
+SubscriptionCostInput
+SubscriptionCost field
+
+Field	Type	Description
+period	String!	
+Whether the SubscriptionCostInput sectionName
+
+periodLength	Int!	
+Whether the SubscriptionCostInput attributeName
+
+amount	AmountWithCurrencyInput!	
+Whether the SubscriptionCostInput attributeValue
+
+TaxInput
+Tax field
+
+Field	Type	Description
+rate	DecimalNumber	
+The product's tax rate as a percent
+
+countryCode	String	
+The two letter country code of the country the product can be delivered to
+
+region	String	
+The region in which the tax rate applies
+
+postalCode	String	
+The postal code in which the tax rate applies
+
+locationId	ID	
+The location id in which the tax rate applies
+
+locationGroupName	String	
+The location name in which the tax rate applies
+
+taxShip	String	
+Whether the advertiser charges a tax on the shipping cost
+
+UpdateCreditCardProductRequest
+An advertisable update credit card product
+
+Field	Type	Description
+id	ID!	
+Unique product identifier assigned by the advertiser
+
+title	String	
+The name of the card, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded. The CJ search engine uses data in this field to locate words and phrases publishers enter in the search box to locate products.
+
+imageLink	String	
+Main Product image URL
+
+description	String	
+Description of the card/ product.
+
+destinationUrl	String	
+The URL of the page at which a shopper can buy the product.
+
+creditRating	String	
+Excellent, Good, etc
+
+processingNetwork	String	
+MasterCard/Visa/American Express/Discover. Please make sure all symbols are HTML encoded.
+
+marketingCopy	String	
+How marketing member copy should be displayed. Please make sure all bullets are HTML encoded
+
+availableApplications	String	
+List of available support applications
+
+nonIntroPurchAPR	APRInput	
+How non-introductory purchase APR should be displayed
+
+nonIntroTransAPR	APRInput	
+How non-introductory transfer APR should be displayed
+
+balanceTransFee	FeeInput	
+Balance transfer fee value
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+usageType	String	
+Consumer, Business etc
+
+cardType	String	
+CoBrand, Lending, Mileage, Rewards etc
+
+minimumDeposit	String	
+How minimum deposit should be displayed
+
+categories	String	
+Relevant card categories
+
+mobileCopy	String	
+How mobile copy should be displayed. Please make sure all bullets are HTML encoded
+
+additionalCopy	String	
+How additional copy should be displayed. Please make sure all bullets are HTML encoded
+
+customPromotion	String	
+How custom promotion should be displayed
+
+rewardsBonus	String	
+Numeric value of rewards. If relevant, number should be paired with the appropriate symbol. ($,%, etc.
+
+rewardsBonusTerms	String	
+Reward Bonus terms, must be verbatim.
+
+prohibitedCategories	String	
+List of non-approved categories
+
+recommendedSiteType	String	
+List of recommended or approved site types
+
+detailsRatesFeesUrl	String	
+URL for terms and additional details.
+
+cardName	String	
+The name of the card/offer, verbatim including registration/trademarks. Please make sure all symbols are HTML encoded.
+
+penaltyAPR	APRInput	
+This field gives the information on the Penalty APR details related to the product.
+
+cashAdvanceAPR	APRInput	
+This field gives the information on the Cash Advance APR details related to the product.
+
+regularAPR	APRInput	
+This field gives the information on the Regular APR details related to the product.
+
+introPurchAPR	APRInput	
+This field gives the information on the Introductory purchase APR details related to the product.
+
+introTransferAPR	APRInput	
+This field gives the information on the Introductory transfer APR details related to the product.
+
+cashAdvanceFee	FeeInput	
+How cash advance fee should be displayed
+
+latePaymentFee	FeeInput	
+Late payment fee value
+
+returnPaymentFee	FeeInput	
+Return payment fee value
+
+overLimitFee	FeeInput	
+Over limit fee value
+
+foreignTransFee	FeeInput	
+Foreign transaction fee value
+
+annualMemFee	FeeInput	
+Annual member fee value
+
+introAnnualMemFee	FeeInput	
+Introductory annual member fee value
+
+purchGracePeriod	PeriodInput	
+How purchase grace period should be displayed
+
+introAnnualMemFeePeriod	PeriodInput	
+How introductory annual member fee period should be displayed
+
+introPurchAPRPeriod	PeriodInput	
+How introductory purchase APR period should be displayed
+
+introTransAPRPeriod	PeriodInput	
+How introductory transfer APR period should be displayed
+
+transferGracePeriod	PeriodInput	
+How transfer grace period should be displayed
+
+cashGracePeriod	PeriodInput	
+How cash grace period should be displayed
+
+customField1	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField2	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField3	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField4	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+customField5	CustomFieldInput	
+This field is to give leverage for the advertiser to provide any custom fields.
+
+rewards1	RewardInput	
+This field specifies the Rewards offered on the card
+
+rewards2	RewardInput	
+This field specifies the Rewards offered on the card
+
+rewards3	RewardInput	
+This field specifies the Rewards offered on the card
+
+rewards4	RewardInput	
+This field specifies the Rewards offered on the card
+
+publisherGroupName	String	
+Use this field to specify publisher group name
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+UpdateShoppingProductRequest
+An advertisable Shopping product update
+
+Field	Type	Description
+id	ID!	
+Unique product identifier
+
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+brand	String	
+Product's brand
+
+certification	CertificationInput	
+Certification
+
+description	String	
+Detailed product description
+
+title	String	
+Name of product
+
+googleProductCategory	GoogleProductCategoryInput	
+The Google-defined category for the product
+
+price	AmountWithCurrencyInput	
+Standard pricing
+
+salePrice	AmountWithCurrencyInput	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	String	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	String	
+Start date when the product’s sale price applies, if applicable
+
+shipping	ShippingInput	
+Shipping cost
+
+shippingWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+shippingHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+availability	String	
+Product's availability Values: IN_STOCK, OUT_OF_STOCK, PREORDER
+
+availabilityDate	String	
+The date a preordered item becomes available
+
+expirationDate	String	
+The date that your product stops being available
+
+unitPricingMeasure	String	
+The measure and dimension of your product as it is sold Numeric value + unit, eg. 1.5kg, 30sqft
+
+unitPricingBaseMeasure	String	
+The product’s base measure for pricing (e.g. 100ml means the price is calculated based on a 100ml units). Optional when you submit unit_pricing_measure. Integer + unit
+
+installment	InstallmentInput	
+Details of an installment payment plan (BZ only)
+
+imageLink	String	
+Main image URL
+
+link	String	
+Landing page URL
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+itemGroupId	ID	
+Product’s parent-level ID. (Required for apparel products and only used if you have a set of products that come in different versions, for example apparel in different sizes and colors)
+
+loyaltyPoints	LoyaltyPointsInput	
+The number and type of loyalty points a customer receives when buying a product (JP only)
+
+productType	[String!]	
+Product category that you define for your product
+
+gtin	String	
+Your products Global Trade Item Number (GTIN)
+
+mpn	String	
+Product's manufacturer part number
+
+identifierExists	String	
+Will be displayed if the new product doesn’t have a: GTIN and brand or MPN and brand Values: yes, no, blank (default to yes)
+
+condition	String	
+Product’s condition Values: new, refurbished, used
+
+adult	String	
+Indicates if a product includes sexually suggestive content
+
+multipack	Int	
+The number of identical products sold together as a multipack
+
+isBundle	String	
+Indicates a product is a custom group of different products featuring one main product (e.g., a product sold in a bundle with related accessories)
+
+energyEfficiencyClass	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMin	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+energyEfficiencyClassMax	String	
+Your products energy label (EU & CH only) Values: G,F,E,D,C,B,A,A+,A++,A+++
+
+ageGroup	String	
+Product’s targeted demographic (apparel products only) Values: newborn, infant, toddler, kids, adult
+
+color	String	
+Product’s color(s) (apparel products only)
+
+gender	String	
+Product’s targeted gender (apparel products only) Values: male, female, unisex
+
+material	String	
+Product’s fabric or material
+
+minimumHandlingTime	String	
+Shortest number of days between when an order is placed for a product and when the product ships
+
+maximumHandlingTime	String	
+Longest number of days between when an order is placed for a product and when the product ships
+
+pattern	String	
+Product’s pattern or graphic print (apparel products only)
+
+size	String	
+Products size (apparel products only)
+
+sizeType	String	
+Apparel product's cut Values: regular, petite, plus, big and tall, maternity
+
+sizeSystem	String	
+The country of the size system your product is sized in values: US, UK, EU, DE, FR, JP, CN, IT, BR, MEX, AU
+
+tax	TaxInput	
+Product sales tax details
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+productDetail	ProductDetailInput	
+Product's productDetail
+
+productHighlight	[String!]	
+Product's productHighlight
+
+adsRedirect	String	
+Product's adsRedirect
+
+shoppingAdsExcludedCountry	String	
+Product's shoppingAdsExcludedCountry
+
+shipsFromCountry	String	
+Product's shipsFromCountry
+
+transitTimeLabel	String	
+Product's transitTimeLabel
+
+costOfGoodsSold	AmountWithCurrencyInput	
+Product's costOfGoodsSold
+
+subscriptionCost	SubscriptionCostInput	
+Product's costOfGoodsSold
+
+productLength	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWidth	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productHeight	String	
+The dimensions of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+productWeight	String	
+The weight of your product to calculate shipping costs Integer + unit. Supported units: in, cm
+
+Interfaces
+FinanceProduct
+An advertisable financeProduct
+
+Implementations
+CreditCard
+Field	Type	Description	Arguments
+adId	ID!	
+Advertisers link id
+
+advertiserId	ID!	
+Advertisers account id (CID)
+
+advertiserName	String!	
+Advertisers Name
+
+description	String!	
+Detailed product description
+
+destinationUrl	String!	
+The URL of the page at which a shopper can buy the product.
+
+id	ID!	
+Unique product identifier assigned by the advertiser
+
+imageLink	String!	
+Main image URL
+
+isDeleted	Boolean!	
+Whether the product has been deleted by the advertiser
+
+itemListId	ID	
+Restrict search results based on the item list ID
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+lastUpdated	Instant!	
+Last updated date of product
+
+linkCode	LinkCode	
+The link code for the product
+
+Argument	Type	Description
+pid	ID!	
+Promotional property ID to use in link code
+
+shopperId	ID	
+Shopper ID
+
+promotionType	String	
+Coupons, Sweepstakes, Hot Product, Sale/Discount., Free Shipping, seasonal Link, hot Product
+
+publisherGroupName	String	
+Advertisers publisher group name by Id
+
+sourceFeedType	String	
+The type of the feed the product belongs to (i.e. shopping, travel)
+
+title	String!	
+Name of product
+
+Product
+An advertisable product
+
+Implementations
+Shopping
+TravelExperience
+Field	Type	Description	Arguments
+adId	ID!	
+Advertisers link id
+
+additionalImageLink	[String!]	
+Up to 24 additional image URLs, separated with commas
+
+advertiserCountry	String	
+Country that the advertiser is in
+
+advertiserId	ID!	
+Advertisers account id (CID)
+
+advertiserName	String!	
+Advertisers Name
+
+brand	String	
+Product's brand
+
+catalogId	ID	
+Product feed catalog id
+
+customLabel0	String	
+Advertiser custom product feed field
+
+customLabel1	String	
+Advertiser custom product feed field
+
+customLabel2	String	
+Advertiser custom product feed field
+
+customLabel3	String	
+Advertiser custom product feed field
+
+customLabel4	String	
+Advertiser custom product feed field
+
+description	String!	
+Detailed product description
+
+id	ID!	
+Unique product identifier
+
+imageLink	String	
+Main image URL
+
+isDeleted	Boolean!	
+Whether the product has been deleted by the advertiser
+
+itemListId	ID	
+Id associated with an advertiser's item list
+
+itemListName	String	
+The name associated with the advertiser's item list
+
+lastUpdated	Instant!	
+Last updated date of product
+
+link	String	
+Landing page URL
+
+linkCode	LinkCode	
+The link code for the product
+
+Argument	Type	Description
+pid	ID!	
+Promotional property ID to use in link code
+
+shopperId	ID	
+Shopper ID
+
+mobileLink	String	
+Mobile-optimized landing page when you have a different URL for mobile and desktop traffic
+
+price	AmountWithCurrency!	
+Standard pricing
+
+salePrice	AmountWithCurrency	
+Discounted or sale price
+
+salePriceEffectiveDateEnd	Instant	
+End date when the product’s sale price applies, if applicable
+
+salePriceEffectiveDateStart	Instant	
+Start date when the product’s sale price applies, if applicable
+
+serviceableAreas	String	
+Servicable areas of the product (2 digit country code)
+
+shipping	Shipping	
+Shipping cost
+
+sourceFeedType	String	
+The type of the feed the product belongs to (i.e. shopping, travel)
+
+targetCountry	String	
+The primary country where the product is available for sale, or to be shipped to
+
+title	String	
+Name of product
+
+Enums
+Availability
+Value	Description
+IN_STOCK	
+Product is available
+
+OUT_OF_STOCK	
+Product is out of stock
+
+PREORDER	
+Product is available for pre-order
+
+BACKORDER	
+Product is on back order
+
+FeedType
+Value	Description
+SHOPPING	
+The Shopping feed type product belongs to.
+
+TRAVEL	
+The Travel feed type product belongs to.
+
+FINANCE	
+The Finance feed type product belongs to.
+
+ALL	
+All the feeds product belongs to.
+
+PartnerStatus
+Value	Description
+JOINED	
+Restricts results to advertisers you have an active relationship with. If you include partnerIds and this argument, the results will only include products from partners that you have an active relationship with.
+
+NOT_JOINED	
+Restricts results to advertisers you have an active relationship with. If you include partnerIds and this argument, the results will only include products from partners that you do not have an active relationship with.
+
+SortBy
+Value	Description
+LAST_UPDATED	
+Products are sorted by lastUpdated
+
+PRICE	
+Product are sorted by price
+
+SortOrder
+Value	Description
+DESC	
+Products are sorted in descending order
+
+ASC	
+Product are sorted in ascending
+
+Scalars
+Name	Description
+Boolean	
+The Boolean scalar type represents true or false.
+
+DecimalNumber	
+A numerical value, rendered in JSON as a string.
+
+This allows for a greater range of expression than GraphQL's default Float type supports.
+
+For reliable client-side parsing, the string value will always match the regex pattern (-)?[0-9]+(\.[0-9]+)?.
+
+Float	
+The Float scalar type represents signed double-precision fractional values as specified by IEEE 754.
+
+ID	
+The ID scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as "4") or integer (such as 4) input value will be accepted as an ID.
+
+Instant	
+An ISO 8601 datetime, rendered in JSON as a string.
+
+Int	
+The Int scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
+
+String	
+The String scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.

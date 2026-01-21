@@ -1,0 +1,1 @@
+Invoke-WebRequest -Uri "http://localhost:8888/api/index-products" -Method POST -Headers @{"x-index-secret"="rapicarepcr"} | Select-Object -Expand Content

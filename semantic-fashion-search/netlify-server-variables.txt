@@ -1,0 +1,4 @@
+RESEND_API_KEY=re_RmYQeLn8_977UKx24VoVDE1y6D8JyFoDc
+FROM_EMAIL=onboarding@resend.dev
+NEXTAUTH_SECRET=8f7d9b42b0265b0f9e9d8b5ab3916111
+NEXTAUTH_URL=https://shop.myatlaz.com

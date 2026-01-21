@@ -66,9 +66,10 @@ export async function POST(request: NextRequest) {
 
     console.log('[Search API] Cache MISS - starting semantic search...');
 
-    // Perform semantic search - get ALL results (page 1 with large limit)
+    // Perform semantic search - optimized for <2 second load time
+    // Fetches ~100 raw results → ~50-70 after filtering → 4-6 pages cached
     const searchResponse = await semanticSearch(query.trim(), {
-      limit: 120, // Fetch all results at once
+      limit: 100, // Optimized for fast initial load (<2 sec)
       page: 1,
       allowSexyContent: hasSexyIntent,
       userRatings, // Pass user ratings for personalized filtering and boosting

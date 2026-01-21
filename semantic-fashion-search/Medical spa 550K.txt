@@ -1,0 +1,11 @@
+Medical spa 550K
+Medical center 550K
+Skin care clinic 110K
+Spa 9.1M
+Laser hair removal service 49.5K
+Health consultant 22.2K
+Cosmetic surgeon 12.1K
+Gynecologist
+Medical clinic
+Women's health clinic
+Plastic surgeon

@@ -146,11 +146,11 @@ export async function semanticSearch(
     intent = await extractIntent(query);
   }
 
-  // Fetch a MUCH larger pool of results to enable proper pagination
-  // We need extra because filtering reduces the count significantly
-  // Quality filtering + color filtering + price filtering can reduce by 50-70%
-  const maxPages = 10; // Support up to 10 pages (was 5)
-  const poolSize = limit * maxPages; // Fetch 120 results instead of 60
+  // Fetch results sized for <2 second query time
+  // Quality filtering + color filtering + price filtering reduces by 50-70%
+  // Target: 100 raw results → ~50-70 filtered → 4-6 pages cached
+  const initialFetchSize = 100; // Optimized for speed (<2 sec query time)
+  const poolSize = initialFetchSize; // Will implement lazy-loading for additional pages
 
   const searchResults = await executeMultiSearch(
     intent.searchQueries,
@@ -975,7 +975,8 @@ async function executeMultiSearch(
     const visionEmbedding = visionEmbeddings?.[index];
 
     // Calculate how many results to fetch based on priority and weight
-    const fetchLimit = Math.ceil(limit * searchQuery.weight * 1.5);
+    // Cap at 200 to ensure <2 second query time (target: fast initial load)
+    const fetchLimit = Math.min(Math.ceil(limit * searchQuery.weight * 1.5), 200);
 
     console.log(`[executeMultiSearch] Calling match_products for "${searchQuery.query}" with limit ${fetchLimit}`);
     console.log(`[executeMultiSearch] Text embedding sample for "${searchQuery.query}":`, textEmbedding?.slice(0, 5));
