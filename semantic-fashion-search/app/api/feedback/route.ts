@@ -28,11 +28,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate vote value (must be 1 or -1)
-    if (vote !== 1 && vote !== -1) {
+    // Validate vote value (must be 1, -1, or 0 for removal)
+    if (vote !== 1 && vote !== -1 && vote !== 0) {
       console.log('[Feedback API] Invalid vote value:', vote);
       return NextResponse.json(
-        { error: 'Vote must be 1 (upvote) or -1 (downvote)' },
+        { error: 'Vote must be 1 (upvote), -1 (downvote), or 0 (remove)' },
         { status: 400 }
       );
     }
@@ -40,33 +40,54 @@ export async function POST(request: NextRequest) {
     // Get Supabase client (server-side with service role)
     const supabase = getSupabaseClient(true);
 
-    console.log('[Feedback API] Upserting vote to database...');
+    // If vote is 0, delete the record (remove vote)
+    if (vote === 0) {
+      console.log('[Feedback API] Deleting vote from database...');
 
-    // Upsert vote (insert or update if exists)
-    // Using 'any' type assertion since product_feedback table type is not in the generated types yet
-    const { error } = await (supabase as any)
-      .from('product_feedback')
-      .upsert(
-        {
-          session_id: sessionId.trim(),
-          product_id: productId.trim(),
-          vote: vote,
-          updated_at: new Date().toISOString()
-        },
-        {
-          onConflict: 'session_id,product_id'
-        }
-      );
+      const { error } = await (supabase as any)
+        .from('product_feedback')
+        .delete()
+        .eq('session_id', sessionId.trim())
+        .eq('product_id', productId.trim());
 
-    if (error) {
-      console.error('[Feedback API] Supabase upsert error:', error);
-      return NextResponse.json(
-        { error: 'Failed to save vote to database' },
-        { status: 500 }
-      );
+      if (error) {
+        console.error('[Feedback API] Supabase delete error:', error);
+        return NextResponse.json(
+          { error: 'Failed to remove vote from database' },
+          { status: 500 }
+        );
+      }
+
+      console.log('[Feedback API] Vote removed successfully');
+    } else {
+      // Upsert vote (insert or update if exists)
+      console.log('[Feedback API] Upserting vote to database...');
+
+      // Using 'any' type assertion since product_feedback table type is not in the generated types yet
+      const { error } = await (supabase as any)
+        .from('product_feedback')
+        .upsert(
+          {
+            session_id: sessionId.trim(),
+            product_id: productId.trim(),
+            vote: vote,
+            updated_at: new Date().toISOString()
+          },
+          {
+            onConflict: 'session_id,product_id'
+          }
+        );
+
+      if (error) {
+        console.error('[Feedback API] Supabase upsert error:', error);
+        return NextResponse.json(
+          { error: 'Failed to save vote to database' },
+          { status: 500 }
+        );
+      }
+
+      console.log('[Feedback API] Vote saved successfully');
     }
-
-    console.log('[Feedback API] Vote saved successfully');
 
     return NextResponse.json({ success: true });
   } catch (err) {

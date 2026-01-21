@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import type { Product } from '@/types';
+import { FeedbackButtons } from '@/components/FeedbackButtons';
 
 interface ProductCardProps {
   product: Product;
@@ -87,14 +88,17 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="sale-notice">This item is currently on sale</p>
         )}
         <p className="product-price">{formatPrice(product.price, product.currency)}</p>
-        <a
-          href={product.productUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="product-link"
-        >
-          View Product
-        </a>
+        <div className="product-actions">
+          <a
+            href={product.productUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="product-link"
+          >
+            View Product
+          </a>
+          <FeedbackButtons productId={product.id} />
+        </div>
       </div>
     </div>
   );
