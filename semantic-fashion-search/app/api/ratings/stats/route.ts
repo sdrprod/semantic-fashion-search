@@ -58,7 +58,9 @@ export async function GET(request: NextRequest) {
         const cached = await redis.get(cacheKey);
         if (cached) {
           console.log('[Stats API] Cache HIT');
-          return NextResponse.json({ stats: JSON.parse(cached) });
+          // Redis may return already-parsed object or string
+          const stats = typeof cached === 'string' ? JSON.parse(cached) : cached;
+          return NextResponse.json({ stats });
         }
       } catch (err) {
         console.error('[Stats API] Redis error:', err);
