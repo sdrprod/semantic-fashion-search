@@ -1,8 +1,96 @@
-# Local Netlify folder
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+*.log
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env*.local
+.env
+!.env.example
+
+# Vercel
+.vercel
+
+# Netlify
 .netlify
-*.txt
-|package.json
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Cache directories
 .cache/
-tsconfig.tsbuildinfo
+.turbo/
+
+# Personal/sensitive files
+chatlog.txt
+chatlog-customer.txt
+**/db-*-info.txt
 *-personal-*
-chatlog*
+*-token.txt
+*-key.txt
+*-secret.txt
+*-password.txt
+*-credential.txt
+
+# Screenshots and images (personal development artifacts)
+screencaps/
+yikes*.png
+
+# Test files (keep these local only)
+test-*.mjs
+test-*.js
+**/test-*.mjs
+**/test-*.js
+**/test-*.ps1
+**/test-*.sh
+cj-test-results.json
+
+# Backup files
+*-backup.*
+*-old.*
+*.backup
+*.old
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Development server files
+.dev-server.pid
+*.pid
+
+# SQL files (may contain sensitive queries)
+# Uncomment if you want to exclude all SQL files:
+# *.sql
+
+# Product data dumps (can be large and contain business data)
+data/products-*.json
+!data/products.json
