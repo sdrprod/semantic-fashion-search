@@ -29,6 +29,7 @@ export function generateCacheKey(
     page?: number;
     similarityThreshold?: number;
     allowSexyContent?: boolean;
+    userRatings?: string; // JSON string of user ratings for personalized caching
   }
 ): string {
   // Normalize query (lowercase, trim)
@@ -42,6 +43,11 @@ export function generateCacheKey(
     `threshold:${options.similarityThreshold || 0.3}`,
     `sexy:${options.allowSexyContent ? 'yes' : 'no'}`,
   ];
+
+  // Include user ratings in cache key for personalized results
+  if (options.userRatings) {
+    keyParts.push(`ratings:${options.userRatings}`);
+  }
 
   return keyParts.join(':');
 }
