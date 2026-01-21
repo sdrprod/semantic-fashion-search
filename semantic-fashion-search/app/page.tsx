@@ -10,6 +10,7 @@ import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { HowToUse } from '@/components/HowToUse';
 import { EmailSubscribe } from '@/components/EmailSubscribe';
+import { useSessionRatings } from '@/src/hooks/useSessionRatings';
 import type { Product, ParsedIntent } from '@/types';
 
 const EXAMPLE_SEARCHES = [
@@ -20,6 +21,7 @@ const EXAMPLE_SEARCHES = [
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const { ratings, isLoaded: ratingsLoaded } = useSessionRatings();
   const [query, setQuery] = useState('');
   const [actualSearchQuery, setActualSearchQuery] = useState(''); // The query actually used for search (may differ for visual search)
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
@@ -99,6 +101,7 @@ function HomeContent() {
           query: searchQuery.trim(),
           limit: pageSize,
           page: 1,
+          userRatings: ratings, // Pass user ratings for personalized filtering and boosting
         }),
       });
 
@@ -219,6 +222,7 @@ function HomeContent() {
           query: actualSearchQuery, // Use the actual search query (may be generated from images)
           limit: pageSize,
           page: newPage,
+          userRatings: ratings, // Pass user ratings for pagination too
         }),
       });
 

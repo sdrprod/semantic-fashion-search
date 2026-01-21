@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { query, limit = 12, page = 1 } = body;
+    const { query, limit = 12, page = 1, userRatings = {} } = body;
 
-    console.log('[Search API] Query params:', { query, limit, page });
+    console.log('[Search API] Query params:', { query, limit, page, userRatingsCount: Object.keys(userRatings).length });
 
     // Validate query
     if (!query || typeof query !== 'string' || query.trim().length < 3) {
@@ -39,8 +39,10 @@ export async function POST(request: NextRequest) {
     console.log(`[Search API] User query sexy intent: ${hasSexyIntent ? 'YES' : 'NO'}`);
 
     // Generate cache key (page-agnostic - same key for all pages)
+    // Include userRatings in cache key to ensure personalized results
     const cacheKey = generateCacheKey(query.trim(), {
       allowSexyContent: hasSexyIntent,
+      userRatings: Object.keys(userRatings).length > 0 ? JSON.stringify(userRatings) : undefined,
     });
 
     // Check cache first for FULL result set
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
       limit: 120, // Fetch all results at once
       page: 1,
       allowSexyContent: hasSexyIntent,
+      userRatings, // Pass user ratings for personalized filtering and boosting
     });
 
     console.log('[Search API] Search complete, total results:', searchResponse.results.length);

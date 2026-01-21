@@ -1,0 +1,8 @@
+# Local Netlify folder
+.netlify
+*.txt
+|package.json
+.cache/
+tsconfig.tsbuildinfo
+*-personal-*
+chatlog*
