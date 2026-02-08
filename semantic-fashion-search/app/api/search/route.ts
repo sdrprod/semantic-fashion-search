@@ -92,10 +92,33 @@ export async function POST(request: NextRequest) {
       pageSize: validatedLimit,
     });
   } catch (err) {
-    console.error('[Search API] Error:', err);
+    // Enhanced error logging for debugging production issues
+    console.error('[Search API] ========== ERROR DETAILS ==========');
+    console.error('[Search API] Error type:', err instanceof Error ? err.constructor.name : typeof err);
+    console.error('[Search API] Error message:', err instanceof Error ? err.message : String(err));
     console.error('[Search API] Error stack:', err instanceof Error ? err.stack : 'No stack trace');
+
+    // Log environment info to help debug
+    console.error('[Search API] Environment:', {
+      hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY || !!process.env.SUPABASE_ANON_KEY,
+      nodeEnv: process.env.NODE_ENV,
+    });
+
+    console.error('[Search API] ==============================');
+
+    // Return more helpful error in development, generic in production
+    const isDevelopment = process.env.NODE_ENV === 'development';
     return NextResponse.json(
-      { error: 'Internal server error.' },
+      {
+        error: 'Internal server error.',
+        ...(isDevelopment && {
+          details: err instanceof Error ? err.message : String(err),
+          type: err instanceof Error ? err.constructor.name : typeof err,
+        }),
+      },
       { status: 500 }
     );
   }

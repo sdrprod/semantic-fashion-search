@@ -84,7 +84,7 @@ Contextual inference rules:
 
   const response = await anthropic.messages.create({
     model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 1024,
+    max_tokens: 2048, // Increased from 1024 to allow for more detailed explanations
     system: systemPrompt,
     messages: [
       {
@@ -193,16 +193,16 @@ export function createSimpleIntent(query: string): ParsedIntent {
     }
   }
 
-  // Create friendly explanation
-  let explanation = 'I can help you find ';
+  // Create friendly, detailed explanation (2-3 sentences minimum)
+  let explanation = '';
   if (extractedColor && category !== 'all') {
-    explanation += `${extractedColor} ${itemName}s! I'll show you ${extractedColor} options that match your style.`;
+    explanation = `I can help you find ${extractedColor} ${itemName}s! I'm searching our collection specifically for ${extractedColor} ${itemName}s that match your style. I'll prioritize items where the color is verified from product images to ensure you get exactly what you're looking for.`;
   } else if (extractedColor) {
-    explanation += `${extractedColor} items! I'll search for ${extractedColor} pieces in our collection.`;
+    explanation = `Perfect! I'm searching for ${extractedColor} items across our entire collection. I'll use AI-verified color matching to show you pieces that are genuinely ${extractedColor}, not just items that mention the color in the description. This ensures you get the exact shade you're looking for!`;
   } else if (category !== 'all') {
-    explanation += `${itemName}s! I'll browse through our ${itemName} collection to find great matches.`;
+    explanation = `I can help you find great ${itemName}s! I'm browsing through our ${itemName} collection using semantic search to understand the style and vibe you're after. I'll show you options that match your aesthetic, sorted by relevance to ensure the best matches appear first.`;
   } else {
-    explanation += `${query}! I'll search through our collection to find pieces that match what you're looking for.`;
+    explanation = `I understand you're looking for "${query}"! I'm using semantic search to find items that match the style, aesthetic, and vibe you're describing. Let me show you what I've found that best captures what you're looking for.`;
   }
 
   return {

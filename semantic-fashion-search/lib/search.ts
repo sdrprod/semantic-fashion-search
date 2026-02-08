@@ -366,15 +366,42 @@ export async function semanticSearch(
 
     try {
       // Construct full URL for stats API
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      const statsResponse = await fetch(`${baseUrl}/api/ratings/stats?productIds=${productIds}`);
+      // In production (Netlify), detect the current host from environment
+      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+      if (!baseUrl) {
+        // Fallback detection for Netlify/Vercel
+        if (process.env.URL) {
+          // Netlify provides URL env var
+          baseUrl = process.env.URL;
+        } else if (process.env.VERCEL_URL) {
+          // Vercel provides VERCEL_URL
+          baseUrl = `https://${process.env.VERCEL_URL}`;
+        } else {
+          // Last resort: localhost (development only)
+          baseUrl = 'http://localhost:3000';
+        }
+      }
+
+      console.log(`[semanticSearch] ⭐ Fetching community stats from: ${baseUrl}/api/ratings/stats`);
+
+      const statsResponse = await fetch(`${baseUrl}/api/ratings/stats?productIds=${productIds}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      });
+
       if (statsResponse.ok) {
         const data = await statsResponse.json();
         communityStats = data.stats || {};
         console.log(`[semanticSearch] ⭐ Fetched community stats for ${Object.keys(communityStats).length} products`);
+      } else {
+        console.warn(`[semanticSearch] ⚠️ Rating stats API returned ${statsResponse.status}: ${statsResponse.statusText}`);
       }
     } catch (error) {
       console.error('[semanticSearch] ⚠️ Failed to fetch community stats:', error);
+      // Continue without ratings - this is non-critical
     }
 
     // Step 2: Apply personal filtering (hide ≤2 stars)
