@@ -83,7 +83,7 @@ Contextual inference rules:
 - "winter" → warm fabrics, layering pieces, deeper colors`;
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-haiku-20240307',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
@@ -117,40 +117,96 @@ Contextual inference rules:
 }
 
 /**
- * Generate a simple search query for straightforward inputs
+ * Detect if query is simple enough to skip Claude API call
+ * Simple queries: 1-3 words, basic item + optional color/style
+ * Complex queries: Need Claude for nuanced understanding
  */
 export function isSimpleQuery(query: string): boolean {
-  // ALWAYS use full GPT-4 intent extraction for consistent, high-quality summaries
-  // This ensures every search gets detailed explanations and "Also searching for" examples
-  return false;
+  const trimmed = query.trim();
+  const wordCount = trimmed.split(/\s+/).length;
+
+  // Too long? Use Claude
+  if (wordCount > 4) return false;
+
+  // Check for complexity indicators that need Claude
+  const complexityIndicators = [
+    /\$\d+/,              // Price mentions: "$100", "$50"
+    /under|over|less|more|between|around/i, // Price words
+    /for (a|an|the|my)/i, // Occasion phrases: "for a wedding"
+    /but not|not too|without/i, // Constraints: "but not flashy"
+    /with|and|or/i,       // Multi-item or detailed specs: "dress and shoes", "with pockets"
+    /formal|casual|elegant|wedding|party|work|office|date/i, // Occasion/style context
+  ];
+
+  for (const indicator of complexityIndicators) {
+    if (indicator.test(trimmed)) {
+      return false; // Complex query, use Claude
+    }
+  }
+
+  // Simple query: just an item, color, or basic combo
+  return true;
 }
 
 /**
  * Create a basic intent for simple queries (skip Claude call)
+ * Extracts color, category, and creates a friendly explanation
  */
 export function createSimpleIntent(query: string): ParsedIntent {
-  // Detect category from query
-  const categoryKeywords: Record<string, string[]> = {
-    dress: ['dress', 'gown', 'frock'],
-    shoes: ['shoes', 'heels', 'boots', 'sandals', 'sneakers', 'loafers'],
-    bags: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack'],
-    tops: ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 't-shirt'],
-    bottoms: ['pants', 'jeans', 'skirt', 'shorts', 'trousers'],
-    outerwear: ['jacket', 'coat', 'blazer', 'cardigan'],
-    accessories: ['jewelry', 'scarf', 'belt', 'hat', 'watch', 'sunglasses'],
-  };
-
   const lowerQuery = query.toLowerCase();
-  let category = 'all';
 
-  for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some(kw => lowerQuery.includes(kw))) {
-      category = cat;
+  // Extract color
+  const colorKeywords = [
+    'black', 'white', 'red', 'blue', 'navy', 'green', 'yellow', 'orange',
+    'purple', 'pink', 'brown', 'beige', 'cream', 'grey', 'gray', 'gold',
+    'silver', 'tan', 'burgundy', 'maroon', 'olive', 'emerald', 'lavender'
+  ];
+
+  let extractedColor: string | null = null;
+  for (const color of colorKeywords) {
+    if (lowerQuery.includes(color)) {
+      extractedColor = color;
       break;
     }
   }
 
+  // Detect category from query
+  const categoryKeywords: Record<string, string[]> = {
+    dress: ['dress', 'gown', 'frock'],
+    shoes: ['shoes', 'heels', 'boots', 'sandals', 'sneakers', 'loafers', 'pumps', 'flats'],
+    bags: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel'],
+    tops: ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 't-shirt', 'tee'],
+    bottoms: ['pants', 'jeans', 'skirt', 'shorts', 'trousers', 'leggings'],
+    outerwear: ['jacket', 'coat', 'blazer'],
+    accessories: ['jewelry', 'scarf', 'belt', 'hat', 'watch', 'sunglasses', 'necklace', 'earrings', 'bracelet'],
+  };
+
+  let category = 'all';
+  let itemName = query;
+
+  for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+    if (keywords.some(kw => lowerQuery.includes(kw))) {
+      category = cat;
+      // Use the matched keyword as item name
+      itemName = keywords.find(kw => lowerQuery.includes(kw)) || query;
+      break;
+    }
+  }
+
+  // Create friendly explanation
+  let explanation = 'I can help you find ';
+  if (extractedColor && category !== 'all') {
+    explanation += `${extractedColor} ${itemName}s! I'll show you ${extractedColor} options that match your style.`;
+  } else if (extractedColor) {
+    explanation += `${extractedColor} items! I'll search for ${extractedColor} pieces in our collection.`;
+  } else if (category !== 'all') {
+    explanation += `${itemName}s! I'll browse through our ${itemName} collection to find great matches.`;
+  } else {
+    explanation += `${query}! I'll search through our collection to find pieces that match what you're looking for.`;
+  }
+
   return {
+    color: extractedColor,
     searchQueries: [
       {
         query: query,
@@ -159,6 +215,6 @@ export function createSimpleIntent(query: string): ParsedIntent {
         weight: 1.0,
       },
     ],
-    explanation: `I can help you find ${query}! I'll search through our collection to find pieces that match what you're looking for.`,
+    explanation,
   };
 }

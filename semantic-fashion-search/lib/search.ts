@@ -148,8 +148,9 @@ export async function semanticSearch(
 
   // Fetch results sized for <2 second query time
   // Quality filtering + color filtering + price filtering reduces by 50-70%
-  // Target: 100 raw results → ~50-70 filtered → 4-6 pages cached
-  const initialFetchSize = 100; // Optimized for speed (<2 sec query time)
+  // Simple queries: 50 raw → ~25-35 filtered → 2-3 pages cached (faster)
+  // Complex queries: 100 raw → ~50-70 filtered → 4-6 pages cached (more coverage)
+  const initialFetchSize = isSimpleQuery(query) ? 50 : 100; // Optimized per query type
   const poolSize = initialFetchSize; // Will implement lazy-loading for additional pages
 
   const searchResults = await executeMultiSearch(
