@@ -338,12 +338,13 @@ export async function semanticSearch(
 
   // CRITICAL: Apply vision-based re-ranking for queries with visual descriptors
   // This ensures "sexy boots" shows heeled/stiletto boots first, not work boots
-  // NOTE: Only analyze first 12 products (1 page) to avoid serverless timeout
+  // NOTE: Only analyze first 6 products to stay under Netlify 10-second timeout
+  // Each GPT-4 Vision call takes ~1-2 seconds, so 6 products = 6-12 seconds (safe)
   let visionRankedResults = priceFilteredResults;
   if (shouldUseVisionReranking(query) && priceFilteredResults.length > 0) {
     console.log(`[semanticSearch] 👁️ Query has visual descriptors - applying GPT-4 Vision re-ranking...`);
     try {
-      visionRankedResults = await rerankWithVision(priceFilteredResults, query, 12);
+      visionRankedResults = await rerankWithVision(priceFilteredResults, query, 6);
       console.log(`[semanticSearch] 👁️ Vision re-ranking complete`);
     } catch (error) {
       console.error('[semanticSearch] ❌ Vision re-ranking failed, using original order:', error);
