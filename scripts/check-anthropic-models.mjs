@@ -4,61 +4,96 @@
  * Check which Anthropic models are available with your API key
  *
  * Usage:
+ *   Set ANTHROPIC_API_KEY env var, then run:
  *   node scripts/check-anthropic-models.mjs
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-import dotenv from 'dotenv';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables from semantic-fashion-search directory
-dotenv.config({ path: join(__dirname, '../semantic-fashion-search/.env.local') });
+// Load .env.local manually
+let ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+if (!ANTHROPIC_API_KEY) {
+  try {
+    const envPath = join(__dirname, '../semantic-fashion-search/.env.local');
+    const envFile = readFileSync(envPath, 'utf8');
+    const match = envFile.match(/ANTHROPIC_API_KEY=(.+)/);
+    if (match) {
+      ANTHROPIC_API_KEY = match[1].trim();
+    }
+  } catch (e) {
+    console.error('Could not load .env.local file');
+  }
+}
+
+if (!ANTHROPIC_API_KEY) {
+  console.error('ERROR: ANTHROPIC_API_KEY not found in environment or .env.local');
+  console.error('Please set it as an environment variable or add it to semantic-fashion-search/.env.local');
+  process.exit(1);
+}
 
 // Models to test
 const modelsToTest = [
-  'claude-3-haiku-20240307',          // Fastest, cheapest
-  'claude-3-5-haiku-20241022',        // Faster Haiku
-  'claude-3-5-sonnet-20240620',       // Sonnet (stable)
-  'claude-3-5-sonnet-20241022',       // Sonnet (latest)
-  'claude-3-opus-20240229',           // Most intelligent
-  'claude-3-sonnet-20240229',         // Older Sonnet
+  'claude-3-haiku-20240307',          // Haiku 3
+  'claude-3-5-haiku-20241022',        // Haiku 3.5
+  'claude-3-sonnet-20240229',         // Older Sonnet 3
+  'claude-3-5-sonnet-20240620',       // Sonnet 3.5 (June)
+  'claude-3-5-sonnet-20241022',       // Sonnet 3.5 (October)
+  'claude-3-5-sonnet-latest',         // Sonnet latest
+  'claude-3-opus-20240229',           // Opus 3
 ];
 
 console.log('Testing Anthropic API key access to models...\n');
-console.log(`API Key: ${process.env.ANTHROPIC_API_KEY?.slice(0, 20)}...${process.env.ANTHROPIC_API_KEY?.slice(-4)}\n`);
+console.log(`API Key: ${ANTHROPIC_API_KEY?.slice(0, 20)}...${ANTHROPIC_API_KEY?.slice(-4)}\n`);
 
 async function testModel(modelName) {
   try {
-    const response = await anthropic.messages.create({
-      model: modelName,
-      max_tokens: 10,
-      messages: [
-        {
-          role: 'user',
-          content: 'Hi',
-        },
-      ],
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        max_tokens: 10,
+        messages: [
+          {
+            role: 'user',
+            content: 'Hi',
+          },
+        ],
+      }),
     });
 
-    return {
-      model: modelName,
-      available: true,
-      response: response.content[0].text,
-    };
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        model: modelName,
+        available: true,
+        response: data.content[0].text,
+      };
+    } else {
+      const errorData = await response.json();
+      return {
+        model: modelName,
+        available: false,
+        error: errorData.error?.message || 'Unknown error',
+        status: response.status,
+      };
+    }
   } catch (error) {
     return {
       model: modelName,
       available: false,
       error: error.message,
-      status: error.status,
+      status: null,
     };
   }
 }
