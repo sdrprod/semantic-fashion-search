@@ -25,8 +25,10 @@ function HomeContent() {
   const [query, setQuery] = useState('');
   const [actualSearchQuery, setActualSearchQuery] = useState(''); // The query actually used for search (may differ for visual search)
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
-  const [results, setResults] = useState<Product[]>([]);
+  const [allResults, setAllResults] = useState<Product[]>([]); // ALL results from search (for client-side pagination)
+  const [results, setResults] = useState<Product[]>([]); // Current page results
   const [loading, setLoading] = useState(false);
+  const [searchProgress, setSearchProgress] = useState<string | null>(null); // Real-time progress message
   const [error, setError] = useState<string | null>(null);
   const [intent, setIntent] = useState<ParsedIntent | null>(null);
   const [qualityWarning, setQualityWarning] = useState<string | null>(null);
@@ -54,11 +56,13 @@ function HomeContent() {
     setQuery('');
     setActualSearchQuery('');
     setUploadedImages([]);
+    setAllResults([]);
     setResults([]);
     setError(null);
     setIntent(null);
     setQualityWarning(null);
     setSearchType(null);
+    setSearchProgress(null);
     setPage(1);
     setTotalCount(0);
     setFanoutSeed(0);
@@ -79,6 +83,7 @@ function HomeContent() {
     setError(null);
     setIntent(null);
     setQualityWarning(null);
+    setSearchProgress('Analyzing your request with AI...');
     setPage(1);
 
     // If images are uploaded, use hybrid search
@@ -92,6 +97,11 @@ function HomeContent() {
     setSearchType('text');
 
     try {
+      // Show progress updates
+      setTimeout(() => setSearchProgress('Searching fashion retailers...'), 800);
+      setTimeout(() => setSearchProgress('Finding matching products...'), 1600);
+      setTimeout(() => setSearchProgress('Analyzing images and colors...'), 2400);
+
       const response = await fetch('/api/search', {
         method: 'POST',
         headers: {
@@ -99,7 +109,7 @@ function HomeContent() {
         },
         body: JSON.stringify({
           query: searchQuery.trim(),
-          limit: pageSize,
+          limit: 100, // Fetch all results for client-side pagination
           page: 1,
           userRatings: ratings, // Pass user ratings for personalized filtering and boosting
         }),
@@ -111,19 +121,27 @@ function HomeContent() {
       }
 
       const data = await response.json();
-      setResults(data.results || []);
+      const fullResults = data.results || [];
+
+      // Store ALL results for client-side pagination
+      setAllResults(fullResults);
+      setTotalCount(fullResults.length);
+
+      // Show first page
+      setResults(fullResults.slice(0, pageSize));
       setIntent(data.intent || null);
       setQualityWarning(data.qualityWarning || null);
-      setTotalCount(data.totalCount || data.results?.length || 0);
       setActualSearchQuery(searchQuery.trim()); // Store the actual query used
     } catch (err) {
       console.error('Search failed:', err);
       setError(err instanceof Error ? err.message : 'Search failed. Please try again.');
+      setAllResults([]);
       setResults([]);
       setIntent(null);
       setQualityWarning(null);
     } finally {
       setLoading(false);
+      setSearchProgress(null);
     }
   };
 
@@ -206,42 +224,17 @@ function HomeContent() {
     }
   };
 
-  const handlePageChange = async (newPage: number) => {
-    if (!actualSearchQuery || newPage < 1) return;
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
 
-    setLoading(true);
+    // Client-side pagination - instant, no server call needed!
     setPage(newPage);
+    const startIndex = (newPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setResults(allResults.slice(startIndex, endIndex));
 
-    try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: actualSearchQuery, // Use the actual search query (may be generated from images)
-          limit: pageSize,
-          page: newPage,
-          userRatings: ratings, // Pass user ratings for pagination too
-          skipVisionReranking: true, // Skip vision re-ranking on pagination to avoid timeout
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load page');
-      }
-
-      const data = await response.json();
-      setResults(data.results || []);
-      setQualityWarning(data.qualityWarning || null);
-      // DON'T update totalCount during pagination - it was set during initial search
-      // setTotalCount(data.totalCount || data.results?.length || 0);
-    } catch (err) {
-      console.error('Page load failed:', err);
-      setError('Failed to load page. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePageSizeChange = (newSize: number) => {
@@ -352,7 +345,7 @@ function HomeContent() {
           {loading && (
             <div className="loading-state">
               <div className="spinner"></div>
-              <p>Analyzing your request and finding perfect matches...</p>
+              <p>{searchProgress || 'Analyzing your request and finding perfect matches...'}</p>
             </div>
           )}
 
