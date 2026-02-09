@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { SearchBar } from '@/components/SearchBar';
 import { ImageUpload } from '@/components/ImageUpload';
 import { ProductCard } from '@/components/ProductCard';
@@ -11,6 +12,7 @@ import { Footer } from '@/components/Footer';
 import { HowToUse } from '@/components/HowToUse';
 import { EmailSubscribe } from '@/components/EmailSubscribe';
 import { useSessionRatings } from '@/src/hooks/useSessionRatings';
+import { usePersistentRatings } from '@/src/hooks/usePersistentRatings';
 import type { Product, ParsedIntent } from '@/types';
 
 const EXAMPLE_SEARCHES = [
@@ -21,7 +23,12 @@ const EXAMPLE_SEARCHES = [
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const { ratings, isLoaded: ratingsLoaded } = useSessionRatings();
+  const { data: session } = useSession();
+  const sessionRatings = useSessionRatings();
+  const persistentRatings = usePersistentRatings({
+    userId: session?.user?.id,
+  });
+  const { ratings, isLoaded: ratingsLoaded } = sessionRatings;
   const [query, setQuery] = useState('');
   const [actualSearchQuery, setActualSearchQuery] = useState(''); // The query actually used for search (may differ for visual search)
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
@@ -449,7 +456,12 @@ function HomeContent() {
 
               <div className="results-grid">
                 {results.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    sessionRatings={sessionRatings}
+                    persistentRatings={persistentRatings}
+                  />
                 ))}
               </div>
 

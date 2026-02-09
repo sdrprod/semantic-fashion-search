@@ -1,14 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useSession } from 'next-auth/react';
 import type { Product } from '@/types';
-import { FeedbackButtons } from '@/components/FeedbackButtons';
+import { StarRating } from '@/components/StarRating';
 
 interface ProductCardProps {
   product: Product;
+  sessionRatings?: {
+    getRating: (productId: string) => number;
+    rate: (productId: string, rating: number) => void;
+  };
+  persistentRatings?: {
+    getRating: (productId: string) => number;
+    rate: (productId: string, rating: number) => void;
+  };
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+interface RatingStats {
+  totalRatings: number;
+  avgRating: number;
+  percent3Plus: number;
+  percent5Star: number;
+}
+
+export function ProductCard({ product, sessionRatings, persistentRatings }: ProductCardProps) {
+  const { data: session } = useSession();
   const [imageError, setImageError] = useState(false);
+  const [stats, setStats] = useState<RatingStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   // Decode common HTML entities safely
   const decodeHtmlEntities = (text: string): string => {
@@ -57,6 +76,60 @@ export function ProductCard({ product }: ProductCardProps) {
                           product.description !== 'null' &&
                           product.description.trim() !== '';
 
+  // Fetch community rating stats on mount
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoadingStats(true);
+      try {
+        const response = await fetch(`/api/ratings/stats?productIds=${product.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          const productStats = data.stats?.[product.id];
+          if (productStats && productStats.totalRatings >= 5) {
+            setStats(productStats);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch rating stats:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [product.id]);
+
+  // Determine current rating based on authentication status
+  const currentRating = session?.user?.id
+    ? persistentRatings?.getRating(product.id) || 0
+    : sessionRatings?.getRating(product.id) || 0;
+
+  // Handle rating submission
+  const handleRate = async (rating: number) => {
+    if (session?.user?.id) {
+      // Authenticated user - save to database
+      persistentRatings?.rate(product.id, rating);
+      // Refetch stats after rating
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/ratings/stats?productIds=${product.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            const productStats = data.stats?.[product.id];
+            if (productStats && productStats.totalRatings >= 5) {
+              setStats(productStats);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to refetch stats:', error);
+        }
+      }, 500);
+    } else {
+      // Anonymous user - save to sessionStorage
+      sessionRatings?.rate(product.id, rating);
+    }
+  };
+
   return (
     <div className="product-card">
       <div className="product-image-container">
@@ -88,6 +161,40 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="sale-notice">This item is currently on sale</p>
         )}
         <p className="product-price">{formatPrice(product.price, product.currency)}</p>
+
+        {/* Star Rating */}
+        {(sessionRatings || persistentRatings) && (
+          <div style={{ marginTop: '12px', marginBottom: '8px' }}>
+            <StarRating
+              rating={currentRating}
+              onRate={handleRate}
+              size={20}
+            />
+
+            {/* Community Stats */}
+            {stats && stats.totalRatings >= 5 && (
+              <div style={{
+                fontSize: '12px',
+                color: '#666',
+                marginTop: '6px',
+              }}>
+                {stats.percent3Plus}% rated 3+ stars • {stats.percent5Star}% gave 5 stars
+              </div>
+            )}
+
+            {/* First to rate message */}
+            {!stats && !isLoadingStats && currentRating === 0 && (
+              <div style={{
+                fontSize: '12px',
+                color: '#999',
+                marginTop: '6px',
+              }}>
+                Be the first to rate this item
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="product-actions">
           <a
             href={product.productUrl}
@@ -97,7 +204,6 @@ export function ProductCard({ product }: ProductCardProps) {
           >
             View Product
           </a>
-          <FeedbackButtons productId={product.id} />
         </div>
       </div>
     </div>
