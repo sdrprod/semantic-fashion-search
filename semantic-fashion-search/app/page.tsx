@@ -26,7 +26,7 @@ function HomeContent() {
   const { data: session } = useSession();
   const sessionRatings = useSessionRatings();
   const persistentRatings = usePersistentRatings({
-    userId: session?.user?.id,
+    userId: session?.user?.id ?? null,
   });
   const { ratings, isLoaded: ratingsLoaded } = sessionRatings;
   const [query, setQuery] = useState('');
