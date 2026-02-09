@@ -83,7 +83,7 @@ Contextual inference rules:
 - "winter" → warm fabrics, layering pieces, deeper colors`;
 
   const response = await anthropic.messages.create({
-    model: 'claude-3-5-haiku-20241022', // Using Haiku 3.5 - API key doesn't have Sonnet access
+    model: 'claude-opus-4-6', // Using Opus 4.6 (new version number format)
     max_tokens: 2048, // Increased from 1024 to allow for more detailed explanations
     system: systemPrompt,
     messages: [
