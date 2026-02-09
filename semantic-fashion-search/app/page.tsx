@@ -223,6 +223,7 @@ function HomeContent() {
           limit: pageSize,
           page: newPage,
           userRatings: ratings, // Pass user ratings for pagination too
+          skipVisionReranking: true, // Skip vision re-ranking on pagination to avoid timeout
         }),
       });
 

@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { query, limit = 12, page = 1, userRatings = {} } = body;
+    const { query, limit = 12, page = 1, userRatings = {}, skipVisionReranking = false } = body;
 
-    console.log('[Search API] Query params:', { query, limit, page, userRatingsCount: Object.keys(userRatings).length });
+    console.log('[Search API] Query params:', { query, limit, page, userRatingsCount: Object.keys(userRatings).length, skipVisionReranking });
 
     // Validate query
     if (!query || typeof query !== 'string' || query.trim().length < 3) {
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       page: 1,
       allowSexyContent: hasSexyIntent,
       userRatings, // Pass user ratings for personalized filtering and boosting
+      skipVisionReranking, // Skip vision re-ranking on pagination to avoid timeout
     });
 
     console.log('[Search API] Search complete, total results:', searchResponse.results.length);

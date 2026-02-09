@@ -93,6 +93,7 @@ interface SearchOptions {
   imageValidationThreshold?: number;
   allowSexyContent?: boolean; // Explicitly allow sexy/provocative content
   userRatings?: { [productId: string]: number }; // User's personal ratings (1-5)
+  skipVisionReranking?: boolean; // Skip vision re-ranking (for pagination to avoid timeout)
 }
 
 /**
@@ -131,6 +132,7 @@ export async function semanticSearch(
     imageValidationThreshold = 0.6,  // 60% image similarity required
     allowSexyContent = false, // Default to filtering sexy content
     userRatings = {}, // User's personal ratings (session or persistent)
+    skipVisionReranking = false, // Skip vision re-ranking (for pagination)
   } = options;
 
   // Detect broad queries that want to see "everything" in a category/color
@@ -340,8 +342,9 @@ export async function semanticSearch(
   // This ensures "sexy boots" shows heeled/stiletto boots first, not work boots
   // NOTE: Only analyze first 6 products to stay under Netlify 10-second timeout
   // Each GPT-4 Vision call takes ~1-2 seconds, so 6 products = 6-12 seconds (safe)
+  // SKIP on pagination to avoid timeout (pagination should use cached results)
   let visionRankedResults = priceFilteredResults;
-  if (shouldUseVisionReranking(query) && priceFilteredResults.length > 0) {
+  if (!skipVisionReranking && shouldUseVisionReranking(query) && priceFilteredResults.length > 0) {
     console.log(`[semanticSearch] 👁️ Query has visual descriptors - applying GPT-4 Vision re-ranking...`);
     try {
       visionRankedResults = await rerankWithVision(priceFilteredResults, query, 6);
@@ -350,6 +353,8 @@ export async function semanticSearch(
       console.error('[semanticSearch] ❌ Vision re-ranking failed, using original order:', error);
       visionRankedResults = priceFilteredResults;
     }
+  } else if (skipVisionReranking) {
+    console.log(`[semanticSearch] ⏭️ Skipping vision re-ranking (pagination request)`);
   }
 
   // FEATURE: Rating-based filtering and boosting (personal + community)
