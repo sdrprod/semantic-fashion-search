@@ -1022,6 +1022,7 @@ async function executeMultiSearch(
       const result = await supabase.rpc('match_products', {
         query_embedding: textEmbedding,
         match_count: fetchLimit,
+        filter_gender: 'exclude_men', // Never return explicitly men's-only products
       });
 
       if (result.error) {
@@ -1284,6 +1285,7 @@ export async function simpleSearch(
   const { data, error } = await supabase.rpc('match_products', {
     query_embedding: embedding,
     match_count: limit,
+    filter_gender: 'exclude_men',
   });
 
   if (error) {
