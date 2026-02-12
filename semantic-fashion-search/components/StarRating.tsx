@@ -42,6 +42,15 @@ export function StarRating({
   const displayRating = hoverRating !== null ? hoverRating : rating;
   const totalStars = 5;
 
+  // Relevance label per star level
+  const RELEVANCE_LABELS: Record<number, string> = {
+    1: 'Not relevant',
+    2: 'Slightly relevant',
+    3: 'Somewhat relevant',
+    4: 'Very relevant',
+    5: 'Excellent match',
+  };
+
   const handleClick = (starIndex: number) => {
     if (readonly || !onRate) return;
 
@@ -83,8 +92,8 @@ export function StarRating({
                 ${!readonly && onRate ? 'hover:scale-110' : ''}
                 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-1 rounded
               `}
-              aria-label={`Rate ${starIndex} star${starIndex > 1 ? 's' : ''}`}
-              title={readonly ? undefined : `Rate ${starIndex} star${starIndex > 1 ? 's' : ''}`}
+              aria-label={RELEVANCE_LABELS[starIndex]}
+              title={readonly ? undefined : RELEVANCE_LABELS[starIndex]}
             >
               <svg
                 width={size}
@@ -120,8 +129,14 @@ export function StarRating({
         </span>
       )}
 
-      {!readonly && onRate && rating === 0 && (
-        <span className="text-xs text-gray-400 ml-1">Rate this</span>
+      {!readonly && onRate && (
+        <span className="text-xs text-gray-400 ml-1">
+          {hoverRating !== null
+            ? RELEVANCE_LABELS[hoverRating]
+            : rating > 0
+              ? RELEVANCE_LABELS[rating]
+              : 'Rate relevance'}
+        </span>
       )}
     </div>
   );

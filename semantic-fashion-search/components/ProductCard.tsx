@@ -165,6 +165,9 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
         {/* Star Rating */}
         {(sessionRatings || persistentRatings) && (
           <div style={{ marginTop: '12px', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: '#888', marginBottom: '4px' }}>
+              How relevant are these results?
+            </div>
             <StarRating
               rating={currentRating}
               onRate={handleRate}
@@ -178,18 +181,7 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
                 color: '#666',
                 marginTop: '6px',
               }}>
-                {stats.percent3Plus}% rated 3+ stars • {stats.percent5Star}% gave 5 stars
-              </div>
-            )}
-
-            {/* First to rate message */}
-            {!stats && !isLoadingStats && currentRating === 0 && (
-              <div style={{
-                fontSize: '12px',
-                color: '#999',
-                marginTop: '6px',
-              }}>
-                Be the first to rate this item
+                {stats.percent3Plus}% found relevant • {stats.percent5Star}% gave 5 stars
               </div>
             )}
           </div>
