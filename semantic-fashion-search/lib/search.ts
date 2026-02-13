@@ -111,6 +111,14 @@ function detectBroadQuery(query: string): boolean {
     /what.*do\s+you\s+have\s+in/i,
     /browse/i,
     /catalog/i,
+    // Simple 1-2 word category queries from nav (user is browsing, not searching for something specific)
+    /^(?:footwear|shoes?|boots?|heels?|sneakers?|sandals?|loafers?|flats?)$/i,
+    /^(?:dresses?|skirts?|tops?|blouses?|pants?|jeans?|activewear|swimwear|outerwear)$/i,
+    /^(?:accessories|jewelry|handbags?|bags?|wallets?|scarves?|sunglasses?)$/i,
+    /^women'?s?\s+clothing$/i,
+    /^men'?s?\s+clothing$/i,
+    /^(?:clothing|fashion|apparel|style)$/i,
+    /^(?:flats?\s+and\s+loafers?|tops?\s+and\s+blouses?|pants?\s+and\s+jeans?)$/i,
   ];
 
   return broadPatterns.some(pattern => pattern.test(query));
@@ -183,21 +191,21 @@ export async function semanticSearch(
     }
     // For specific queries, apply tiered quality thresholds
     else {
-      // Top result: require +0.25 similarity boost (minimum 0.55 for best match)
+      // Top result: require +0.10 similarity boost (minimum 0.40 for best match)
       if (index === 0) {
-        requiredSimilarity = similarityThreshold + 0.25;
-      }
-      // Results 2-3: require +0.20 similarity boost (minimum 0.50)
-      else if (index < 3) {
-        requiredSimilarity = similarityThreshold + 0.20;
-      }
-      // Results 4-6: require +0.15 similarity boost (minimum 0.45)
-      else if (index < 6) {
-        requiredSimilarity = similarityThreshold + 0.15;
-      }
-      // Results 7-12: require +0.10 similarity boost (minimum 0.40)
-      else if (index < 12) {
         requiredSimilarity = similarityThreshold + 0.10;
+      }
+      // Results 2-3: require +0.07 similarity boost (minimum 0.37)
+      else if (index < 3) {
+        requiredSimilarity = similarityThreshold + 0.07;
+      }
+      // Results 4-6: require +0.05 similarity boost (minimum 0.35)
+      else if (index < 6) {
+        requiredSimilarity = similarityThreshold + 0.05;
+      }
+      // Results 7-12: require +0.02 similarity boost (minimum 0.32)
+      else if (index < 12) {
+        requiredSimilarity = similarityThreshold + 0.02;
       }
       // Results 13+: use base threshold (minimum 0.30)
     }

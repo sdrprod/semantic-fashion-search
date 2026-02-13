@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Navigation } from '@/components/Navigation';
+import { Footer } from '@/components/Footer';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -57,14 +59,17 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card" style={{ maxWidth: '480px' }}>
-        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <Link href="/" style={{ color: '#17a2b8', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-            ← Back to Home
-          </Link>
-        </div>
-
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Navigation />
+      <main style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #17a2b8 0%, #0d7a8a 100%)',
+        padding: '3rem 2rem',
+      }}>
+      <div className="login-card" style={{ maxWidth: '480px', width: '100%' }}>
         <h1 className="login-title">Create Account</h1>
         <p className="login-subtitle">
           Sign up to start discovering fashion items
@@ -231,11 +236,13 @@ export default function SignUpPage() {
 
         <p style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: '#666' }}>
           Already have an account?{' '}
-          <Link href="/admin/login" style={{ color: '#17a2b8', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/login" style={{ color: '#17a2b8', textDecoration: 'none', fontWeight: 600 }}>
             Sign In
           </Link>
         </p>
       </div>
+      </main>
+      <Footer />
     </div>
   );
 }

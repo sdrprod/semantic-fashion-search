@@ -170,7 +170,7 @@ export function Navigation({ onReset }: NavigationProps) {
               <Link href="/signup" className="nav-link-secondary">
                 Sign Up
               </Link>
-              <Link href="/admin/login" className="nav-link-secondary">
+              <Link href="/login" className="nav-link-secondary">
                 Sign In
               </Link>
             </>
@@ -318,7 +318,7 @@ export function Navigation({ onReset }: NavigationProps) {
                   Sign Up
                 </Link>
                 <Link
-                  href="/admin/login"
+                  href="/login"
                   className="mobile-menu-link"
                   onClick={() => setMobileMenuOpen(false)}
                 >

@@ -16,7 +16,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/admin/login');
+      router.push('/login');
     } else if (status === 'authenticated') {
       // Block viewers from accessing admin
       const userRole = session?.user?.role;

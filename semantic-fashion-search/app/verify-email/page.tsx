@@ -57,7 +57,7 @@ function VerifyEmailContent() {
 
       // Wait a moment then redirect to sign in
       setTimeout(() => {
-        router.push('/admin/login?verified=true');
+        router.push('/login?verified=true');
       }, 2000);
     } catch (err) {
       setError('An error occurred. Please try again.');

@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/admin/login');
+      router.push('/login');
     } else if (status === 'authenticated') {
       // Block viewers from accessing admin settings
       const userRole = session?.user?.role;
