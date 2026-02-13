@@ -10,12 +10,12 @@ export function Footer() {
         <div className="footer-column">
           <h3 className="footer-heading">Shop</h3>
           <ul className="footer-links">
-            <li><Link href="/category/womens-clothing">Women's Clothing</Link></li>
-            <li><Link href="/category/footwear">Footwear</Link></li>
-            <li><Link href="/category/accessories">Accessories</Link></li>
-            <li><Link href="/category/jewelry">Jewelry</Link></li>
-            <li><Link href="/new-arrivals">New Arrivals</Link></li>
-            <li><Link href="/sale">Sale</Link></li>
+            <li><Link href="/?q=women%27s%20clothing">Women's Clothing</Link></li>
+            <li><Link href="/?q=footwear">Footwear</Link></li>
+            <li><Link href="/?q=accessories">Accessories</Link></li>
+            <li><Link href="/?q=jewelry">Jewelry</Link></li>
+            <li><Link href="/?q=new%20arrivals">New Arrivals</Link></li>
+            <li><Link href="/?q=sale">Sale</Link></li>
           </ul>
         </div>
 

@@ -48,7 +48,7 @@ function HomeContent() {
 
   const hasSearched = results.length > 0 || error !== null || loading || intent !== null;
 
-  // Check for authorization errors
+  // Check for authorization errors and handle ?q= search param
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam === 'unauthorized') {
@@ -56,7 +56,13 @@ function HomeContent() {
       // Clear the error parameter from URL
       window.history.replaceState({}, '', '/');
     }
-  }, [searchParams]);
+
+    const qParam = searchParams.get('q');
+    if (qParam && qParam.trim().length >= 3) {
+      handleSearch(qParam.trim());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reset to initial blank search state
   const handleReset = () => {

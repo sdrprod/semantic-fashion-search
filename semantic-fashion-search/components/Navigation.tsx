@@ -2,50 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSession, signIn, signOut } from 'next-auth/react';
-
-interface NavItem {
-  label: string;
-  href?: string;
-  children?: { label: string; href: string }[];
-}
+import { useSession, signOut } from 'next-auth/react';
 
 interface NavigationProps {
   onReset?: () => void;
 }
 
-const navigationItems: NavItem[] = [
-  { label: 'Home', href: '/' },
-  {
-    label: "Women's Clothing",
-    children: [
-      { label: 'Dresses', href: '/category/dresses' },
-      { label: 'Tops & Blouses', href: '/category/tops' },
-      { label: 'Skirts', href: '/category/skirts' },
-      { label: 'Outerwear', href: '/category/outerwear' },
-    ],
-  },
-  {
-    label: 'Footwear',
-    children: [
-      { label: 'Heels', href: '/category/heels' },
-      { label: 'Boots', href: '/category/boots' },
-      { label: 'Sneakers', href: '/category/sneakers' },
-    ],
-  },
-  {
-    label: 'Accessories',
-    children: [
-      { label: 'Jewelry', href: '/category/jewelry' },
-      { label: 'Bags', href: '/category/bags' },
-      { label: 'Hats', href: '/category/hats' },
-    ],
-  },
-  { label: 'Jewelry', href: '/category/jewelry' },
+const navLinks = [
+  { label: "Women's Clothing", query: "women's clothing" },
+  { label: 'Footwear',         query: 'footwear' },
+  { label: 'Accessories',      query: 'accessories' },
+  { label: 'Jewelry',          query: 'jewelry' },
 ];
 
 export function Navigation({ onReset }: NavigationProps) {
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: session } = useSession();
 
@@ -54,6 +24,8 @@ export function Navigation({ onReset }: NavigationProps) {
     if (onReset) {
       onReset();
     }
+    // Clear ?q= from URL when going home
+    window.history.replaceState({}, '', '/');
   };
 
   return (
@@ -66,53 +38,14 @@ export function Navigation({ onReset }: NavigationProps) {
 
         {/* Desktop Navigation */}
         <div className="nav-desktop">
-          {navigationItems.map((item) => (
-            <div
+          {navLinks.map((item) => (
+            <Link
               key={item.label}
-              className="nav-item"
-              onMouseEnter={() => item.children && setOpenDropdown(item.label)}
-              onMouseLeave={() => setOpenDropdown(null)}
+              href={`/?q=${encodeURIComponent(item.query)}`}
+              className="nav-link"
             >
-              {item.href ? (
-                <a
-                  href={item.href}
-                  className="nav-link"
-                  onClick={item.label === 'Home' ? handleHomeClick : undefined}
-                >
-                  {item.label}
-                </a>
-              ) : (
-                <button className="nav-link nav-dropdown-trigger">
-                  {item.label}
-                  <svg
-                    className="dropdown-icon"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                  >
-                    <path
-                      d="M2.5 4.5L6 8L9.5 4.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              )}
-
-              {/* Dropdown Menu */}
-              {item.children && openDropdown === item.label && (
-                <div className="nav-dropdown">
-                  {item.children.map((child) => (
-                    <Link key={child.label} href={child.href} className="nav-dropdown-item">
-                      {child.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+              {item.label}
+            </Link>
           ))}
         </div>
 
@@ -177,41 +110,44 @@ export function Navigation({ onReset }: NavigationProps) {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="mobile-menu">
-          {navigationItems.map((item) => (
-            <div key={item.label} className="mobile-menu-section">
-              {item.href ? (
-                <a
-                  href={item.href}
-                  className="mobile-menu-link"
-                  onClick={(e) => {
-                    if (item.label === 'Home') {
-                      handleHomeClick(e);
-                    }
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  {item.label}
-                </a>
-              ) : (
-                <>
-                  <div className="mobile-menu-category">{item.label}</div>
-                  {item.children?.map((child) => (
-                    <Link
-                      key={child.label}
-                      href={child.href}
-                      className="mobile-menu-sublink"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {child.label}
-                    </Link>
-                  ))}
-                </>
-              )}
-            </div>
+          <a
+            href="/"
+            className="mobile-menu-link"
+            onClick={(e) => {
+              handleHomeClick(e);
+              setMobileMenuOpen(false);
+            }}
+          >
+            Home
+          </a>
+
+          {navLinks.map((item) => (
+            <Link
+              key={item.label}
+              href={`/?q=${encodeURIComponent(item.query)}`}
+              className="mobile-menu-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
           ))}
 
           {/* Mobile Auth */}
           <div className="mobile-menu-section mobile-auth-section">
+            <Link
+              href="/support"
+              className="mobile-menu-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Support
+            </Link>
+            <Link
+              href="/contact"
+              className="mobile-menu-link"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contact
+            </Link>
             {session ? (
               <>
                 <div className="mobile-user-info">
