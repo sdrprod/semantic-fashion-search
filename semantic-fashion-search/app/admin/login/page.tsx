@@ -69,7 +69,7 @@ function LoginContent() {
     <div className="login-container">
       <div className="login-card">
         <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <Link href="/" style={{ color: '#667eea', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
+          <Link href="/" style={{ color: '#17a2b8', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
             ← Back to Home
           </Link>
         </div>
@@ -130,7 +130,7 @@ function LoginContent() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#667eea',
+                  color: '#17a2b8',
                   fontSize: '14px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -205,7 +205,7 @@ function LoginContent() {
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: loading ? '#ccc' : 'linear-gradient(135deg, #17a2b8 0%, #0d7a8a 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
@@ -225,7 +225,7 @@ function LoginContent() {
                   width: '100%',
                   padding: '12px',
                   background: 'white',
-                  color: '#667eea',
+                  color: '#17a2b8',
                   border: '2px solid #e1e4e8',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -241,7 +241,7 @@ function LoginContent() {
 
         <p style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: '#666' }}>
           Don't have an account?{' '}
-          <Link href="/signup" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/signup" style={{ color: '#17a2b8', textDecoration: 'none', fontWeight: 600 }}>
             Sign Up
           </Link>
         </p>

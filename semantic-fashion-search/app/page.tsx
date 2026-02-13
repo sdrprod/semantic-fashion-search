@@ -11,6 +11,7 @@ import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { HowToUse } from '@/components/HowToUse';
 import { EmailSubscribe } from '@/components/EmailSubscribe';
+import { SearchLoadingModal } from '@/components/SearchLoadingModal';
 import { useSessionRatings } from '@/src/hooks/useSessionRatings';
 import { usePersistentRatings } from '@/src/hooks/usePersistentRatings';
 import type { Product, ParsedIntent } from '@/types';
@@ -61,8 +62,9 @@ function HomeContent() {
     if (qParam && qParam.trim().length >= 3) {
       handleSearch(qParam.trim());
     }
+  // searchParams change (e.g. nav category link) should re-trigger search
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   // Reset to initial blank search state
   const handleReset = () => {
@@ -356,10 +358,7 @@ function HomeContent() {
           {!hasSearched && <HowToUse />}
 
           {loading && (
-            <div className="loading-state">
-              <div className="spinner"></div>
-              <p>{searchProgress || 'Analyzing your request and finding perfect matches...'}</p>
-            </div>
+            <SearchLoadingModal query={query} intent={intent} />
           )}
 
           {error && (

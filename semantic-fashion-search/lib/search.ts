@@ -1019,20 +1019,30 @@ async function executeMultiSearch(
 
     try {
       // Pass embedding array directly - PostgreSQL will convert to vector
-      const result = await supabase.rpc('match_products', {
+      // Try with filter_gender first; fall back to 2-param call if DB function not yet updated
+      let result = await supabase.rpc('match_products', {
         query_embedding: textEmbedding,
         match_count: fetchLimit,
         filter_gender: 'exclude_men', // Never return explicitly men's-only products
       });
 
       if (result.error) {
-        console.error(`[executeMultiSearch] Error for "${searchQuery.query}":`, {
+        console.error(`[executeMultiSearch] Error for "${searchQuery.query}" (will retry without filter_gender):`, {
           message: result.error.message,
           details: result.error.details,
           hint: result.error.hint,
           code: result.error.code
         });
-        return { query: searchQuery.query, products: [] };
+        // Fallback: retry without filter_gender (in-memory men's filter still applies below)
+        result = await supabase.rpc('match_products', {
+          query_embedding: textEmbedding,
+          match_count: fetchLimit,
+        });
+        if (result.error) {
+          console.error(`[executeMultiSearch] Fallback also failed for "${searchQuery.query}":`, result.error.message);
+          return { query: searchQuery.query, products: [] };
+        }
+        console.log(`[executeMultiSearch] Fallback succeeded for "${searchQuery.query}": ${(result.data || []).length} products`);
       }
 
       data = result.data || [];
@@ -1282,11 +1292,22 @@ export async function simpleSearch(
   const embedding = await generateEmbedding(query);
 
   // Pass embedding array directly - PostgreSQL will convert to vector
-  const { data, error } = await supabase.rpc('match_products', {
+  // Try with filter_gender first; fall back to 2-param call if DB function not yet updated
+  let rpcResult = await supabase.rpc('match_products', {
     query_embedding: embedding,
     match_count: limit,
     filter_gender: 'exclude_men',
   });
+
+  if (rpcResult.error) {
+    console.warn('[simpleSearch] filter_gender call failed, retrying without it:', rpcResult.error.message);
+    rpcResult = await supabase.rpc('match_products', {
+      query_embedding: embedding,
+      match_count: limit,
+    });
+  }
+
+  const { data, error } = rpcResult;
 
   if (error) {
     console.error('Search error:', error);

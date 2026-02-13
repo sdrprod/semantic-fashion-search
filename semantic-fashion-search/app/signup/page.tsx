@@ -60,7 +60,7 @@ export default function SignUpPage() {
     <div className="login-container">
       <div className="login-card" style={{ maxWidth: '480px' }}>
         <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <Link href="/" style={{ color: '#667eea', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
+          <Link href="/" style={{ color: '#17a2b8', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
             ← Back to Home
           </Link>
         </div>
@@ -215,7 +215,7 @@ export default function SignUpPage() {
             style={{
               width: '100%',
               padding: '12px',
-              background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: loading ? '#ccc' : 'linear-gradient(135deg, #17a2b8 0%, #0d7a8a 100%)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -231,7 +231,7 @@ export default function SignUpPage() {
 
         <p style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: '#666' }}>
           Already have an account?{' '}
-          <Link href="/admin/login" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/admin/login" style={{ color: '#17a2b8', textDecoration: 'none', fontWeight: 600 }}>
             Sign In
           </Link>
         </p>
