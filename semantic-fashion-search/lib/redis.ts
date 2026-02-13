@@ -10,12 +10,15 @@ import { Redis } from '@upstash/redis';
  * - Cost optimization (fewer OpenAI API calls)
  */
 
-// Initialize Redis client
-// Uses REST API for serverless compatibility
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+// Initialize Redis client only if env vars are configured
+// If UPSTASH_REDIS_REST_URL is missing or invalid, all cache operations
+// will be no-ops and search will run without caching.
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+const redis = (redisUrl && redisToken && redisUrl.startsWith('https://'))
+  ? new Redis({ url: redisUrl, token: redisToken })
+  : null;
 
 /**
  * Generate a stable cache key from search parameters
@@ -56,6 +59,7 @@ export function generateCacheKey(
  * Get cached search results
  */
 export async function getCachedSearch<T>(cacheKey: string): Promise<T | null> {
+  if (!redis) return null;
   try {
     const cached = await redis.get<T>(cacheKey);
 
@@ -80,6 +84,7 @@ export async function setCachedSearch<T>(
   data: T,
   ttlSeconds: number = 3600 // 1 hour default
 ): Promise<void> {
+  if (!redis) return;
   try {
     await redis.set(cacheKey, data, { ex: ttlSeconds });
     console.log(`[Redis] 💾 Cached: ${cacheKey} (TTL: ${ttlSeconds}s)`);
