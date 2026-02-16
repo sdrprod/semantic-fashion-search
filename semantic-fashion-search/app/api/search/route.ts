@@ -25,6 +25,13 @@ export async function POST(request: NextRequest) {
     const validatedLimit = Math.min(Math.max(1, limit), 50);
     const validatedPage = Math.max(1, page);
 
+    // Check if this is a demo query - skip caching for demo queries
+    const DEMO_TRIGGER = 'Modern long black dress with a romantic neckline for a formal evening event';
+    const isDemoQuery = query.toLowerCase().trim() === DEMO_TRIGGER.toLowerCase().trim();
+    if (isDemoQuery) {
+      console.log('[Search API] 🎬 DEMO QUERY DETECTED - Skipping cache for demo search');
+    }
+
     // Check sexy intent on user query
     let hasSexyIntent = false;
     const sexyKeywords = [
@@ -45,8 +52,11 @@ export async function POST(request: NextRequest) {
       userRatings: Object.keys(userRatings).length > 0 ? JSON.stringify(userRatings) : undefined,
     });
 
-    // Check cache first for FULL result set
-    const cachedFullResults = await getCachedSearch<SearchResponse>(cacheKey);
+    // Check cache first for FULL result set (skip for demo queries)
+    let cachedFullResults: SearchResponse | null = null;
+    if (!isDemoQuery) {
+      cachedFullResults = await getCachedSearch<SearchResponse>(cacheKey);
+    }
 
     if (cachedFullResults) {
       console.log('[Search API] Cache HIT ⚡ - paginating from cached results');
@@ -78,8 +88,12 @@ export async function POST(request: NextRequest) {
 
     console.log('[Search API] Search complete, total results:', searchResponse.results.length);
 
-    // Cache the FULL result set (1 hour TTL)
-    await setCachedSearch(cacheKey, searchResponse, 3600);
+    // Cache the FULL result set (1 hour TTL) - skip caching for demo queries
+    if (!isDemoQuery) {
+      await setCachedSearch(cacheKey, searchResponse, 3600);
+    } else {
+      console.log('[Search API] 🎬 DEMO QUERY - Not caching results (instant demo search always fresh)');
+    }
 
     // Paginate the requested page from full results
     const startIndex = (validatedPage - 1) * validatedLimit;
