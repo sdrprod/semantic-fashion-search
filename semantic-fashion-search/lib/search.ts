@@ -97,6 +97,87 @@ interface SearchOptions {
 }
 
 /**
+ * Fetch pre-populated demo products for live presentations
+ */
+async function getDemoSearchResults(limit: number = 12, page: number = 1): Promise<SearchResponse> {
+  const DEMO_TRIGGER = 'Modern long black dress with a romantic neckline for a formal evening event';
+  try {
+    const supabase = getSupabaseClient(true);
+
+    // Fetch all demo products
+    const { data: demoProductsData, error } = await supabase
+      .from('demo_products')
+      .select('*')
+      .eq('demo_trigger', DEMO_TRIGGER)
+      .order('price', { ascending: false });
+
+    if (error || !demoProductsData) {
+      console.error('[getDemoSearchResults] Error fetching demo products:', error);
+      return {
+        query: DEMO_TRIGGER,
+        results: [],
+        totalCount: 0,
+        intent: {
+          searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
+          primaryItem: 'dress',
+          priceRange: undefined,
+          occasion: 'formal evening',
+          style: ['romantic', 'elegant', 'black'],
+        },
+        qualityWarning: 'Demo products not available',
+      };
+    }
+
+    // Convert demo products to Product type
+    const demoProducts = demoProductsData as any[];
+    const products: Product[] = demoProducts.map(p => ({
+      id: p.id,
+      brand: p.brand,
+      title: p.title,
+      description: p.description || '',
+      price: parseFloat(p.price) || 0,
+      currency: p.currency || 'USD',
+      imageUrl: p.image_url,
+      productUrl: p.product_url,
+      verifiedColors: Array.isArray(p.verified_colors) ? p.verified_colors : [],
+      similarity: 0.95, // Demo products are perfect matches
+    }));
+
+    // Paginate results
+    const startIdx = (page - 1) * limit;
+    const paginatedProducts = products.slice(startIdx, startIdx + limit);
+
+    console.log(`[getDemoSearchResults] Returned ${paginatedProducts.length} demo products (page ${page}, total ${products.length})`);
+
+    return {
+      query: DEMO_TRIGGER,
+      results: paginatedProducts,
+      totalCount: products.length,
+      intent: {
+        searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
+        primaryItem: 'dress',
+        priceRange: undefined,
+        occasion: 'formal evening',
+        style: ['romantic', 'elegant', 'black'],
+      },
+      qualityWarning: undefined,
+    };
+  } catch (error) {
+    console.error('[getDemoSearchResults] Error:', error);
+    return {
+      query: DEMO_TRIGGER,
+      results: [],
+      totalCount: 0,
+      intent: {
+        searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
+        primaryItem: 'dress',
+      },
+      qualityWarning: 'Demo search encountered an error',
+    };
+  }
+}
+
+/**
  * Detect if query is asking to see "everything" or "all items"
  * These queries should show broad results without aggressive filtering
  */
@@ -142,6 +223,13 @@ export async function semanticSearch(
     userRatings = {}, // User's personal ratings (session or persistent)
     skipVisionReranking = false, // Skip vision re-ranking (for pagination)
   } = options;
+
+  // CHECK FOR DEMO MODE - exact match on demo trigger phrase
+  const DEMO_TRIGGER = 'Modern long black dress with a romantic neckline for a formal evening event';
+  if (query.toLowerCase().trim() === DEMO_TRIGGER.toLowerCase().trim()) {
+    console.log('[semanticSearch] 🎬 DEMO MODE ACTIVATED - Returning pre-populated demo results');
+    return await getDemoSearchResults(limit, page);
+  }
 
   // Detect broad queries that want to see "everything" in a category/color
   const isBroadQuery = detectBroadQuery(query);

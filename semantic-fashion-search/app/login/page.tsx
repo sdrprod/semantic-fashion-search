@@ -20,7 +20,13 @@ function LoginContent() {
 
   useEffect(() => {
     if (session) {
-      router.push('/admin');
+      // Only redirect to admin if user has admin/editor role
+      if (session.user?.role === 'admin' || session.user?.role === 'editor') {
+        router.push('/admin');
+      } else {
+        // Regular users go to home
+        router.push('/');
+      }
     }
   }, [session, router]);
 
@@ -48,7 +54,7 @@ function LoginContent() {
         return;
       }
 
-      router.push('/admin');
+      // Session will be updated, and useEffect above will handle redirect based on role
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setLoading(false);
@@ -90,7 +96,7 @@ function LoginContent() {
       {!showEmailLogin ? (
         <>
           <button
-            onClick={() => signIn('google', { callbackUrl: '/admin' })}
+            onClick={() => signIn('google', { callbackUrl: '/' })}
             className="google-btn"
           >
             <svg width="20" height="20" viewBox="0 0 24 24">
