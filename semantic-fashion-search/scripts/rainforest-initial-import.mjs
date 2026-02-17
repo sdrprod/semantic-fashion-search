@@ -25,10 +25,10 @@ const analysisPath = path.join(process.cwd(), 'rainforest-weighting-analysis.jso
 const analysisData = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'));
 
 // Configuration
-const TOTAL_TARGET_PRODUCTS = 20000;
+const TOTAL_TARGET_PRODUCTS = 5000; // Phase 1: Test with 5,000 first
 const PRODUCTS_PER_SEARCH = 50; // Try to fetch ~50 products per category search
 const BATCH_SIZE = 100; // Insert/update in batches
-const CREDIT_BUDGET = 100; // Total credits allowed for initial import (configurable)
+const CREDIT_BUDGET = 50; // Phase 1: Limited to 50 credits for testing
 
 let creditsUsed = 0;
 let productsImported = 0;

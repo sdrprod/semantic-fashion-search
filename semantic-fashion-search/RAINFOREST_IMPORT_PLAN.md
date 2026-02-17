@@ -2,16 +2,26 @@
 
 ## Executive Summary
 
-We have created a complete strategy for importing Amazon products into the database using weighted category distribution, then maintaining them with weekly updates using content change detection.
+We have created a complete strategy for importing Amazon products into the database using weighted category distribution, with on-demand checking for product updates.
 
 **Key Components:**
 1. ✅ Migration script - Adds tracking columns
-2. ✅ Initial import script - Populates 20,000 products
-3. ✅ Weekly diff script - Detects changes and updates only changed products
+2. ✅ Initial import script - Phase 1: 5,000 products (test)
+3. ✅ On-demand category checker - Check/update any category manually
 
 ---
 
-## Strategy: Weighted Distribution
+## Strategy: Phased Approach with On-Demand Updates
+
+**Phase 1 - Testing (5,000 products across 22 categories):**
+- Limited credit budget: 50 credits
+- Validate data quality and embedding generation
+- Ensure workflow is correct
+
+**Phase 2 - Full Population (remaining 15,000 products):**
+- After Phase 1 validation
+- Full weighted distribution across all categories
+- Target 20,000 total additional products
 
 **Distribution Model (20,000 products across 22 categories):**
 
@@ -80,12 +90,12 @@ We have created a complete strategy for importing Amazon products into the datab
 
 **Configuration:**
 ```javascript
-TOTAL_TARGET_PRODUCTS = 20000
+TOTAL_TARGET_PRODUCTS = 5000  // Phase 1: Test first
 PRODUCTS_PER_SEARCH = 50
-CREDIT_BUDGET = 100  // Configurable - adjust as needed
+CREDIT_BUDGET = 50  // Phase 1: Conservative budget for testing
 ```
 
-**Expected Runtime:** ~30-60 minutes (depends on API responsiveness)
+**Expected Runtime:** ~10-20 minutes for Phase 1
 
 **Run:**
 ```bash
@@ -94,39 +104,53 @@ node scripts/rainforest-initial-import.mjs
 
 ---
 
-### Stage 3: Weekly Diff/Update Script
+### Stage 3: On-Demand Category Checker
 
-**File:** `scripts/rainforest-weekly-diff.mjs`
+**File:** `scripts/rainforest-check-category.mjs`
 
-**Strategy:**
-1. Queries database for products where `last_scraped_at` > 7 days old
-2. Extracts ASIN from product URL
-3. Fetches fresh product data using Rainforest's product endpoint
-4. Compares `content_hash` of old vs new data
-5. Only updates products where content changed
-6. Updates `last_scraped_at` timestamp for all checked products
+**Purpose:** Manually check any category/subcategory for product changes without automation
+
+**What it does:**
+1. Takes category/subcategory as command line argument
+2. Fetches latest products from Rainforest for that category
+3. Compares against database using content_hash
+4. Shows changes: new products, updated prices/sales, unchanged items
+5. Prompts to confirm before updating database
+6. Upserts only changed products
 
 **Benefits:**
-- ✅ Minimal credit usage (only checks 7+ day old products)
-- ✅ Skips unchanged products automatically
-- ✅ Detects price changes, sales, stock status changes
-- ✅ Scales to unlimited product count
+- ✅ Manual control over when to check
+- ✅ Low credit cost per check (~3-5 credits per category)
+- ✅ See exactly what changed before applying updates
+- ✅ No recurring automation overhead
+- ✅ Can check categories selectively based on need
 
 **Configuration:**
 ```javascript
-CREDIT_BUDGET = 50          // Weekly budget
-DAYS_SINCE_LAST_SCRAPE = 7  // Re-check after 7 days
-BATCH_SIZE = 20             // Process 20 products at a time
+PAGES_TO_CHECK = 3          // Check first 3 pages = ~150 products
+PRODUCTS_PER_PAGE = 50
+CREDIT_BUDGET = 25          // Per-check budget
 ```
 
-**Expected Runtime:** ~5-15 minutes
-
-**Schedule:** Run every weekend (Friday night or Saturday morning)
-
-**Run:**
+**Usage Examples:**
 ```bash
-node scripts/rainforest-weekly-diff.mjs
+# Check specific subcategory
+node scripts/rainforest-check-category.mjs "Footwear" "Sneakers"
+
+# Check broader category
+node scripts/rainforest-check-category.mjs "Dresses"
+
+# Check accessories
+node scripts/rainforest-check-category.mjs "Accessories" "Handbags & Totes"
 ```
+
+**Output:**
+- Summary of new, updated, and unchanged products
+- Details of what changed (price, sale status, etc.)
+- Interactive confirmation before applying changes
+- Credit usage report
+
+**Expected Runtime:** ~2-5 minutes per category check
 
 ---
 
@@ -157,92 +181,112 @@ hash = SHA256(
 
 ## Credit Cost Analysis
 
-### Initial Import Estimates
+### Phase 1: Initial Import (5,000 products)
 
-**Scenario 1: Optimized Search (2 credits/search)**
-- 22 categories
-- ~18 searches per category (at 50 products per search)
-- Total: 22 × 18 = 396 searches
-- **Estimated cost: 792+ credits** ❌ (exceeds 30-credit test budget significantly)
+**Budget:** 50 credits
 
-**Scenario 2: Aggressive Batching (1 search per category)**
-- 22 broad category searches
-- Get ~100-200 products per search
-- **Estimated cost: 22-44 credits** ✅ (feasible)
+**Calculation:**
+- 5,000 products ÷ 50 products per search = 100 searches needed
+- But we're only checking 3 pages per category = limited searches
+- Average: ~2-3 searches per category × 22 categories = ~50-60 searches
+- **Expected cost: 50-60 credits** ⚠️ (slightly over but close)
 
-### Weekly Maintenance Costs
+**Contingency:** If we hit budget limits, script will stop gracefully and report progress
 
-**Scenario: 20,000 products, re-check 1/7 per week**
-- Products to check: ~2,857 per week
-- Product endpoint cost: ~0.5 credits per ASIN
-- **Estimated weekly cost: ~1,400 credits** ❌ (too high if checking all weekly)
+### Phase 2: Full Population (remaining 15,000 products)
 
-**Recommended: Monthly full check instead**
-- Re-check 1/30 per month: ~667 products
-- Monthly cost: ~333 credits
-- **This is sustainable** ✅
+**Budget:** 100-150 credits
+
+**Calculation:**
+- Similar approach to Phase 1 but with more pages per category
+- Total needed: ~5-7 searches × 22 categories = ~110-154 searches
+- **Expected cost: 110-150 credits** ✅
+
+### On-Demand Category Checking
+
+**Cost per check:** ~3-5 credits per category (3 pages × 50 products)
+
+**Examples:**
+- Check 1 category: 3-5 credits
+- Check 5 categories: 15-25 credits
+- Check all 22 categories: ~66-110 credits
+
+**No recurring costs** - Only run checks when you need to
 
 ---
 
-## Execution Recommendations
+## Execution Path - Option B (Selected)
 
-### For Initial Import - Three Options:
+**Phase 1: Testing (5,000 products)**
+1. Run migration - Add tracking columns (0 credits)
+2. Run initial import with 5,000 target (50 credits budget)
+3. Validate data quality and completeness
+4. Run existing embedding scripts
+5. Test search functionality
 
-**Option A: Go Big (Recommended)**
-- Run initial import with 20,000 target
-- Accept higher credit cost (~100-150 credits)
-- Verify data quality
-- Then switch to monthly maintenance
-- **Cost:** 100-150 one-time + ~333/month maintenance
+**Phase 2: Full Population (15,000 more products)**
+1. After Phase 1 validation succeeds
+2. Adjust script to target remaining 15,000 products
+3. Run initial import again for full 20,000 total (100-150 credits)
+4. Re-run embedding scripts on new products
+5. Verify quality across all categories
 
-**Option B: Conservative Approach**
-- Start with 5,000 products (test first)
-- Validate import quality and embedding generation
-- Then scale to 20,000
-- **Cost:** 25-50 for test + 100-150 for full + 333/month
-
-**Option C: Smart Batching**
-- Use category-wide searches (1 per category)
-- Get ~100-200 products per category = ~2,200-4,400 total
-- Accept smaller initial dataset, grow weekly
-- **Cost:** ~22-44 initial + ~200/month growth
-
-### Recommended Path:
-
-1. **Run migration** - Execute `001-add-vendor-tracking-columns.sql` (0 credits)
-2. **Test import** - Run initial-import on 1-2 categories first (2-4 credits)
-3. **Validate results** - Check data quality, run existing embedding scripts
-4. **Full import** - Run for all categories (100-150 credits)
-5. **Set up weekly** - Configure cron/scheduled task for diff script (next Monday)
+**Ongoing Maintenance: On-Demand Checking**
+- No scheduled checks
+- Run `rainforest-check-category.mjs` when needed
+- Check specific categories showing stale data
+- Examples: price drift, new competitors, seasonal changes
+- Cost: 3-5 credits per category check
 
 ---
 
 ## Next Steps
 
-1. **Confirm credit budget allocation** - How many credits for initial import?
-2. **Run migration** - Apply database schema changes
-3. **Run initial import** - Populate 20,000 products
-4. **Generate embeddings** - Run existing text & image embedding scripts
-5. **Test search** - Verify quality of results
-6. **Schedule weekly diff** - Set up automated weekend maintenance
+### Immediate (Phase 1 - Ready Now)
+
+1. **Run migration** - Execute `001-add-vendor-tracking-columns.sql`
+   ```sql
+   -- Execute in Supabase SQL editor
+   ```
+
+2. **Run initial import** - Test with 5,000 products
+   ```bash
+   node scripts/rainforest-initial-import.mjs
+   ```
+   - Monitor for completion
+   - Report credit usage and product count
+
+3. **Generate embeddings** - Run your existing embedding scripts on imported products
+   ```bash
+   # Your existing text embedding script
+   # Your existing image embedding script
+   ```
+
+4. **Test search** - Verify semantic search quality
+
+### After Phase 1 Validation
+
+5. **Scale to 20,000** - Modify and re-run import with full target
+6. **Check categories as needed** - Use on-demand checker:
+   ```bash
+   node scripts/rainforest-check-category.mjs "Footwear" "Sneakers"
+   ```
 
 ---
 
 ## Files Created
 
 - ✅ `scripts/001-add-vendor-tracking-columns.sql` - Database migration
-- ✅ `scripts/rainforest-initial-import.mjs` - One-time product population
-- ✅ `scripts/rainforest-weekly-diff.mjs` - Weekly change detection
+- ✅ `scripts/rainforest-initial-import.mjs` - One-time product population (Phase 1: 5,000 target)
+- ✅ `scripts/rainforest-check-category.mjs` - On-demand category checker
 - ✅ `rainforest-weighting-analysis.json` - Category weighting data
 - ✅ `RAINFOREST_IMPORT_PLAN.md` - This document
 
 ---
 
-## Questions to Confirm
+## Ready to Execute?
 
-1. **Initial import approach?** (Option A, B, or C above)
-2. **Credit budget for initial import?** (Recommend 100-150)
-3. **When to start?** (Immediately or after testing?)
-4. **Re-check frequency?** (Weekly vs monthly after initial import)
-
-Ready to proceed when you give the go-ahead.
+All scripts are prepared. Ready to:
+1. Apply database migration
+2. Run Phase 1 import (5,000 products, 50 credit budget)
+3. Validate results before Phase 2
