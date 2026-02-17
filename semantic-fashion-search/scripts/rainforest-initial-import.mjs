@@ -86,8 +86,13 @@ async function makeRainforestRequest(params) {
 
 // Map Rainforest product to our DB schema
 function mapRainforestProduct(rainforestProduct, category, subcategory) {
-  const images = rainforestProduct.images || [];
-  const imageUrl = images[0] || null;
+  // Rainforest API uses 'image' (singular) for search results
+  const imageUrl = rainforestProduct.image || null;
+
+  // Skip products without images (database requires image_url to be non-null)
+  if (!imageUrl) {
+    return null;
+  }
 
   const description =
     rainforestProduct.description ||
@@ -99,27 +104,33 @@ function mapRainforestProduct(rainforestProduct, category, subcategory) {
   let saleEndDate = null;
   let isOnSale = false;
 
+  // Handle offers for sales/deals
   if (rainforestProduct.offers && rainforestProduct.offers.length > 0) {
     const offer = rainforestProduct.offers[0];
-    if (offer.price && parseFloat(offer.price) < parseFloat(rainforestProduct.price || offer.price)) {
+    const offerPrice = offer.price?.value || offer.price || null;
+    const currentPrice = rainforestProduct.price?.value || rainforestProduct.price || null;
+
+    if (offerPrice && currentPrice && parseFloat(offerPrice) < parseFloat(currentPrice)) {
       isOnSale = true;
-      salePrice = parseFloat(offer.price);
-      const originalPrice = parseFloat(rainforestProduct.price || offer.price);
+      salePrice = parseFloat(offerPrice);
+      const originalPrice = parseFloat(currentPrice);
       if (originalPrice > 0) {
         discountPercent = ((originalPrice - salePrice) / originalPrice) * 100;
       }
-      // Assuming sales are typically 7 days
       const saleEndDateObj = new Date();
       saleEndDateObj.setDate(saleEndDateObj.getDate() + 7);
       saleEndDate = saleEndDateObj.toISOString();
     }
   }
 
+  // Extract price from nested structure
+  const priceValue = rainforestProduct.price?.value || null;
+
   const product = {
     brand: rainforestProduct.brand || 'Unknown Brand',
     title: rainforestProduct.title || 'Untitled Product',
     description,
-    price: rainforestProduct.price ? parseFloat(rainforestProduct.price) : null,
+    price: priceValue ? parseFloat(priceValue) : null,
     currency: 'USD',
     image_url: imageUrl,
     product_url: rainforestProduct.link || rainforestProduct.url,
@@ -233,6 +244,12 @@ async function importCategory(category) {
 
         try {
           const mappedProduct = mapRainforestProduct(rainforestProduct, topLevel, subcategory);
+
+          // Skip if product mapping returned null (no image, etc)
+          if (!mappedProduct) {
+            continue;
+          }
+
           const result = await upsertProduct(mappedProduct);
 
           if (result.status !== 'skipped') {
