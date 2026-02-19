@@ -28,7 +28,8 @@ const analysisData = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'));
 const TOTAL_TARGET_PRODUCTS = 5000; // Phase 1: Test with 5,000 first
 const PRODUCTS_PER_SEARCH = 50; // Try to fetch ~50 products per category search
 const BATCH_SIZE = 100; // Insert/update in batches
-const CREDIT_BUDGET = 50; // Phase 1: Limited to 50 credits for testing
+const CREDIT_BUDGET = 140; // Phase 2: 22 probe credits + ~90 import + 28 buffer
+const FORCE_REIMPORT = process.argv.includes('--force');
 
 let creditsUsed = 0;
 let productsImported = 0;
@@ -203,6 +204,54 @@ async function upsertProduct(product) {
   }
 }
 
+// Check if a category was already imported by probing the first 10 valid products
+// against the DB. Costs 1 credit. Returns true if ≥7 of 10 URLs already exist.
+async function checkIfAlreadyImported(category) {
+  const { topLevel, subcategory } = category;
+  const categoryLabel = `${topLevel} ${subcategory}`.toLowerCase();
+
+  console.log(`   🔍 Probing DB for existing products...`);
+
+  const searchResult = await makeRainforestRequest({
+    type: 'search',
+    search_term: categoryLabel,
+    amazon_domain: 'amazon.com',
+    page: '1',
+  });
+
+  if (!searchResult.search_results || searchResult.search_results.length === 0) {
+    return { alreadyImported: false, matchCount: 0, probeSize: 0 };
+  }
+
+  // Collect first 10 valid product URLs (with images)
+  const probeUrls = [];
+  for (const p of searchResult.search_results) {
+    if (probeUrls.length >= 10) break;
+    if (!p.image) continue;
+    const url = p.link || p.url;
+    if (url) probeUrls.push(url);
+  }
+
+  if (probeUrls.length === 0) {
+    return { alreadyImported: false, matchCount: 0, probeSize: 0 };
+  }
+
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const { data: existing } = await supabase
+    .from('products')
+    .select('product_url')
+    .in('product_url', probeUrls);
+
+  const matchCount = existing ? existing.length : 0;
+  const alreadyImported = matchCount >= 7;
+
+  console.log(`   🔍 Probe: ${matchCount}/${probeUrls.length} products already in DB`);
+
+  return { alreadyImported, matchCount, probeSize: probeUrls.length };
+}
+
 // Fetch products for a single category
 async function importCategory(category) {
   const { topLevel, subcategory, productsPerThousand } = category;
@@ -210,7 +259,6 @@ async function importCategory(category) {
   // Calculate how many products to import for this category
   const targetCount = Math.round((productsPerThousand / 1000) * TOTAL_TARGET_PRODUCTS);
 
-  console.log(`\n📁 Category: ${topLevel} → ${subcategory}`);
   console.log(`   Target products: ${targetCount}`);
 
   const categoryLabel = `${topLevel} ${subcategory}`.toLowerCase();
@@ -239,6 +287,11 @@ async function importCategory(category) {
 
       const pageProducts = searchResult.search_results.slice(0, PRODUCTS_PER_SEARCH);
 
+      let pageApiCount = pageProducts.length;
+      let pageSkippedNoImage = 0;
+      let pageInserted = 0;
+      let pageSkippedExists = 0;
+
       for (const rainforestProduct of pageProducts) {
         if (productsCollected >= targetCount) break;
 
@@ -247,6 +300,7 @@ async function importCategory(category) {
 
           // Skip if product mapping returned null (no image, etc)
           if (!mappedProduct) {
+            pageSkippedNoImage++;
             continue;
           }
 
@@ -256,7 +310,10 @@ async function importCategory(category) {
             productsCollected++;
             if (result.status === 'inserted') {
               productsImported++;
+              pageInserted++;
             }
+          } else {
+            pageSkippedExists++;
           }
         } catch (error) {
           console.error(`      ❌ Failed to upsert product: ${error.message}`);
@@ -268,7 +325,7 @@ async function importCategory(category) {
       }
 
       pagesFetched++;
-      console.log(`   ✅ Page ${page} complete. Total collected: ${productsCollected}/${targetCount}`);
+      console.log(`   ✅ Page ${page} complete. API: ${pageApiCount} | No image: ${pageSkippedNoImage} | Inserted: ${pageInserted} | Already existed: ${pageSkippedExists} | Total: ${productsCollected}/${targetCount}`);
       console.log(`   Credits used: ${creditsUsed}`);
 
       // Rate limit between pages
@@ -288,7 +345,11 @@ async function importCategory(category) {
 async function main() {
   console.log('🚀 Rainforest Initial Product Import\n');
   console.log(`📋 Target: ${TOTAL_TARGET_PRODUCTS} products across ${analysisData.categories.length} categories`);
-  console.log(`💳 Credit budget: ${CREDIT_BUDGET}\n`);
+  console.log(`💳 Credit budget: ${CREDIT_BUDGET}`);
+  if (FORCE_REIMPORT) {
+    console.log(`⚠️  --force flag set: skipping duplicate probes, reimporting all categories`);
+  }
+  console.log('');
 
   console.log(`${'='.repeat(80)}`);
   console.log(`STARTING IMPORT`);
@@ -296,6 +357,7 @@ async function main() {
 
   const startTime = Date.now();
   let categoriesProcessed = 0;
+  let categoriesSkipped = 0;
 
   for (const category of analysisData.categories) {
     if (creditsUsed >= CREDIT_BUDGET) {
@@ -303,7 +365,20 @@ async function main() {
       break;
     }
 
+    console.log(`\n📁 Category: ${category.topLevel} → ${category.subcategory}`);
+
     try {
+      // Probe DB to check if category was already imported (skippable with --force)
+      if (!FORCE_REIMPORT) {
+        const probe = await checkIfAlreadyImported(category);
+        if (probe.alreadyImported) {
+          console.log(`   ⏭️  Skipping: ${probe.matchCount}/${probe.probeSize} products already in DB. Use --force to reimport.`);
+          categoriesSkipped++;
+          await sleep(300);
+          continue;
+        }
+      }
+
       await importCategory(category);
       categoriesProcessed++;
     } catch (error) {
@@ -322,6 +397,7 @@ async function main() {
   console.log(`IMPORT COMPLETE`);
   console.log(`${'='.repeat(80)}`);
   console.log(`Categories processed: ${categoriesProcessed}/${analysisData.categories.length}`);
+  console.log(`Categories skipped (already imported): ${categoriesSkipped}`);
   console.log(`Products imported: ${productsImported}`);
   console.log(`Products failed: ${productsFailed}`);
   console.log(`Total time: ${duration}s`);

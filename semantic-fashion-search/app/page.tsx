@@ -17,7 +17,7 @@ import { usePersistentRatings } from '@/src/hooks/usePersistentRatings';
 import type { Product, ParsedIntent } from '@/types';
 
 const EXAMPLE_SEARCHES = [
-  'Sinky black dress for date night',
+  'Slinky black dress for date night',
   'Casual summer brunch outfit',
   'Business casual blazer',
 ];
