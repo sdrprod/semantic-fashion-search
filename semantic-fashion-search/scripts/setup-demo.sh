@@ -39,7 +39,8 @@ if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
 fi
 
 if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-  export SUPABASE_SERVICE_ROLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5bHVpY2x1b2R0YWJldWZyYWpkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzA2NDY5NiwiZXhwIjoyMDc4NjQwNjk2fQ.QeCXRvuKQGE23Ywl1pXGoEMnTB9DAMDE4GSqn2PtPig'
+  echo "ERROR: SUPABASE_SERVICE_ROLE_KEY is not set. Export it before running this script."
+  exit 1
 fi
 
 node scripts/create-and-populate-demo.mjs
