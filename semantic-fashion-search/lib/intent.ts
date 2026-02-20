@@ -1,6 +1,62 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { ParsedIntent, SearchQuery } from '@/types';
 
+export type SearchMode = 'auto' | 'hybrid' | 'vector';
+
+export interface SearchModeResult {
+  useHybrid: boolean;
+  vectorWeight: number;
+  textWeight: number;
+}
+
+/**
+ * Classify a query to determine the optimal search routing.
+ * In 'auto' mode, detects brand signals and attribute stacking to decide weights.
+ * In 'hybrid' mode, uses the admin-configured weights for all queries.
+ * In 'vector' mode, bypasses text search entirely.
+ */
+export function classifySearchMode(
+  query: string,
+  adminMode: SearchMode,
+  adminVectorWeight: number,
+  adminTextWeight: number
+): SearchModeResult {
+  if (adminMode === 'vector') {
+    return { useHybrid: false, vectorWeight: 1.0, textWeight: 0.0 };
+  }
+
+  if (adminMode === 'hybrid') {
+    return { useHybrid: true, vectorWeight: adminVectorWeight, textWeight: adminTextWeight };
+  }
+
+  // auto mode: analyze the query to determine best weighting
+  // Brand signal: two or more consecutive Title Case words (e.g. "Eileen Fisher", "Pleats Please Issey Miyake")
+  const brandPattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/;
+  const hasBrand = brandPattern.test(query);
+
+  // Specificity signal: material, construction, or garment-part terms stacked
+  const specificTerms = [
+    /\bcotton\b/i, /\bsilk\b/i, /\blinen\b/i, /\bwool\b/i, /\bcashmere\b/i,
+    /\bnylon\b/i, /\bpolyester\b/i, /\bsatin\b/i, /\bvelvet\b/i, /\bdenim\b/i,
+    /\bneck\b/i, /\bsleeve\b/i, /\bwaist\b/i, /\bheel\b/i, /\btoe\b/i,
+    /\bpleated\b/i, /\bflared\b/i, /\bfitted\b/i, /\boversize\b/i, /\bcropped\b/i,
+  ];
+  const specificityScore = specificTerms.filter(t => t.test(query)).length;
+
+  if (hasBrand) {
+    // Brand query: text search dominant to surface exact brand matches
+    return { useHybrid: true, vectorWeight: 0.35, textWeight: 0.65 };
+  }
+
+  if (specificityScore >= 2) {
+    // Attribute-stacked query: balanced split
+    return { useHybrid: true, vectorWeight: 0.5, textWeight: 0.5 };
+  }
+
+  // Pure style/aesthetic query: vector only to avoid noise from FTS
+  return { useHybrid: false, vectorWeight: 1.0, textWeight: 0.0 };
+}
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });

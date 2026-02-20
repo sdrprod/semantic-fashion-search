@@ -1,6 +1,7 @@
 import { getSupabaseClient, ProductRow } from './supabase';
 import { generateEmbedding, generateEmbeddings } from './embeddings';
-import { extractIntent, isSimpleQuery, createSimpleIntent } from './intent';
+import { extractIntent, isSimpleQuery, createSimpleIntent, classifySearchMode } from './intent';
+import type { SearchMode } from './intent';
 import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision-embeddings-api';
 import { rerankWithVision, shouldUseVisionReranking } from './vision-reranking';
 import type { Product, SearchResponse, ParsedIntent, SearchQuery } from '@/types';
@@ -11,6 +12,9 @@ interface QualityFilterSettings {
   enableMensFilter: boolean;
   enablePriceFilter: boolean;
   enableNonApparelFilter: boolean;
+  searchMode: SearchMode;
+  hybridVectorWeight: number;
+  hybridTextWeight: number;
 }
 
 // Database row type for search_settings
@@ -19,6 +23,9 @@ interface SearchSettingsRow {
   enable_mens_filter: boolean;
   enable_price_filter: boolean;
   enable_non_apparel_filter: boolean;
+  search_mode: SearchMode | null;
+  hybrid_vector_weight: number | null;
+  hybrid_text_weight: number | null;
 }
 
 let cachedSettings: QualityFilterSettings | null = null;
@@ -38,18 +45,20 @@ async function getQualityFilterSettings(): Promise<QualityFilterSettings> {
     const supabase = getSupabaseClient(true);
     const { data, error } = await supabase
       .from('search_settings')
-      .select('min_price_threshold, enable_mens_filter, enable_price_filter, enable_non_apparel_filter')
+      .select('min_price_threshold, enable_mens_filter, enable_price_filter, enable_non_apparel_filter, search_mode, hybrid_vector_weight, hybrid_text_weight')
       .eq('id', '00000000-0000-0000-0000-000000000001')
       .single<SearchSettingsRow>();
 
     if (error) {
       console.error('[getQualityFilterSettings] Database error:', error);
-      // Return defaults if settings don't exist
       return {
         minPriceThreshold: 5.00,
         enableMensFilter: true,
         enablePriceFilter: true,
         enableNonApparelFilter: true,
+        searchMode: 'auto',
+        hybridVectorWeight: 0.60,
+        hybridTextWeight: 0.40,
       };
     }
 
@@ -60,6 +69,9 @@ async function getQualityFilterSettings(): Promise<QualityFilterSettings> {
         enableMensFilter: true,
         enablePriceFilter: true,
         enableNonApparelFilter: true,
+        searchMode: 'auto',
+        hybridVectorWeight: 0.60,
+        hybridTextWeight: 0.40,
       };
     }
 
@@ -68,18 +80,23 @@ async function getQualityFilterSettings(): Promise<QualityFilterSettings> {
       enableMensFilter: data.enable_mens_filter,
       enablePriceFilter: data.enable_price_filter,
       enableNonApparelFilter: data.enable_non_apparel_filter,
+      searchMode: data.search_mode ?? 'auto',
+      hybridVectorWeight: data.hybrid_vector_weight ?? 0.60,
+      hybridTextWeight: data.hybrid_text_weight ?? 0.40,
     };
     settingsCacheTime = Date.now();
 
     return cachedSettings;
   } catch (error) {
     console.error('[getQualityFilterSettings] Error fetching settings:', error);
-    // Return defaults on error
     return {
       minPriceThreshold: 5.00,
       enableMensFilter: true,
       enablePriceFilter: true,
       enableNonApparelFilter: true,
+      searchMode: 'auto' as SearchMode,
+      hybridVectorWeight: 0.60,
+      hybridTextWeight: 0.40,
     };
   }
 }
@@ -1108,18 +1125,32 @@ async function executeMultiSearch(
     // Cap at 200 to ensure <2 second query time (target: fast initial load)
     const fetchLimit = Math.min(Math.ceil(limit * searchQuery.weight * 1.5), 200);
 
-    console.log(`[executeMultiSearch] Calling match_products for "${searchQuery.query}" with limit ${fetchLimit}`);
-    console.log(`[executeMultiSearch] Text embedding sample for "${searchQuery.query}":`, textEmbedding?.slice(0, 5));
+    const searchModeResult = classifySearchMode(
+      searchQuery.query,
+      qualitySettings.searchMode,
+      qualitySettings.hybridVectorWeight,
+      qualitySettings.hybridTextWeight
+    );
+
+    console.log(`[executeMultiSearch] "${searchQuery.query}" → mode=${qualitySettings.searchMode} useHybrid=${searchModeResult.useHybrid} vw=${searchModeResult.vectorWeight} tw=${searchModeResult.textWeight}`);
+    console.log(`[executeMultiSearch] Calling ${searchModeResult.useHybrid ? 'hybrid_match_products' : 'match_products'} for "${searchQuery.query}" with limit ${fetchLimit}`);
 
     let data: any[] = [];
 
     try {
-      // Pass embedding array directly - PostgreSQL will convert to vector
-      const result = await supabase.rpc('match_products', {
-        query_embedding: textEmbedding,
-        match_count: fetchLimit,
-        filter_gender: 'exclude_men',
-      });
+      const result = searchModeResult.useHybrid
+        ? await supabase.rpc('hybrid_match_products', {
+            query_embedding: textEmbedding,
+            query_text: searchQuery.query,
+            match_count: fetchLimit,
+            vector_weight: searchModeResult.vectorWeight,
+            text_weight: searchModeResult.textWeight,
+          })
+        : await supabase.rpc('match_products', {
+            query_embedding: textEmbedding,
+            match_count: fetchLimit,
+            filter_gender: 'exclude_men',
+          });
 
       if (result.error) {
         console.error(`[executeMultiSearch] RPC error for "${searchQuery.query}":`, {

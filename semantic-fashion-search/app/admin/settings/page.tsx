@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+type SearchMode = 'auto' | 'hybrid' | 'vector';
+
 interface SearchSettings {
   similarityThreshold: number;
   diversityFactor: number;
@@ -16,6 +18,17 @@ interface SearchSettings {
   enableMensFilter: boolean;
   enablePriceFilter: boolean;
   enableNonApparelFilter: boolean;
+  searchMode: SearchMode;
+  hybridVectorWeight: number;
+  hybridTextWeight: number;
+}
+
+function Tooltip({ text }: { text: string }) {
+  return (
+    <span className="tooltip-icon" data-tooltip={text} aria-label="More info">
+      ?
+    </span>
+  );
 }
 
 export default function SettingsPage() {
@@ -32,6 +45,9 @@ export default function SettingsPage() {
     enableMensFilter: true,
     enablePriceFilter: true,
     enableNonApparelFilter: true,
+    searchMode: 'auto',
+    hybridVectorWeight: 0.60,
+    hybridTextWeight: 0.40,
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -126,6 +142,77 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Search Mode */}
+      <div className="admin-card">
+        <h2 className="admin-card-title">
+          Search Mode
+          <Tooltip text={'Auto: analyzes each query and adjusts vector vs. text weighting dynamically — brand names get more text weight, style queries get more vector weight.\n\nHybrid: applies your fixed slider split to every query. Good for testing.\n\nVector Only: disables text search entirely. Matches the previous behavior.'} />
+        </h2>
+        <p className="admin-card-description">
+          Control whether search uses semantic (vector) matching, exact text matching, or an intelligent blend of both.
+        </p>
+
+        <div className="form-group">
+          <div className="search-mode-group">
+            {([
+              { value: 'auto', name: 'Auto', desc: 'Recommended' },
+              { value: 'hybrid', name: 'Hybrid', desc: 'Fixed split' },
+              { value: 'vector', name: 'Vector Only', desc: 'Previous behavior' },
+            ] as { value: SearchMode; name: string; desc: string }[]).map(({ value, name, desc }) => (
+              <div className="search-mode-option" key={value}>
+                <input
+                  type="radio"
+                  id={`mode-${value}`}
+                  name="searchMode"
+                  value={value}
+                  checked={settings.searchMode === value}
+                  onChange={() => setSettings({ ...settings, searchMode: value })}
+                />
+                <label htmlFor={`mode-${value}`}>
+                  <span className="mode-name">{name}</span>
+                  <span className="mode-desc">{desc}</span>
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="form-group" style={{ opacity: settings.searchMode === 'vector' ? 0.4 : 1, pointerEvents: settings.searchMode === 'vector' ? 'none' : 'auto' }}>
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center' }}>
+            Search Weighting
+            <Tooltip text={'Controls the balance between exact text matching and semantic meaning-based matching.\n\nSlide toward Text for more exact matches (brand names, product titles).\n\nSlide toward Semantic for more conceptual matches (styles, occasions, aesthetics).\n\nIn Auto mode, this sets the default — individual queries may override it.'} />
+          </label>
+          <div className="weight-slider-labels">
+            <span>← More Semantic</span>
+            <span>More Exact Match →</span>
+          </div>
+          <input
+            type="range"
+            className="form-slider"
+            min="0"
+            max="1"
+            step="0.05"
+            value={1 - settings.hybridVectorWeight}
+            onChange={(e) => {
+              const textWeight = parseFloat(e.target.value);
+              setSettings({
+                ...settings,
+                hybridVectorWeight: parseFloat((1 - textWeight).toFixed(2)),
+                hybridTextWeight: parseFloat(textWeight.toFixed(2)),
+              });
+            }}
+          />
+          <div className="weight-slider-values">
+            <span className="weight-value-vector">Semantic {Math.round(settings.hybridVectorWeight * 100)}%</span>
+            <span className="weight-value-text">Text {Math.round(settings.hybridTextWeight * 100)}%</span>
+          </div>
+          <p className="form-help">
+            Default: 60% semantic / 40% text. In Auto mode, queries with brand names automatically shift toward text.
+          </p>
+        </div>
+      </div>
+
+      {/* Similarity & Ranking */}
       <div className="admin-card">
         <h2 className="admin-card-title">Similarity & Ranking</h2>
         <p className="admin-card-description">
@@ -133,9 +220,10 @@ export default function SettingsPage() {
         </p>
 
         <div className="form-group">
-          <label className="form-label">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center' }}>
             Similarity Threshold
-            <span className="slider-value">{settings.similarityThreshold.toFixed(2)}</span>
+            <Tooltip text={'Minimum match score for a product to appear in results. Lower values show more results but reduce relevance. Higher values show fewer, more precise results.\n\nDefault: 0.30'} />
+            <span className="slider-value" style={{ marginLeft: 'auto' }}>{settings.similarityThreshold.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -154,9 +242,10 @@ export default function SettingsPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center' }}>
             Diversity Factor
-            <span className="slider-value">{settings.diversityFactor.toFixed(2)}</span>
+            <Tooltip text={'How aggressively to limit repeat brands in results. Higher values push the system to show a wider variety of brands.\n\nDefault: 0.10'} />
+            <span className="slider-value" style={{ marginLeft: 'auto' }}>{settings.diversityFactor.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -210,16 +299,19 @@ export default function SettingsPage() {
       </div>
 
       <div className="admin-card">
-        <h2 className="admin-card-title">Category Weights</h2>
+        <h2 className="admin-card-title">
+          Category Weights
+          <Tooltip text={'Boost or reduce how often this category appears in mixed search results. 1.0x is neutral.\n\nDoes not affect searches explicitly for this category.'} />
+        </h2>
         <p className="admin-card-description">
           Boost or reduce the prominence of specific product categories in search results.
         </p>
 
         {['dress', 'shoes', 'bags', 'tops', 'bottoms', 'accessories'].map((category) => (
           <div className="form-group" key={category}>
-            <label className="form-label">
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center' }}>
               {category.charAt(0).toUpperCase() + category.slice(1)}
-              <span className="slider-value">
+              <span className="slider-value" style={{ marginLeft: 'auto' }}>
                 {(settings.categoryWeights[category] || 1).toFixed(1)}x
               </span>
             </label>
@@ -251,9 +343,10 @@ export default function SettingsPage() {
         </p>
 
         <div className="form-group">
-          <label className="form-label">
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center' }}>
             Minimum Price Threshold
-            <span className="slider-value">${settings.minPriceThreshold.toFixed(2)}</span>
+            <Tooltip text={'Products below this price are filtered from results. Helps eliminate low-quality listings.\n\nDefault: $5.00'} />
+            <span className="slider-value" style={{ marginLeft: 'auto' }}>${settings.minPriceThreshold.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -282,6 +375,7 @@ export default function SettingsPage() {
               style={{ width: 'auto' }}
             />
             Enable Price Filter
+            <Tooltip text={'Toggle off to disable the minimum price filter entirely. Useful for testing or if sourcing lower price-point inventory.'} />
           </label>
           <p className="form-help">
             When enabled, products below the minimum price threshold will be hidden.
@@ -298,7 +392,8 @@ export default function SettingsPage() {
               }
               style={{ width: 'auto' }}
             />
-            Filter Men's Products
+            Filter Men&apos;s Products
+            <Tooltip text={"Hides products explicitly marketed for men. Items marked unisex are always shown.\n\nToggle off if your catalog includes men's products."} />
           </label>
           <p className="form-help">
             When enabled, products explicitly marketed for men will be hidden. Unisex items are always shown.
@@ -316,6 +411,7 @@ export default function SettingsPage() {
               style={{ width: 'auto' }}
             />
             Filter Non-Apparel Materials
+            <Tooltip text={'Hides raw fabrics, upholstery materials, and crafting supplies that appear in fashion category feeds.\n\nToggle off with caution — fashion accessories (bags, belts) are always shown regardless.'} />
           </label>
           <p className="form-help">
             When enabled, raw fabrics, upholstery, and DIY materials will be hidden. Fashion accessories like bags and belts are always shown.

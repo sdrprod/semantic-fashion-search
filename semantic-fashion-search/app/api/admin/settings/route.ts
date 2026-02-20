@@ -15,6 +15,9 @@ interface SearchSettingsRow {
   enable_mens_filter: boolean;
   enable_price_filter: boolean;
   enable_non_apparel_filter: boolean;
+  search_mode: 'auto' | 'hybrid' | 'vector' | null;
+  hybrid_vector_weight: number | null;
+  hybrid_text_weight: number | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -50,6 +53,9 @@ export async function GET() {
         enableMensFilter: true,
         enablePriceFilter: true,
         enableNonApparelFilter: true,
+        searchMode: 'auto',
+        hybridVectorWeight: 0.60,
+        hybridTextWeight: 0.40,
       });
     }
 
@@ -64,6 +70,9 @@ export async function GET() {
       enableMensFilter: data.enable_mens_filter,
       enablePriceFilter: data.enable_price_filter,
       enableNonApparelFilter: data.enable_non_apparel_filter,
+      searchMode: data.search_mode ?? 'auto',
+      hybridVectorWeight: data.hybrid_vector_weight ?? 0.60,
+      hybridTextWeight: data.hybrid_text_weight ?? 0.40,
     });
   } catch (err) {
     console.error('Settings fetch error:', err);
@@ -106,6 +115,9 @@ export async function PUT(request: NextRequest) {
       enableMensFilter,
       enablePriceFilter,
       enableNonApparelFilter,
+      searchMode,
+      hybridVectorWeight,
+      hybridTextWeight,
     } = body;
 
     const supabase = getSupabaseClient(true);
@@ -138,6 +150,9 @@ export async function PUT(request: NextRequest) {
         enable_mens_filter: enableMensFilter,
         enable_price_filter: enablePriceFilter,
         enable_non_apparel_filter: enableNonApparelFilter,
+        search_mode: searchMode,
+        hybrid_vector_weight: hybridVectorWeight,
+        hybrid_text_weight: hybridTextWeight,
         updated_at: new Date().toISOString(),
         updated_by: userId,
       } as any);

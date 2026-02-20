@@ -311,6 +311,132 @@
   color: #1e40af;
 }
 
+/* Tooltips */
+.tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #94a3b8;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  cursor: help;
+  position: relative;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.tooltip-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  max-width: 260px;
+  width: max-content;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 50;
+  text-align: left;
+}
+
+.tooltip-icon:hover::after {
+  opacity: 1;
+}
+
+/* Search Mode Selector */
+.search-mode-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.search-mode-option {
+  flex: 1;
+  position: relative;
+}
+
+.search-mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.search-mode-option label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #475569;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.search-mode-option label:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.search-mode-option input[type="radio"]:checked + label {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.search-mode-option .mode-name {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.search-mode-option .mode-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.search-mode-option input[type="radio"]:checked + label .mode-desc {
+  color: #60a5fa;
+}
+
+/* Weight slider dual-label */
+.weight-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.weight-slider-values {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+}
+
+.weight-value-vector { color: #3b82f6; }
+.weight-value-text { color: #8b5cf6; }
+
 /* Responsive */
 @media (max-width: 768px) {
   .admin-container {
