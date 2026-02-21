@@ -3,16 +3,19 @@ import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import type { Product } from '@/types';
 import { StarRating } from '@/components/StarRating';
+import { FeedbackPopover } from '@/components/FeedbackPopover';
 
 interface ProductCardProps {
   product: Product;
   sessionRatings?: {
     getRating: (productId: string) => number;
     rate: (productId: string, rating: number) => void;
+    saveFeedback: (productId: string, text: string) => void;
   };
   persistentRatings?: {
     getRating: (productId: string) => number;
     rate: (productId: string, rating: number) => void;
+    saveFeedback: (productId: string, text: string) => void;
   };
 }
 
@@ -28,6 +31,7 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
   const [imageError, setImageError] = useState(false);
   const [stats, setStats] = useState<RatingStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Decode common HTML entities safely
   const decodeHtmlEntities = (text: string): string => {
@@ -128,6 +132,25 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
       // Anonymous user - save to sessionStorage
       sessionRatings?.rate(product.id, rating);
     }
+
+    // Show feedback popover for low ratings (1-2 stars)
+    if (rating <= 2) {
+      setShowFeedback(true);
+    } else {
+      setShowFeedback(false);
+    }
+  };
+
+  // Handle feedback submission from the popover
+  const handleFeedbackSubmit = (text: string) => {
+    if (text.trim()) {
+      if (session?.user?.id) {
+        persistentRatings?.saveFeedback(product.id, text.trim());
+      } else {
+        sessionRatings?.saveFeedback(product.id, text.trim());
+      }
+    }
+    setShowFeedback(false);
   };
 
   return (
@@ -173,6 +196,14 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
               onRate={handleRate}
               size={20}
             />
+
+            {/* Low-rating feedback popover */}
+            {showFeedback && (
+              <FeedbackPopover
+                onSubmit={handleFeedbackSubmit}
+                onDismiss={() => setShowFeedback(false)}
+              />
+            )}
 
             {/* Community Stats */}
             {stats && stats.totalRatings >= 5 && (

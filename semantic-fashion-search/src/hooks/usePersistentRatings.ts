@@ -173,6 +173,33 @@ export function usePersistentRatings({
     return Object.keys(ratings);
   }, [ratings]);
 
+  // Save free-text feedback for a product (upserts alongside existing rating)
+  const saveFeedback = useCallback(
+    async (productId: string, feedbackText: string) => {
+      if (!userId) {
+        console.warn('Cannot save feedback: user not authenticated');
+        return false;
+      }
+
+      try {
+        const response = await fetch('/api/ratings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId,
+            rating: ratings[productId], // preserve existing rating
+            feedbackText,
+          }),
+        });
+        return response.ok;
+      } catch (err) {
+        console.error('Network error saving feedback:', err);
+        return false;
+      }
+    },
+    [userId, ratings]
+  );
+
   return {
     ratings,
     isLoaded,
@@ -183,6 +210,7 @@ export function usePersistentRatings({
     hasRating,
     clearRating,
     getRatedProductIds,
+    saveFeedback,
     refetch: fetchRatings,
   };
 }

@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id;
     const body = await request.json();
-    const { productId, rating } = body;
+    const { productId, rating, feedbackText } = body;
 
-    console.log('[Ratings API] Rating params:', { userId, productId, rating });
+    console.log('[Ratings API] Rating params:', { userId, productId, rating, hasFeedback: !!feedbackText });
 
     // Validate product ID
     if (!productId || typeof productId !== 'string' || productId.trim().length === 0) {
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate rating (1-5)
+    // Validate rating (1-5) — required
     if (
       typeof rating !== 'number' ||
       rating < 1 ||
@@ -50,6 +50,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Validate feedbackText if provided
+    const cleanedFeedback =
+      typeof feedbackText === 'string' && feedbackText.trim().length > 0
+        ? feedbackText.trim().slice(0, 500)
+        : null;
 
     // Get Supabase client (server-side with service role)
     const supabase = getSupabaseClient(true);
@@ -64,6 +70,7 @@ export async function POST(request: NextRequest) {
           user_id: userId,
           product_id: productId.trim(),
           rating: rating,
+          ...(cleanedFeedback !== null && { feedback_text: cleanedFeedback }),
           updated_at: new Date().toISOString(),
         },
         {

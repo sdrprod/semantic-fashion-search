@@ -112,6 +112,18 @@ export function useSessionRatings() {
     [getRating]
   );
 
+  // Save free-text feedback for a product (stored separately in sessionStorage)
+  const saveFeedback = useCallback((productId: string, text: string) => {
+    try {
+      const stored = sessionStorage.getItem('session_feedback');
+      const feedbacks: Record<string, string> = stored ? JSON.parse(stored) : {};
+      feedbacks[productId] = text;
+      sessionStorage.setItem('session_feedback', JSON.stringify(feedbacks));
+    } catch (err) {
+      console.error('Failed to save session feedback:', err);
+    }
+  }, []);
+
   // Get personal boost for a product (for search ranking)
   const getPersonalBoost = useCallback(
     (productId: string): number => {
@@ -141,5 +153,6 @@ export function useSessionRatings() {
     getRatedProductIds,
     shouldShowProduct,
     getPersonalBoost,
+    saveFeedback,
   };
 }

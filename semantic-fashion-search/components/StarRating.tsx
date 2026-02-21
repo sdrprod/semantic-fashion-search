@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface StarRatingProps {
   /** Current rating (1-5, or 0 for unrated) */
@@ -38,8 +38,16 @@ export function StarRating({
   halfStars = false, // Future feature
 }: StarRatingProps) {
   const [hoverRating, setHoverRating] = useState<number | null>(null);
+  // Track the last clicked rating locally so the UI doesn't flash to 0
+  // while waiting for the parent to propagate the updated rating prop.
+  const [confirmedRating, setConfirmedRating] = useState(rating);
 
-  const displayRating = hoverRating !== null ? hoverRating : rating;
+  // Sync confirmedRating when the parent prop changes (e.g., loaded from DB)
+  useEffect(() => {
+    setConfirmedRating(rating);
+  }, [rating]);
+
+  const displayRating = hoverRating !== null ? hoverRating : confirmedRating;
   const totalStars = 5;
 
   // Relevance label per star level
@@ -53,9 +61,9 @@ export function StarRating({
 
   const handleClick = (starIndex: number) => {
     if (readonly || !onRate) return;
-
-    // In MVP: whole stars only (1-5)
-    // Future: half-star support by checking click position
+    // Update confirmed rating immediately so the UI doesn't flash while
+    // the parent re-renders with the new rating prop.
+    setConfirmedRating(starIndex);
     onRate(starIndex);
   };
 
@@ -133,8 +141,8 @@ export function StarRating({
         <span className="text-xs text-gray-400 ml-1">
           {hoverRating !== null
             ? RELEVANCE_LABELS[hoverRating]
-            : rating > 0
-              ? RELEVANCE_LABELS[rating]
+            : confirmedRating > 0
+              ? RELEVANCE_LABELS[confirmedRating]
               : 'Rate relevance'}
         </span>
       )}
