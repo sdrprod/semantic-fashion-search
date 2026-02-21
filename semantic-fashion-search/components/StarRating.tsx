@@ -59,11 +59,17 @@ export function StarRating({
     5: 'Excellent match',
   };
 
+  // onMouseDown fires BEFORE any mouseleave can fire on mouse-button release,
+  // so we lock in confirmedRating here. onClick also sets it to cover keyboard
+  // activation (Enter/Space), which doesn't trigger mousedown.
+  const handleMouseDown = (starIndex: number) => {
+    if (readonly || !onRate) return;
+    setConfirmedRating(starIndex);
+  };
+
   const handleClick = (starIndex: number) => {
     if (readonly || !onRate) return;
-    // Update confirmed rating immediately so the UI doesn't flash while
-    // the parent re-renders with the new rating prop.
-    setConfirmedRating(starIndex);
+    setConfirmedRating(starIndex); // covers keyboard clicks (no mousedown)
     onRate(starIndex);
   };
 
@@ -92,6 +98,7 @@ export function StarRating({
             <button
               key={starIndex}
               type="button"
+              onMouseDown={() => handleMouseDown(starIndex)}
               onClick={() => handleClick(starIndex)}
               onMouseEnter={() => handleMouseEnter(starIndex)}
               disabled={readonly || !onRate}
@@ -110,15 +117,12 @@ export function StarRating({
                 fill={isFilled ? 'currentColor' : 'none'}
                 stroke="currentColor"
                 strokeWidth={1.5}
-                className={`
-                  transition-colors duration-150
-                  ${isFilled
-                    ? hoverRating !== null
-                      ? 'text-yellow-400'
-                      : 'text-yellow-500'
-                    : 'text-gray-300'
-                  }
-                `}
+                style={{
+                  color: isFilled
+                    ? (hoverRating !== null ? '#FACC15' : '#EAB308')
+                    : '#D1D5DB',
+                  transition: 'color 0.15s',
+                }}
               >
                 <path
                   strokeLinecap="round"
