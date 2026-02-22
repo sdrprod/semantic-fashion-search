@@ -31,6 +31,35 @@ const BATCH_SIZE = 100; // Insert/update in batches
 const CREDIT_BUDGET = 200; // Phase 3: Incremental import (no probe waste)
 const MIN_PRODUCTS_PER_CATEGORY = 50; // Floor: every category must have at least 50 products
 
+// Multiple search terms per category.
+// Amazon tops out at ~7-10 pages per query. When we already have 300+ products
+// from the first term, we start at page 7+ and get nothing. Using varied terms
+// starting from page 1 each time gets us fresh products; upsert handles dupes.
+const CATEGORY_SEARCH_TERMS = {
+  'Sneakers':        ["women's sneakers", "casual sneakers women", "fashion sneakers", "platform sneakers women", "athletic sneakers women"],
+  'Dresses':         ["women's casual dresses", "formal dresses women", "summer dresses", "party dresses women", "maxi dresses women"],
+  'Pants & Jeans':   ["women's jeans", "women's dress pants", "skinny jeans women", "wide leg pants women", "high waist pants women"],
+  'Boots':           ["women's ankle boots", "knee high boots women", "fashion boots", "combat boots women", "heeled boots women"],
+  'Activewear':      ["women's yoga pants", "athletic wear women", "workout clothes women", "gym leggings women", "sports bra set women"],
+  'Heels':           ["women's high heels", "stiletto heels women", "block heels women", "platform heels women", "kitten heels women"],
+  'Tops & Blouses':  ["women's blouses", "women's fashion tops", "flowy tops women", "satin blouses women", "casual tops women"],
+  'Handbags & Totes':["women's handbags", "tote bags women", "shoulder bags women", "crossbody bags women", "hobo bags women"],
+  'Sunglasses':      ["women's sunglasses", "oversized sunglasses women", "cat eye sunglasses", "aviator sunglasses women", "retro sunglasses women"],
+  'Earrings':        ["women's earrings", "hoop earrings women", "statement earrings", "gold earrings women", "drop earrings women"],
+  'Outerwear':       ["women's winter coats", "women's blazers", "fashion jackets women", "trench coats women", "puffer coats women"],
+  'Sandals':         ["women's sandals", "flat sandals women", "heeled sandals women", "strappy sandals", "slide sandals women"],
+  'Necklaces':       ["women's necklaces", "pendant necklaces women", "gold necklaces women", "layered necklaces", "statement necklaces women"],
+  'Skirts':          ["women's midi skirts", "mini skirts women", "maxi skirts women", "floral skirts women", "pencil skirts women"],
+  'Bracelets':       ["women's bracelets", "bangle bracelets women", "charm bracelets women", "gold bracelets women", "cuff bracelets women"],
+  'Rings':           ["women's fashion rings", "stackable rings women", "statement rings women", "gold rings women", "cocktail rings women"],
+  'Swimwear':        ["women's swimsuits", "bikinis women", "one piece swimsuit women", "tankini women", "high waist bikini women"],
+  'Hats & Caps':     ["women's sun hats", "baseball caps women", "bucket hats women", "wide brim hats women", "fashion beanies women"],
+  'Flats & Loafers': ["women's ballet flats", "loafers women", "slip on flats women", "pointed toe flats women", "mule flats women"],
+  'Jewelry Sets':    ["women's jewelry sets", "necklace earring set women", "gold jewelry set women", "bridal jewelry set", "fashion jewelry set"],
+  'Scarves & Wraps': ["women's scarves", "silk scarves women", "infinity scarves women", "pashmina wraps women", "fashion wraps women"],
+  'Belts':           ["women's leather belts", "fashion belts women", "waist belts women", "skinny belts women", "wide belts women"],
+};
+
 let creditsUsed = 0;
 let productsImported = 0;
 let productsFailed = 0;
@@ -219,17 +248,55 @@ async function getExistingCount(subcategory) {
   return count || 0;
 }
 
-// Fetch products for a single category (incremental — starts from where we left off)
+// Fetch one page of results for a given search term and upsert them.
+// Returns { inserted, skipped, noImage, exhausted }
+// exhausted = true when the page had zero API results (term is tapped out).
+async function fetchPage(searchTerm, page, topLevel, subcategory, stillNeed, runningCollected) {
+  const searchResult = await makeRainforestRequest({
+    type: 'search',
+    search_term: searchTerm,
+    amazon_domain: 'amazon.com',
+    page: page.toString(),
+  });
+
+  if (!searchResult.search_results || searchResult.search_results.length === 0) {
+    return { inserted: 0, skipped: 0, noImage: 0, exhausted: true };
+  }
+
+  const pageProducts = searchResult.search_results.slice(0, PRODUCTS_PER_SEARCH);
+  let inserted = 0, skipped = 0, noImage = 0;
+
+  for (const rainforestProduct of pageProducts) {
+    if (runningCollected + inserted >= stillNeed) break;
+    try {
+      const mappedProduct = mapRainforestProduct(rainforestProduct, topLevel, subcategory);
+      if (!mappedProduct) { noImage++; continue; }
+      const result = await upsertProduct(mappedProduct);
+      if (result.status === 'inserted') { productsImported++; inserted++; }
+      else if (result.status === 'updated') { inserted++; }
+      else { skipped++; }
+    } catch (error) {
+      console.error(`      ❌ Failed to upsert: ${error.message}`);
+      productsFailed++;
+    }
+    await sleep(100);
+  }
+
+  return { inserted, skipped, noImage, exhausted: false };
+}
+
+// Fetch products for a single category.
+// Cycles through multiple search terms (each starting at page 1) so we always
+// stay within Amazon's ~7-10 page limit per query instead of asking for page 14+.
 async function importCategory(category) {
   const { topLevel, subcategory, productsPerThousand } = category;
 
-  // Calculate target with 50-product floor
   const ratioTarget = Math.round((productsPerThousand / 1000) * TOTAL_TARGET_PRODUCTS);
   const targetCount = Math.max(MIN_PRODUCTS_PER_CATEGORY, ratioTarget);
 
-  // Check how many we already have in the DB (free — no API credit)
+  // Check current DB count (no API credit used)
   const alreadyHave = await getExistingCount(subcategory);
-  const stillNeed = Math.max(0, targetCount - alreadyHave);
+  let stillNeed = Math.max(0, targetCount - alreadyHave);
 
   console.log(`   Already in DB: ${alreadyHave} | Target: ${targetCount} | Still need: ${stillNeed}`);
 
@@ -238,90 +305,53 @@ async function importCategory(category) {
     return { targetCount, productsCollected: 0, pagesFetched: 0, skipped: true };
   }
 
-  // Start from the page AFTER the ones already fetched, so we get fresh products
-  // (approximation: each page yields ~PRODUCTS_PER_SEARCH products)
-  const startPage = Math.max(1, Math.floor(alreadyHave / PRODUCTS_PER_SEARCH) + 1);
-  const pagesNeeded = Math.ceil(stillNeed / PRODUCTS_PER_SEARCH);
-  const endPage = startPage + pagesNeeded - 1;
+  // Build the ordered list of search terms to try for this category
+  const searchTerms = CATEGORY_SEARCH_TERMS[subcategory]
+    ?? [`${topLevel} ${subcategory}`.toLowerCase()];
 
-  const categoryLabel = `${topLevel} ${subcategory}`.toLowerCase();
+  let totalCollected = 0;
+  let totalPagesFetched = 0;
 
-  console.log(`   Fetching pages ${startPage}–${endPage} (${pagesNeeded} pages, ~${stillNeed} products)`);
+  for (const searchTerm of searchTerms) {
+    if (totalCollected >= stillNeed || creditsUsed >= CREDIT_BUDGET) break;
 
-  let productsCollected = 0;
-  let pagesFetched = 0;
+    const remaining = stillNeed - totalCollected;
+    const maxPages = Math.ceil(remaining / PRODUCTS_PER_SEARCH);
+    console.log(`   🔍 Search term: "${searchTerm}" | Need ${remaining} more | up to ${maxPages} pages`);
 
-  for (let page = startPage; page <= endPage && productsCollected < stillNeed; page++) {
-    try {
-      console.log(`   [Page ${page}/${endPage}] Fetching products...`);
+    let termCollected = 0;
 
-      const searchResult = await makeRainforestRequest({
-        type: 'search',
-        search_term: categoryLabel,
-        amazon_domain: 'amazon.com',
-        page: page.toString(),
-      });
+    for (let page = 1; page <= maxPages; page++) {
+      if (totalCollected + termCollected >= stillNeed || creditsUsed >= CREDIT_BUDGET) break;
 
-      if (!searchResult.search_results || searchResult.search_results.length === 0) {
-        console.log(`   ⚠️  No results for page ${page}`);
-        break;
-      }
+      try {
+        console.log(`      [Page ${page}/${maxPages}] fetching...`);
+        const { inserted, skipped, noImage, exhausted } = await fetchPage(
+          searchTerm, page, topLevel, subcategory,
+          stillNeed, totalCollected + termCollected
+        );
 
-      const pageProducts = searchResult.search_results.slice(0, PRODUCTS_PER_SEARCH);
+        totalPagesFetched++;
 
-      let pageApiCount = pageProducts.length;
-      let pageSkippedNoImage = 0;
-      let pageInserted = 0;
-      let pageSkippedExists = 0;
-
-      for (const rainforestProduct of pageProducts) {
-        if (productsCollected >= stillNeed) break;
-
-        try {
-          const mappedProduct = mapRainforestProduct(rainforestProduct, topLevel, subcategory);
-
-          // Skip if product mapping returned null (no image, etc)
-          if (!mappedProduct) {
-            pageSkippedNoImage++;
-            continue;
-          }
-
-          const result = await upsertProduct(mappedProduct);
-
-          if (result.status !== 'skipped') {
-            productsCollected++;
-            if (result.status === 'inserted') {
-              productsImported++;
-              pageInserted++;
-            }
-          } else {
-            pageSkippedExists++;
-          }
-        } catch (error) {
-          console.error(`      ❌ Failed to upsert product: ${error.message}`);
-          productsFailed++;
+        if (exhausted) {
+          console.log(`      ⚠️  No results — term exhausted at page ${page}`);
+          break; // Move on to the next search term
         }
 
-        // Rate limiting
-        await sleep(100);
-      }
-
-      pagesFetched++;
-      console.log(`   ✅ Page ${page} complete. API: ${pageApiCount} | No image: ${pageSkippedNoImage} | Inserted: ${pageInserted} | Exists: ${pageSkippedExists} | Progress: ${alreadyHave + productsCollected}/${targetCount}`);
-      console.log(`   Credits used: ${creditsUsed}`);
-
-      // Rate limit between pages
-      await sleep(500);
-    } catch (error) {
-      console.error(`   ❌ Error fetching page ${page}: ${error.message}`);
-      if (creditsUsed >= CREDIT_BUDGET) {
-        console.log(`   💳 Credit budget exhausted. Stopping import.`);
-        break;
+        termCollected += inserted;
+        console.log(`      ✅ Page ${page}: +${inserted} new | ${skipped} dupes | ${noImage} no-img | DB total: ~${alreadyHave + totalCollected + termCollected}/${targetCount} | Credits: ${creditsUsed}`);
+        await sleep(500);
+      } catch (error) {
+        console.error(`      ❌ Error on page ${page}: ${error.message}`);
+        if (creditsUsed >= CREDIT_BUDGET) break;
       }
     }
+
+    totalCollected += termCollected;
+    console.log(`   Term "${searchTerm}" done: +${termCollected} products`);
   }
 
-  return { targetCount, productsCollected, pagesFetched };
+  return { targetCount, productsCollected: totalCollected, pagesFetched: totalPagesFetched };
 }
 
 async function main() {
