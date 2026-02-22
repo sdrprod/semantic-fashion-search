@@ -102,10 +102,10 @@ export function Footer() {
       {/* Bottom Bar */}
       <div className="footer-bottom">
         <p className="footer-copyright">
-          © {new Date().getFullYear()} ATLAZ AI Fashion Search. All rights reserved.
+          © {new Date().getFullYear()} Atlaz. All rights reserved.
         </p>
         <p className="footer-powered">
-          Powered by <strong>ATLAZ AI</strong> search technology
+          Powered by <span className="footer-atlaz-brand">Atlaz AI</span>
         </p>
       </div>
     </footer>

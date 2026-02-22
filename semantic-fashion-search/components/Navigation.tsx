@@ -89,7 +89,7 @@ export function Navigation({ onReset }: NavigationProps) {
       <div className="nav-container">
         {/* Logo */}
         <a href="/" className="nav-logo" onClick={handleHomeClick}>
-          <span className="logo-box">⚡ ATLAZ AI</span>
+          <span className="logo-atlaz">ATLAZ</span>
         </a>
 
         {/* Desktop Navigation */}
