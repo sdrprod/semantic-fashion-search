@@ -1371,6 +1371,16 @@ function rankResults(
     .sort((a, b) => b.score - a.score)
     .map(item => item.product);
 
+  // Deduplicate by title+brand — catches the same Amazon product imported with
+  // different URL parameters across multiple search term variations
+  const seenTitleBrand = new Set<string>();
+  rankedProducts = rankedProducts.filter(p => {
+    const key = `${(p.brand || '').toLowerCase().trim()}::${(p.title || '').toLowerCase().trim()}`;
+    if (seenTitleBrand.has(key)) return false;
+    seenTitleBrand.add(key);
+    return true;
+  });
+
   // Apply diversity factor within similarity tiers to preserve quality ordering
   // This ensures best matches always appear first, regardless of brand
   if (diversityFactor > 0 && rankedProducts.length > 0) {
