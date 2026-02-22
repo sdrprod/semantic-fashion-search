@@ -25,11 +25,11 @@ const analysisPath = path.join(process.cwd(), 'rainforest-weighting-analysis.jso
 const analysisData = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'));
 
 // Configuration
-const TOTAL_TARGET_PRODUCTS = 5000; // Phase 1: Test with 5,000 first
+const TOTAL_TARGET_PRODUCTS = 15000; // Phase 3: Grow catalog to ~15K categorized products
 const PRODUCTS_PER_SEARCH = 50; // Try to fetch ~50 products per category search
 const BATCH_SIZE = 100; // Insert/update in batches
-const CREDIT_BUDGET = 140; // Phase 2: 22 probe credits + ~90 import + 28 buffer
-const FORCE_REIMPORT = process.argv.includes('--force');
+const CREDIT_BUDGET = 200; // Phase 3: Incremental import (no probe waste)
+const MIN_PRODUCTS_PER_CATEGORY = 50; // Floor: every category must have at least 50 products
 
 let creditsUsed = 0;
 let productsImported = 0;
@@ -204,74 +204,56 @@ async function upsertProduct(product) {
   }
 }
 
-// Check if a category was already imported by probing the first 10 valid products
-// against the DB. Costs 1 credit. Returns true if ≥7 of 10 URLs already exist.
-async function checkIfAlreadyImported(category) {
-  const { topLevel, subcategory } = category;
-  const categoryLabel = `${topLevel} ${subcategory}`.toLowerCase();
-
-  console.log(`   🔍 Probing DB for existing products...`);
-
-  const searchResult = await makeRainforestRequest({
-    type: 'search',
-    search_term: categoryLabel,
-    amazon_domain: 'amazon.com',
-    page: '1',
-  });
-
-  if (!searchResult.search_results || searchResult.search_results.length === 0) {
-    return { alreadyImported: false, matchCount: 0, probeSize: 0 };
-  }
-
-  // Collect first 10 valid product URLs (with images)
-  const probeUrls = [];
-  for (const p of searchResult.search_results) {
-    if (probeUrls.length >= 10) break;
-    if (!p.image) continue;
-    const url = p.link || p.url;
-    if (url) probeUrls.push(url);
-  }
-
-  if (probeUrls.length === 0) {
-    return { alreadyImported: false, matchCount: 0, probeSize: 0 };
-  }
-
+// Get the current DB count for a subcategory (no API credit used)
+async function getExistingCount(subcategory) {
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-  const { data: existing } = await supabase
+  const { count, error } = await supabase
     .from('products')
-    .select('product_url')
-    .in('product_url', probeUrls);
-
-  const matchCount = existing ? existing.length : 0;
-  const alreadyImported = matchCount >= 7;
-
-  console.log(`   🔍 Probe: ${matchCount}/${probeUrls.length} products already in DB`);
-
-  return { alreadyImported, matchCount, probeSize: probeUrls.length };
+    .select('*', { count: 'exact', head: true })
+    .eq('category', subcategory);
+  if (error) {
+    console.error(`   ⚠️  Could not get existing count: ${error.message}`);
+    return 0;
+  }
+  return count || 0;
 }
 
-// Fetch products for a single category
+// Fetch products for a single category (incremental — starts from where we left off)
 async function importCategory(category) {
   const { topLevel, subcategory, productsPerThousand } = category;
 
-  // Calculate how many products to import for this category
-  const targetCount = Math.round((productsPerThousand / 1000) * TOTAL_TARGET_PRODUCTS);
+  // Calculate target with 50-product floor
+  const ratioTarget = Math.round((productsPerThousand / 1000) * TOTAL_TARGET_PRODUCTS);
+  const targetCount = Math.max(MIN_PRODUCTS_PER_CATEGORY, ratioTarget);
 
-  console.log(`   Target products: ${targetCount}`);
+  // Check how many we already have in the DB (free — no API credit)
+  const alreadyHave = await getExistingCount(subcategory);
+  const stillNeed = Math.max(0, targetCount - alreadyHave);
+
+  console.log(`   Already in DB: ${alreadyHave} | Target: ${targetCount} | Still need: ${stillNeed}`);
+
+  if (stillNeed === 0) {
+    console.log(`   ✅ Category is complete. Skipping.`);
+    return { targetCount, productsCollected: 0, pagesFetched: 0, skipped: true };
+  }
+
+  // Start from the page AFTER the ones already fetched, so we get fresh products
+  // (approximation: each page yields ~PRODUCTS_PER_SEARCH products)
+  const startPage = Math.max(1, Math.floor(alreadyHave / PRODUCTS_PER_SEARCH) + 1);
+  const pagesNeeded = Math.ceil(stillNeed / PRODUCTS_PER_SEARCH);
+  const endPage = startPage + pagesNeeded - 1;
 
   const categoryLabel = `${topLevel} ${subcategory}`.toLowerCase();
-  let pagesNeeded = Math.ceil(targetCount / PRODUCTS_PER_SEARCH);
 
-  console.log(`   Search pages needed: ${pagesNeeded}`);
+  console.log(`   Fetching pages ${startPage}–${endPage} (${pagesNeeded} pages, ~${stillNeed} products)`);
 
   let productsCollected = 0;
   let pagesFetched = 0;
 
-  for (let page = 1; page <= pagesNeeded && productsCollected < targetCount; page++) {
+  for (let page = startPage; page <= endPage && productsCollected < stillNeed; page++) {
     try {
-      console.log(`   [Page ${page}/${pagesNeeded}] Fetching products...`);
+      console.log(`   [Page ${page}/${endPage}] Fetching products...`);
 
       const searchResult = await makeRainforestRequest({
         type: 'search',
@@ -293,7 +275,7 @@ async function importCategory(category) {
       let pageSkippedExists = 0;
 
       for (const rainforestProduct of pageProducts) {
-        if (productsCollected >= targetCount) break;
+        if (productsCollected >= stillNeed) break;
 
         try {
           const mappedProduct = mapRainforestProduct(rainforestProduct, topLevel, subcategory);
@@ -325,7 +307,7 @@ async function importCategory(category) {
       }
 
       pagesFetched++;
-      console.log(`   ✅ Page ${page} complete. API: ${pageApiCount} | No image: ${pageSkippedNoImage} | Inserted: ${pageInserted} | Already existed: ${pageSkippedExists} | Total: ${productsCollected}/${targetCount}`);
+      console.log(`   ✅ Page ${page} complete. API: ${pageApiCount} | No image: ${pageSkippedNoImage} | Inserted: ${pageInserted} | Exists: ${pageSkippedExists} | Progress: ${alreadyHave + productsCollected}/${targetCount}`);
       console.log(`   Credits used: ${creditsUsed}`);
 
       // Rate limit between pages
@@ -343,12 +325,11 @@ async function importCategory(category) {
 }
 
 async function main() {
-  console.log('🚀 Rainforest Initial Product Import\n');
+  console.log('🚀 Rainforest Incremental Product Import\n');
   console.log(`📋 Target: ${TOTAL_TARGET_PRODUCTS} products across ${analysisData.categories.length} categories`);
+  console.log(`📏 Minimum per category: ${MIN_PRODUCTS_PER_CATEGORY} products`);
   console.log(`💳 Credit budget: ${CREDIT_BUDGET}`);
-  if (FORCE_REIMPORT) {
-    console.log(`⚠️  --force flag set: skipping duplicate probes, reimporting all categories`);
-  }
+  console.log(`🔄 Mode: Incremental (checks existing DB count, starts from next unfetched page)`);
   console.log('');
 
   console.log(`${'='.repeat(80)}`);
@@ -368,19 +349,12 @@ async function main() {
     console.log(`\n📁 Category: ${category.topLevel} → ${category.subcategory}`);
 
     try {
-      // Probe DB to check if category was already imported (skippable with --force)
-      if (!FORCE_REIMPORT) {
-        const probe = await checkIfAlreadyImported(category);
-        if (probe.alreadyImported) {
-          console.log(`   ⏭️  Skipping: ${probe.matchCount}/${probe.probeSize} products already in DB. Use --force to reimport.`);
-          categoriesSkipped++;
-          await sleep(300);
-          continue;
-        }
+      const result = await importCategory(category);
+      if (result.skipped) {
+        categoriesSkipped++;
+      } else {
+        categoriesProcessed++;
       }
-
-      await importCategory(category);
-      categoriesProcessed++;
     } catch (error) {
       console.error(`\n❌ Fatal error in category import: ${error.message}`);
       break;
@@ -396,8 +370,8 @@ async function main() {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`IMPORT COMPLETE`);
   console.log(`${'='.repeat(80)}`);
-  console.log(`Categories processed: ${categoriesProcessed}/${analysisData.categories.length}`);
-  console.log(`Categories skipped (already imported): ${categoriesSkipped}`);
+  console.log(`Categories with new products: ${categoriesProcessed}/${analysisData.categories.length}`);
+  console.log(`Categories already complete: ${categoriesSkipped}`);
   console.log(`Products imported: ${productsImported}`);
   console.log(`Products failed: ${productsFailed}`);
   console.log(`Total time: ${duration}s`);

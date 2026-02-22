@@ -226,15 +226,23 @@ export function createSimpleIntent(query: string): ParsedIntent {
     }
   }
 
-  // Detect category from query
+  // Detect category from query.
+  // Use specific category names (hat, scarf, belt, etc.) rather than the
+  // broad abstract "accessories" bucket so that getCategoryMatchType in
+  // search.ts can look up the right concrete product term variations.
   const categoryKeywords: Record<string, string[]> = {
-    dress: ['dress', 'gown', 'frock'],
-    shoes: ['shoes', 'heels', 'boots', 'sandals', 'sneakers', 'loafers', 'pumps', 'flats'],
-    bags: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel'],
-    tops: ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 't-shirt', 'tee'],
-    bottoms: ['pants', 'jeans', 'skirt', 'shorts', 'trousers', 'leggings'],
-    outerwear: ['jacket', 'coat', 'blazer'],
-    accessories: ['jewelry', 'scarf', 'belt', 'hat', 'watch', 'sunglasses', 'necklace', 'earrings', 'bracelet'],
+    dress: ['dress', 'gown', 'frock', 'maxi', 'midi', 'sundress', 'romper', 'jumpsuit'],
+    shoes: ['heels', 'boots', 'sandals', 'sneakers', 'loafers', 'pumps', 'flats', 'footwear', 'shoe', 'mule', 'wedge', 'trainer'],
+    bags: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel', 'wallet'],
+    tops: ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 't-shirt', 'tee', 'tunic', 'tank', 'cami'],
+    bottoms: ['pants', 'jeans', 'skirt', 'shorts', 'trousers', 'leggings', 'chino', 'jogger'],
+    outerwear: ['jacket', 'coat', 'blazer', 'vest', 'parka', 'anorak', 'windbreaker', 'trench'],
+    hat: ['hat', 'cap', 'beanie', 'fedora', 'beret', 'visor', 'snapback', 'bucket hat', 'baseball cap'],
+    scarf: ['scarf', 'scarves', 'wrap', 'shawl', 'stole', 'pashmina', 'bandana'],
+    belt: ['belt', 'belts', 'waistband', 'sash'],
+    sunglasses: ['sunglasses', 'sunglass', 'eyewear', 'shades', 'eyeglasses'],
+    jewelry: ['necklace', 'necklaces', 'earring', 'earrings', 'bracelet', 'bracelets', 'ring', 'rings', 'pendant', 'bangle', 'jewelry', 'jewellery', 'jewel', 'brooch', 'anklet', 'choker'],
+    accessories: ['accessory', 'accessories', 'watch', 'glove', 'gloves', 'hair clip', 'headband', 'scrunchie'],
   };
 
   let category = 'all';

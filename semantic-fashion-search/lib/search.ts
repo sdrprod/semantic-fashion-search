@@ -210,13 +210,17 @@ function detectBroadQuery(query: string): boolean {
     /browse/i,
     /catalog/i,
     // Simple 1-2 word category queries from nav (user is browsing, not searching for something specific)
-    /^(?:footwear|shoes?|boots?|heels?|sneakers?|sandals?|loafers?|flats?)$/i,
-    /^(?:dresses?|skirts?|tops?|blouses?|pants?|jeans?|activewear|swimwear|outerwear)$/i,
-    /^(?:accessories|jewelry|handbags?|bags?|wallets?|scarves?|sunglasses?)$/i,
+    /^(?:footwear|shoes?|boots?|heels?|sneakers?|sandals?|loafers?|flats?|mules?|pumps?|wedges?)$/i,
+    /^(?:dresses?|skirts?|tops?|blouses?|pants?|jeans?|activewear|swimwear|outerwear|leggings?|shorts?)$/i,
+    /^(?:accessories|jewelry|jewellery|handbags?|bags?|wallets?|scarves?|sunglasses?|shades?)$/i,
+    /^(?:hats?|caps?|beanies?|fedoras?|berets?|belts?|wraps?|shawls?|gloves?)$/i,
+    /^(?:necklaces?|earrings?|bracelets?|rings?|pendants?|bangles?|brooches?)$/i,
+    /^(?:jewelry\s+sets?|scarves?\s+and\s+wraps?|handbags?\s+and\s+totes?)$/i,
     /^women'?s?\s+clothing$/i,
     /^men'?s?\s+clothing$/i,
     /^(?:clothing|fashion|apparel|style)$/i,
     /^(?:flats?\s+and\s+loafers?|tops?\s+and\s+blouses?|pants?\s+and\s+jeans?)$/i,
+    /^(?:hats?\s+and\s+caps?|scarves?\s+and\s+wraps?)$/i,
   ];
 
   return broadPatterns.some(pattern => pattern.test(query));
@@ -252,10 +256,12 @@ export async function semanticSearch(
   const isBroadQuery = detectBroadQuery(query);
   console.log(`[semanticSearch] Query type: ${isBroadQuery ? 'BROAD (show everything)' : 'SPECIFIC (targeted)'}`);
 
-  // Determine if we need full intent extraction or simple search
+  // Determine if we need full intent extraction or simple search.
+  // Broad queries (nav browsing) also use the simple path — no LLM needed
+  // since the user is just clicking a category link, not describing an outfit.
   let intent: ParsedIntent;
 
-  if (isSimpleQuery(query)) {
+  if (isSimpleQuery(query) || isBroadQuery) {
     intent = createSimpleIntent(query);
   } else {
     intent = await extractIntent(query);
@@ -849,6 +855,21 @@ function generateSearchTermVariations(term: string): string[] {
     'necklace': ['necklace', 'neck lace', 'pendant'],
     'bracelet': ['bracelet', 'bangle', 'wrist band'],
     'earring': ['earring', 'ear ring', 'earbob'],
+    // Abstract intent categories → concrete product terms
+    // These map the LLM/simple-intent category names to terms that actually
+    // appear in product titles, fixing category matching for nav browsing.
+    'bottoms': ['pants', 'jeans', 'trousers', 'leggings', 'shorts', 'chino', 'jogger', 'jegging'],
+    'tops': ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 'tee', 'tunic', 'tank', 'cami', 'camisole'],
+    'shoes': ['shoe', 'heel', 'boot', 'sandal', 'sneaker', 'loafer', 'flat', 'pump', 'slipper', 'mule', 'wedge', 'trainer'],
+    'bags': ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel', 'hobo', 'pouch', 'wallet'],
+    'outerwear': ['jacket', 'coat', 'blazer', 'vest', 'parka', 'anorak', 'windbreaker', 'trench', 'hoodie', 'cardigan'],
+    'hat': ['hat', 'cap', 'beanie', 'fedora', 'beret', 'visor', 'bucket', 'snapback', 'baseball'],
+    'scarf': ['scarf', 'scarve', 'wrap', 'shawl', 'stole', 'pashmina', 'bandana', 'neckerchief'],
+    'sunglasses': ['sunglasses', 'sunglass', 'eyewear', 'shades', 'eyeglasses', 'glasses'],
+    'belt': ['belt', 'waistband', 'sash', 'cinch', 'girdle'],
+    'jewelry': ['necklace', 'earring', 'bracelet', 'ring', 'pendant', 'bangle', 'brooch', 'jewel', 'cuff', 'anklet', 'choker', 'charm'],
+    'accessories': ['hat', 'cap', 'scarf', 'wrap', 'belt', 'sunglasses', 'eyewear', 'shades', 'glove', 'hair', 'headband', 'scrunchie'],
+    'dress': ['dress', 'gown', 'frock', 'maxi', 'midi', 'sundress', 'romper', 'jumpsuit'],
   };
 
   // Check if we have predefined variations
