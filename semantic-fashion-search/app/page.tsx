@@ -60,6 +60,7 @@ function HomeContent() {
 
     const qParam = searchParams.get('q');
     if (qParam && qParam.trim().length >= 3) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
       handleSearch(qParam.trim());
     }
   // searchParams change (e.g. nav category link) should re-trigger search
@@ -81,6 +82,7 @@ function HomeContent() {
     setPage(1);
     setTotalCount(0);
     setFanoutSeed(0);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   // Refresh the "also searching for" queries
@@ -248,8 +250,8 @@ function HomeContent() {
     const endIndex = startIndex + pageSize;
     setResults(allResults.slice(startIndex, endIndex));
 
-    // Scroll to top smoothly
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll to top of results instantly (smooth races the re-render)
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handlePageSizeChange = (newSize: number) => {

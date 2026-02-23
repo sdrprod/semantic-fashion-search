@@ -30,26 +30,63 @@ export function classifySearchMode(
   }
 
   // auto mode: analyze the query to determine best weighting
-  // Brand signal: two or more consecutive Title Case words (e.g. "Eileen Fisher", "Pleats Please Issey Miyake")
-  const brandPattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/;
-  const hasBrand = brandPattern.test(query);
+
+  // Brand signal 1: two or more consecutive Title Case words ("Eileen Fisher", "Pleats Please")
+  const multiWordBrandPattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/;
+  const hasBrand = multiWordBrandPattern.test(query);
+
+  // Brand signal 2: short query (1-3 words) that contains no known color or fashion
+  // category keywords → almost certainly a brand name search (e.g. "nike", "Zara", "BCBG")
+  const knownColors = new Set([
+    'black','white','red','blue','navy','green','yellow','orange','purple','pink',
+    'brown','beige','cream','grey','gray','gold','silver','tan','burgundy','maroon',
+    'olive','emerald','lavender','coral','ivory','nude','rose','blush','khaki','camel',
+  ]);
+  const knownCategories = new Set([
+    'dress','gown','romper','jumpsuit','shoes','heels','boots','sandals','sneakers',
+    'loafers','pumps','flats','bag','purse','handbag','tote','clutch','backpack',
+    'top','blouse','shirt','sweater','cardigan','tee','tank','cami','tunic',
+    'pants','jeans','skirt','shorts','trousers','leggings','chinos','joggers',
+    'jacket','coat','blazer','vest','parka','trench','outerwear',
+    'jewelry','necklace','earrings','bracelet','ring','watch',
+    'hat','cap','scarf','belt','sunglasses','accessory','accessories',
+    'lingerie','swimwear','bikini','activewear','athleisure',
+  ]);
+  // Add broader terms that appear in nav queries but aren't individual products
+  const knownGeneral = new Set([
+    'clothing','apparel','fashion','wear','style','women','men','outfit',
+    'footwear','outerwear','activewear','swimwear','athleisure','loungewear',
+    'wraps','totes','blouses','loafers','joggers','chinos','trousers',
+  ]);
+  const words = query.trim().toLowerCase().split(/\s+/);
+  // Use prefix matching to handle plurals (e.g. "tops" matches "top", "boots" matches "boot")
+  const colorArr = [...knownColors];
+  const categoryArr = [...knownCategories, ...knownGeneral];
+  const hasKnownTerm = words.some(w =>
+    colorArr.some(c => w === c || w.startsWith(c) || c.startsWith(w)) ||
+    categoryArr.some(c => w === c || w.startsWith(c) || c.startsWith(w))
+  );
+  const looksLikeBrand = words.length <= 3 && !hasKnownTerm;
 
   // Specificity signal: material, construction, or garment-part terms stacked
   const specificTerms = [
     /\bcotton\b/i, /\bsilk\b/i, /\blinen\b/i, /\bwool\b/i, /\bcashmere\b/i,
     /\bnylon\b/i, /\bpolyester\b/i, /\bsatin\b/i, /\bvelvet\b/i, /\bdenim\b/i,
-    /\bneck\b/i, /\bsleeve\b/i, /\bwaist\b/i, /\bheel\b/i, /\btoe\b/i,
-    /\bpleated\b/i, /\bflared\b/i, /\bfitted\b/i, /\boversize\b/i, /\bcropped\b/i,
+    /\bneck\b/i, /\bsleeves?\b/i, /\bwaist\b/i, /\bheels?\b/i, /\btoes?\b/i,
+    /\bpleated\b/i, /\bflared\b/i, /\bfitted\b/i, /\boversize[d]?\b/i, /\bcropped\b/i,
+    /\bchunky\b/i, /\bwedge\b/i, /\bplatform\b/i, /\bpointed\b/i, /\bblock\b/i,
+    /\bankle\b/i, /\bknee[\s-]?high\b/i, /\bthigh[\s-]?high\b/i, /\bstrappy\b/i, /\bpeep[\s-]?toe\b/i,
+    /\bopen[\s-]?toe\b/i, /\bkitten\b/i, /\bstiletto\b/i, /\bcone\b/i,
   ];
   const specificityScore = specificTerms.filter(t => t.test(query)).length;
 
-  if (hasBrand) {
+  if (hasBrand || looksLikeBrand) {
     // Brand query: text search dominant to surface exact brand matches
     return { useHybrid: true, vectorWeight: 0.35, textWeight: 0.65 };
   }
 
   if (specificityScore >= 2) {
-    // Attribute-stacked query: balanced split
+    // Attribute-stacked query: balanced split catches e.g. "chunky heel ankle boot"
     return { useHybrid: true, vectorWeight: 0.5, textWeight: 0.5 };
   }
 
@@ -109,6 +146,16 @@ Important guidelines:
 - NEVER default to "understated", "not flashy", or similar qualifiers unless the user said so
 - If the user says "stunning" or "glamorous", preserve that - don't tone it down
 - ALWAYS provide an explanation in the format described above, addressing the user directly
+
+OUTFIT / ENSEMBLE QUERIES (CRITICAL):
+- If the query contains words like "outfit", "look", "ensemble", "get dressed", "what to wear", or is clearly asking for a complete head-to-toe set of pieces, you MUST generate EXACTLY 4 searchQueries — one per category:
+  1. { "query": "<style/occasion> top/blouse/shirt", "category": "tops", "priority": 1, "weight": 1.0 }
+  2. { "query": "<style/occasion> pants/skirt/shorts", "category": "bottoms", "priority": 1, "weight": 1.0 }
+  3. { "query": "<style/occasion> shoes/heels/sandals/boots", "category": "shoes", "priority": 2, "weight": 0.9 }
+  4. { "query": "<style/occasion> bag/accessories/jewelry", "category": "accessories", "priority": 3, "weight": 0.8 }
+- Adapt each query to the style and occasion (e.g., "elegant evening gown" → bottoms query becomes "formal midi skirt evening"; shoes query becomes "heeled sandals evening formal")
+- Do NOT generate a single query for the whole outfit — this is the most common mistake and produces only tops in results
+- Do NOT skip any of the 4 categories even if the user didn't explicitly ask for all of them
 
 COLOR EXTRACTION (CRITICAL):
 - If user specifies a color, extract it EXACTLY in the "color" field
@@ -192,6 +239,7 @@ export function isSimpleQuery(query: string): boolean {
     /but not|not too|without/i, // Constraints: "but not flashy"
     /with|and|or/i,       // Multi-item or detailed specs: "dress and shoes", "with pockets"
     /formal|casual|elegant|wedding|party|work|office|date/i, // Occasion/style context
+    /\boutfit\b|\bensemble\b|\blook\b|\bget dressed\b|\bwhat to wear\b/i, // Outfit queries always need Claude
   ];
 
   for (const indicator of complexityIndicators) {
@@ -257,14 +305,18 @@ export function createSimpleIntent(query: string): ParsedIntent {
     }
   }
 
+  // Pluralize only if the word doesn't already end in s/x/z/ch/sh
+  const pluralize = (word: string) =>
+    /[sxz]$|[cs]h$/i.test(word) ? word : `${word}s`;
+
   // Create friendly, detailed explanation (2-3 sentences minimum)
   let explanation = '';
   if (extractedColor && category !== 'all') {
-    explanation = `I can help you find ${extractedColor} ${itemName}s! I'm searching our collection specifically for ${extractedColor} ${itemName}s that match your style. I'll prioritize items where the color is verified from product images to ensure you get exactly what you're looking for.`;
+    explanation = `I can help you find ${extractedColor} ${pluralize(itemName)}! I'm searching our collection specifically for ${extractedColor} ${pluralize(itemName)} that match your style. I'll prioritize items where the color is verified from product images to ensure you get exactly what you're looking for.`;
   } else if (extractedColor) {
     explanation = `Perfect! I'm searching for ${extractedColor} items across our entire collection. I'll use AI-verified color matching to show you pieces that are genuinely ${extractedColor}, not just items that mention the color in the description. This ensures you get the exact shade you're looking for!`;
   } else if (category !== 'all') {
-    explanation = `I can help you find great ${itemName}s! I'm browsing through our ${itemName} collection using semantic search to understand the style and vibe you're after. I'll show you options that match your aesthetic, sorted by relevance to ensure the best matches appear first.`;
+    explanation = `I can help you find great ${pluralize(itemName)}! I'm browsing through our ${itemName} collection using semantic search to understand the style and vibe you're after. I'll show you options that match your aesthetic, sorted by relevance to ensure the best matches appear first.`;
   } else {
     explanation = `I understand you're looking for "${query}"! I'm using semantic search to find items that match the style, aesthetic, and vibe you're describing. Let me show you what I've found that best captures what you're looking for.`;
   }

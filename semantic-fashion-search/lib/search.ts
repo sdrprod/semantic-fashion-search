@@ -674,8 +674,10 @@ export async function semanticSearch(
     const maxSimilarity = Math.max(...categoryGroupedResults.map(p => p.similarity || 0));
     const avgSimilarity = categoryGroupedResults.reduce((sum, p) => sum + (p.similarity || 0), 0) / categoryGroupedResults.length;
 
-    // Show warning if best match is below 0.45 or average is below 0.35
-    if (maxSimilarity < 0.45 || avgSimilarity < 0.35) {
+    // Show warning only for very poor matches — threshold lowered to reduce false positives
+    // (specific attribute queries like "chunky heel boots" legitimately score 0.35-0.44
+    // but still return relevant products; the Y/N feedback system will handle quality signals)
+    if (maxSimilarity < 0.30 && avgSimilarity < 0.25) {
       qualityWarning = warningMessage;
       console.log(`[semanticSearch] ⚠️ Quality warning: low similarity - max: ${maxSimilarity.toFixed(3)}, avg: ${avgSimilarity.toFixed(3)}`);
     }
