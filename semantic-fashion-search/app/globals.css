@@ -1662,7 +1662,7 @@ body {
 }
 
 .hybrid-hint {
-  color: var(--color-accent);
+  color: rgba(0, 0, 0, 0.75);
   font-weight: 600;
 }
 

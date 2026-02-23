@@ -120,7 +120,7 @@ export function StarRating({
                 style={{
                   color: isFilled
                     ? (hoverRating !== null ? '#FACC15' : '#EAB308')
-                    : '#D1D5DB',
+                    : '#6B7280',
                   transition: 'color 0.15s',
                 }}
               >

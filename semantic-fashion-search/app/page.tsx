@@ -289,7 +289,7 @@ function HomeContent() {
         {!hasSearched && (
           <header className="hero">
             <h1 className="hero-title">
-              Describe Your Fashion Vibe and Build Your Own AI Fashion Consultant with ATLAZ AI
+              Your fashion. Describe it. Discover it.
             </h1>
             <p className="hero-subtitle">
               Describe what you're looking for in natural language
