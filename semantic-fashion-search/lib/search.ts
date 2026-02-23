@@ -271,7 +271,8 @@ export async function semanticSearch(
   // Quality filtering + color filtering + price filtering reduces by 50-70%
   // Simple queries: 50 raw → ~25-35 filtered → 2-3 pages cached (faster)
   // Complex queries: 100 raw → ~50-70 filtered → 4-6 pages cached (more coverage)
-  const initialFetchSize = isSimpleQuery(query) ? 50 : 100; // Optimized per query type
+  // Broad nav queries (skirts, dresses, etc.) need a larger pool despite being "simple"
+  const initialFetchSize = (isSimpleQuery(query) && !isBroadQuery) ? 50 : 100;
   const poolSize = initialFetchSize; // Will implement lazy-loading for additional pages
 
   const searchResults = await executeMultiSearch(
@@ -860,7 +861,7 @@ function generateSearchTermVariations(term: string): string[] {
     // Abstract intent categories → concrete product terms
     // These map the LLM/simple-intent category names to terms that actually
     // appear in product titles, fixing category matching for nav browsing.
-    'bottoms': ['pants', 'jeans', 'trousers', 'leggings', 'shorts', 'chino', 'jogger', 'jegging'],
+    'bottoms': ['pants', 'jeans', 'skirt', 'trousers', 'leggings', 'shorts', 'chino', 'jogger', 'jegging'],
     'tops': ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 'tee', 'tunic', 'tank', 'cami', 'camisole'],
     'shoes': ['shoe', 'heel', 'boot', 'sandal', 'sneaker', 'loafer', 'flat', 'pump', 'slipper', 'mule', 'wedge', 'trainer'],
     'bags': ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel', 'hobo', 'pouch', 'wallet'],

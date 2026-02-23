@@ -305,6 +305,27 @@ export function createSimpleIntent(query: string): ParsedIntent {
     }
   }
 
+  // For multi-word nav queries (e.g. "pants jeans", "tops blouses"), generate
+  // one searchQuery per word so the semantic search fetches a balanced mix of both.
+  // If any word in the query doesn't map to a known category keyword, fall back
+  // to a single combined query (this is a free-text search, not a nav browse).
+  const queryWords = lowerQuery.split(/\s+/);
+  const wordMatches: Array<{ word: string; cat: string }> = [];
+  if (queryWords.length >= 2) {
+    for (const word of queryWords) {
+      let matched = false;
+      for (const [cat, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some(kw => word === kw || word.startsWith(kw) || kw.startsWith(word))) {
+          wordMatches.push({ word, cat });
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) break; // non-category word → not a pure nav query, don't split
+    }
+  }
+  const isMultiTermNav = wordMatches.length === queryWords.length && queryWords.length >= 2;
+
   // Pluralize only if the word doesn't already end in s/x/z/ch/sh
   const pluralize = (word: string) =>
     /[sxz]$|[cs]h$/i.test(word) ? word : `${word}s`;
@@ -323,14 +344,21 @@ export function createSimpleIntent(query: string): ParsedIntent {
 
   return {
     color: extractedColor,
-    searchQueries: [
-      {
-        query: query,
-        category: category,
-        priority: 1,
-        weight: 1.0,
-      },
-    ],
+    searchQueries: isMultiTermNav
+      ? wordMatches.map(m => ({
+          query: m.word,
+          category: m.cat,
+          priority: 1,
+          weight: 1.0 / wordMatches.length,
+        }))
+      : [
+          {
+            query: query,
+            category: category,
+            priority: 1,
+            weight: 1.0,
+          },
+        ],
     explanation,
   };
 }
