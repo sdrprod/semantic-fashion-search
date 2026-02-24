@@ -140,9 +140,10 @@ function HomeContent() {
       const data = await response.json();
       const fullResults = data.results || [];
 
-      // Store ALL results for client-side pagination
+      // Store results for client-side pagination (first batch)
       setAllResults(fullResults);
-      setTotalCount(fullResults.length);
+      // Use server's totalCount (accurate for browse queries with thousands of results)
+      setTotalCount(data.totalCount ?? fullResults.length);
 
       // Show first page
       setResults(fullResults.slice(0, pageSize));
@@ -241,17 +242,45 @@ function HomeContent() {
     }
   };
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = async (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
 
-    // Client-side pagination - instant, no server call needed!
-    setPage(newPage);
     const startIndex = (newPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    setResults(allResults.slice(startIndex, endIndex));
 
-    // Scroll to top of results instantly (smooth races the re-render)
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Client-side pagination when data is locally cached — instant, no server call
+    if (startIndex < allResults.length) {
+      setPage(newPage);
+      setResults(allResults.slice(startIndex, endIndex));
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      return;
+    }
+
+    // Page is beyond locally cached results (e.g. browse category, page 9+) — fetch from server
+    setLoading(true);
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: actualSearchQuery,
+          limit: pageSize,
+          page: newPage,
+          userRatings: ratings,
+          skipVisionReranking: true,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPage(newPage);
+        setResults(data.results || []);
+      }
+    } catch (err) {
+      console.error('Pagination fetch failed:', err);
+    } finally {
+      setLoading(false);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   };
 
   const handlePageSizeChange = (newSize: number) => {

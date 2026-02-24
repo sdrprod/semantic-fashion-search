@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate pagination params
-    const validatedLimit = Math.min(Math.max(1, limit), 50);
+    // Cap at 200 (up from 50) to support browse category pagination
+    const validatedLimit = Math.min(Math.max(1, limit), 200);
     const validatedPage = Math.max(1, page);
 
     // Check if this is a demo query - skip caching for demo queries
@@ -59,46 +60,56 @@ export async function POST(request: NextRequest) {
     }
 
     if (cachedFullResults) {
-      console.log('[Search API] Cache HIT ⚡ - paginating from cached results');
-
-      // Paginate from cached full results
       const startIndex = (validatedPage - 1) * validatedLimit;
       const endIndex = startIndex + validatedLimit;
-      const paginatedResults = cachedFullResults.results.slice(startIndex, endIndex);
 
-      return NextResponse.json({
-        ...cachedFullResults,
-        results: paginatedResults,
-        page: validatedPage,
-        pageSize: validatedLimit,
-      });
+      if (startIndex < cachedFullResults.results.length) {
+        console.log('[Search API] Cache HIT ⚡ - paginating from cached results');
+        const paginatedResults = cachedFullResults.results.slice(startIndex, endIndex);
+        return NextResponse.json({
+          ...cachedFullResults,
+          results: paginatedResults,
+          page: validatedPage,
+          pageSize: validatedLimit,
+        });
+      }
+
+      // Requested page is beyond what's cached (e.g. browse query, page 9+)
+      // Fall through to a fresh DB fetch for this specific page
+      console.log(`[Search API] Cache HIT but page ${validatedPage} beyond cached range (${cachedFullResults.results.length} results) — fetching live`);
     }
 
-    console.log('[Search API] Cache MISS - starting semantic search...');
+    const isBeyondCache = !!cachedFullResults;
 
-    // Perform semantic search - optimized for <2 second load time
-    // Fetches ~100 raw results → ~50-70 after filtering → 4-6 pages cached
+    // For page 1 (or first fetch): fetch a large pool for caching future pages.
+    // For deep pages on browse queries: fetch just the needed slice directly.
+    const fetchLimit = validatedPage === 1 ? Math.max(100, validatedLimit) : validatedLimit;
+    const fetchPage = validatedPage;
+
+    console.log(`[Search API] ${isBeyondCache ? 'Beyond-cache fetch' : 'Cache MISS'} - starting semantic search (limit=${fetchLimit}, page=${fetchPage})...`);
+
     const searchResponse = await semanticSearch(query.trim(), {
-      limit: 100, // Optimized for fast initial load (<2 sec)
-      page: 1,
+      limit: fetchLimit,
+      page: fetchPage,
       allowSexyContent: hasSexyIntent,
-      userRatings, // Pass user ratings for personalized filtering and boosting
-      skipVisionReranking, // Skip vision re-ranking on pagination to avoid timeout
+      userRatings,
+      skipVisionReranking,
     });
 
     console.log('[Search API] Search complete, total results:', searchResponse.results.length);
 
-    // Cache the FULL result set (1 hour TTL) - skip caching for demo queries
-    if (!isDemoQuery) {
+    // Only cache page-1 results (the full initial pool for fast subsequent pages)
+    if (!isDemoQuery && validatedPage === 1) {
       await setCachedSearch(cacheKey, searchResponse, 3600);
-    } else {
+    } else if (isDemoQuery) {
       console.log('[Search API] 🎬 DEMO QUERY - Not caching results (instant demo search always fresh)');
     }
 
-    // Paginate the requested page from full results
+    // Page 1: slice down to validatedLimit; deep pages: results already match requested slice
     const startIndex = (validatedPage - 1) * validatedLimit;
-    const endIndex = startIndex + validatedLimit;
-    const paginatedResults = searchResponse.results.slice(startIndex, endIndex);
+    const paginatedResults = validatedPage === 1
+      ? searchResponse.results.slice(startIndex, startIndex + validatedLimit)
+      : searchResponse.results;
 
     return NextResponse.json({
       ...searchResponse,
