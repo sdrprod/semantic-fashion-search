@@ -262,8 +262,9 @@ function getBrowseTerms(queryWord: string): string[] {
 
 /**
  * Direct DB query for nav category browsing — bypasses vector search entirely.
- * Returns ALL products whose title contains any of the category terms,
- * paginated server-side. Used when isBroadQuery=true.
+ * Uses PostgreSQL full-text search (websearch_to_tsquery) for word-boundary-aware
+ * matching: "top" matches "top"/"tops" but NOT "laptop"/"stopper".
+ * Paginated server-side. Used when isBroadQuery=true.
  */
 async function browseCategorySearch(
   searchQueries: SearchQuery[],
@@ -273,12 +274,19 @@ async function browseCategorySearch(
 ): Promise<{ products: Product[]; totalCount: number }> {
   const supabase = getSupabaseClient(true);
 
-  // Collect ILIKE terms from all query words (deduped)
+  // Collect search terms from all query words (deduped)
   const allTerms = new Set<string>();
   for (const sq of searchQueries) {
     getBrowseTerms(sq.query).forEach(t => allTerms.add(t));
   }
-  const orFilter = [...allTerms].map(t => `title.ilike.%${t}%`).join(',');
+
+  // Build a websearch-style OR query for PostgreSQL full-text search.
+  // websearch_to_tsquery('english', 'dress OR gown OR romper') tokenizes at word
+  // boundaries and applies English stemming, so "dress" matches "dresses" but
+  // NOT "address" or "dresser" (different stems). This is far more accurate than
+  // ILIKE '%dress%' which matches any substring.
+  const ftsQuery = [...allTerms].join(' OR ');
+  console.log(`[browseCategorySearch] FTS query: ${ftsQuery}`);
 
   // Build query — count:exact gives us the total for pagination
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -288,7 +296,7 @@ async function browseCategorySearch(
       'id, brand, title, description, price, currency, image_url, product_url, merchant_name, on_sale, verified_colors, tags',
       { count: 'exact' }
     )
-    .or(orFilter)
+    .textSearch('title', ftsQuery, { type: 'websearch', config: 'english' })
     .not('image_url', 'is', null)
     .neq('image_url', '');
 
