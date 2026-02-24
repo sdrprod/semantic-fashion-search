@@ -229,36 +229,26 @@ function detectBroadQuery(query: string): boolean {
 }
 
 /**
- * Derive ILIKE title terms for a single query word.
- * Uses the existing generateSearchTermVariations table for enriched coverage
- * (e.g. "sneakers" → sneaker + trainer + athletic shoe).
- * Falls back to the root form so ilike('%skirt%') catches both "skirt" and "skirts".
+ * Curated FTS browse terms — only unambiguous garment NOUNS.
+ *
+ * Unlike generateSearchTermVariations (designed for ILIKE/vector matching),
+ * this map excludes style adjectives like "maxi" and "midi" that cause
+ * cross-category false positives in full-text search. FTS stemming already
+ * handles those: searching for "dress" catches "Maxi Dress" because "dress"
+ * is a word in that title. We never need "maxi" as a standalone search term.
+ *
+ * Keyed by the de-pluralized root of broad category nav items.
+ * Specific garment words (e.g. "skirt", "jeans") don't appear here —
+ * they're used directly in the FTS query without expansion.
  */
-function getBrowseTerms(queryWord: string): string[] {
-  const word = queryWord.trim().toLowerCase();
-
-  // Try the word as-is first — plural forms like 'shoes', 'tops', 'bags' are keys
-  // in the variations table and should return their full enriched list.
-  const directVariations = generateSearchTermVariations(word);
-  if (directVariations.length > 1) {
-    return directVariations;
-  }
-
-  // De-pluralize and retry
-  let root: string;
-  if (word === 'scarves') {
-    root = 'scarf';
-  } else if (word.endsWith('sses')) {
-    // "dresses" → "dress" (strip the -es suffix from double-s roots)
-    root = word.slice(0, -2);
-  } else {
-    root = word.replace(/s$/, '') || word;
-  }
-
-  if (root === word) return [root];
-  const variations = generateSearchTermVariations(root);
-  return variations.length > 1 ? variations : [root];
-}
+const FTS_CATEGORY_TERMS: Record<string, string[]> = {
+  dress: ['dress', 'gown', 'sundress', 'romper', 'jumpsuit', 'frock'],
+  shoe: ['shoe', 'heel', 'boot', 'sandal', 'sneaker', 'loafer', 'pump', 'slipper', 'mule', 'wedge', 'oxford'],
+  top: ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 'tunic', 'camisole', 'pullover', 'hoodie'],
+  bag: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel', 'wallet'],
+  outerwear: ['jacket', 'coat', 'blazer', 'vest', 'parka', 'trench', 'windbreaker'],
+  jewelry: ['necklace', 'earring', 'bracelet', 'pendant', 'bangle', 'brooch', 'choker', 'anklet'],
+};
 
 /**
  * Direct DB query for nav category browsing — bypasses vector search entirely.
@@ -274,17 +264,30 @@ async function browseCategorySearch(
 ): Promise<{ products: Product[]; totalCount: number }> {
   const supabase = getSupabaseClient(true);
 
-  // Collect search terms from all query words (deduped)
+  // Build FTS terms: for single broad categories (e.g. "Dresses"), expand via
+  // curated garment-noun map. For multi-term nav queries (e.g. "pants jeans"),
+  // use each word directly — FTS stemming handles plurals automatically.
   const allTerms = new Set<string>();
   for (const sq of searchQueries) {
-    getBrowseTerms(sq.query).forEach(t => allTerms.add(t));
+    if (searchQueries.length === 1) {
+      // Single broad category — check for curated expansion
+      const word = sq.query.toLowerCase();
+      const stem = word.endsWith('sses') ? word.slice(0, -2)
+        : word === 'scarves' ? 'scarf'
+        : word.replace(/s$/, '') || word;
+      const expansion = FTS_CATEGORY_TERMS[stem];
+      if (expansion) {
+        expansion.forEach(t => allTerms.add(t));
+      } else {
+        // No expansion (e.g. "skirts" → "skirt") — use word directly
+        allTerms.add(word);
+      }
+    } else {
+      // Multi-term nav query (e.g. "pants jeans") — use each word directly
+      allTerms.add(sq.query.toLowerCase());
+    }
   }
 
-  // Build a websearch-style OR query for PostgreSQL full-text search.
-  // websearch_to_tsquery('english', 'dress OR gown OR romper') tokenizes at word
-  // boundaries and applies English stemming, so "dress" matches "dresses" but
-  // NOT "address" or "dresser" (different stems). This is far more accurate than
-  // ILIKE '%dress%' which matches any substring.
   const ftsQuery = [...allTerms].join(' OR ');
   console.log(`[browseCategorySearch] FTS query: ${ftsQuery}`);
 
