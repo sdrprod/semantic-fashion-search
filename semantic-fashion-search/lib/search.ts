@@ -221,9 +221,97 @@ function detectBroadQuery(query: string): boolean {
     /^(?:clothing|fashion|apparel|style)$/i,
     /^(?:flats?\s+and\s+loafers?|tops?\s+and\s+blouses?|pants?\s+and\s+jeans?)$/i,
     /^(?:hats?\s+and\s+caps?|scarves?\s+and\s+wraps?)$/i,
+    // Two-word nav queries (the "X & Y" items with "and" removed)
+    /^(?:pants?\s+jeans?|tops?\s+blouses?|flats?\s+loafers?|handbags?\s+totes?|scarves?\s+wraps?)$/i,
   ];
 
   return broadPatterns.some(pattern => pattern.test(query));
+}
+
+/**
+ * Derive ILIKE title terms for a single query word.
+ * Uses the existing generateSearchTermVariations table for enriched coverage
+ * (e.g. "sneakers" → sneaker + trainer + athletic shoe).
+ * Falls back to the root form so ilike('%skirt%') catches both "skirt" and "skirts".
+ */
+function getBrowseTerms(queryWord: string): string[] {
+  const word = queryWord.trim().toLowerCase();
+  // Handle the one common irregular plural that matters in fashion
+  const root = word === 'scarves' ? 'scarf' : (word.replace(/s$/, '') || word);
+  const variations = generateSearchTermVariations(root);
+  // If the table has enriched variations (length > 1), use them; otherwise use root
+  return variations.length > 1 ? variations : [root];
+}
+
+/**
+ * Direct DB query for nav category browsing — bypasses vector search entirely.
+ * Returns ALL products whose title contains any of the category terms,
+ * paginated server-side. Used when isBroadQuery=true.
+ */
+async function browseCategorySearch(
+  searchQueries: SearchQuery[],
+  settings: QualityFilterSettings,
+  page: number,
+  limit: number,
+): Promise<{ products: Product[]; totalCount: number }> {
+  const supabase = getSupabaseClient(true);
+
+  // Collect ILIKE terms from all query words (deduped)
+  const allTerms = new Set<string>();
+  for (const sq of searchQueries) {
+    getBrowseTerms(sq.query).forEach(t => allTerms.add(t));
+  }
+  const orFilter = [...allTerms].map(t => `title.ilike.%${t}%`).join(',');
+
+  // Build query — count:exact gives us the total for pagination
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any = supabase
+    .from('products')
+    .select(
+      'id, brand, title, description, price, currency, image_url, product_url, merchant_name, on_sale, verified_colors, tags',
+      { count: 'exact' }
+    )
+    .or(orFilter)
+    .not('image_url', 'is', null)
+    .neq('image_url', '');
+
+  if (settings.enablePriceFilter && settings.minPriceThreshold > 0) {
+    q = q.gte('price', settings.minPriceThreshold);
+  }
+
+  // Safe server-side men's filter: "women's" does NOT contain "men's" as a substring
+  if (settings.enableMensFilter) {
+    q = q.not('title', 'ilike', "%men's%");
+  }
+
+  const startIndex = (page - 1) * limit;
+  const { data, error, count } = await q
+    .order('price', { ascending: true, nullsFirst: false })
+    .range(startIndex, startIndex + limit - 1);
+
+  if (error || !data) {
+    console.error('[browseCategorySearch] Query error:', error);
+    return { products: [], totalCount: 0 };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const products: Product[] = (data as any[]).map(row => ({
+    id: row.id,
+    brand: row.brand || '',
+    title: row.title || '',
+    description: row.description || '',
+    price: row.price,
+    currency: row.currency || 'USD',
+    imageUrl: row.image_url || '',
+    productUrl: row.product_url || '',
+    merchantName: row.merchant_name,
+    onSale: row.on_sale,
+    verifiedColors: row.verified_colors,
+    tags: row.tags || [],
+    similarity: 1.0, // not a similarity-ranked result
+  }));
+
+  return { products, totalCount: count ?? 0 };
 }
 
 /**
@@ -265,6 +353,26 @@ export async function semanticSearch(
     intent = createSimpleIntent(query);
   } else {
     intent = await extractIntent(query);
+  }
+
+  // SHORTCUT: For nav category browsing, skip vector search and query the DB directly.
+  // This surfaces ALL matching products (thousands) instead of just the top 100 by similarity.
+  if (isBroadQuery && intent.searchQueries.every(sq => sq.category !== 'all')) {
+    console.log(
+      `[semanticSearch] 🛍️ Browse mode: direct DB query for ` +
+      `${intent.searchQueries.map(sq => sq.query).join(' + ')}`
+    );
+    const settings = await getQualityFilterSettings();
+    const { products, totalCount } = await browseCategorySearch(
+      intent.searchQueries,
+      settings,
+      page,
+      limit,
+    );
+    console.log(
+      `[semanticSearch] 🛍️ Browse results: ${products.length} on page ${page}, ${totalCount} total`
+    );
+    return { query, results: products, totalCount, page, pageSize: limit, intent };
   }
 
   // Fetch results sized for <2 second query time
