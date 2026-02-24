@@ -236,10 +236,27 @@ function detectBroadQuery(query: string): boolean {
  */
 function getBrowseTerms(queryWord: string): string[] {
   const word = queryWord.trim().toLowerCase();
-  // Handle the one common irregular plural that matters in fashion
-  const root = word === 'scarves' ? 'scarf' : (word.replace(/s$/, '') || word);
+
+  // Try the word as-is first — plural forms like 'shoes', 'tops', 'bags' are keys
+  // in the variations table and should return their full enriched list.
+  const directVariations = generateSearchTermVariations(word);
+  if (directVariations.length > 1) {
+    return directVariations;
+  }
+
+  // De-pluralize and retry
+  let root: string;
+  if (word === 'scarves') {
+    root = 'scarf';
+  } else if (word.endsWith('sses')) {
+    // "dresses" → "dress" (strip the -es suffix from double-s roots)
+    root = word.slice(0, -2);
+  } else {
+    root = word.replace(/s$/, '') || word;
+  }
+
+  if (root === word) return [root];
   const variations = generateSearchTermVariations(root);
-  // If the table has enriched variations (length > 1), use them; otherwise use root
   return variations.length > 1 ? variations : [root];
 }
 
