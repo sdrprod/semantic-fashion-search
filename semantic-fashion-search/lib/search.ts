@@ -2,8 +2,8 @@ import { getSupabaseClient, ProductRow } from './supabase';
 import { generateEmbedding, generateEmbeddings } from './embeddings';
 import { extractIntent, isSimpleQuery, createSimpleIntent, classifySearchMode } from './intent';
 import type { SearchMode } from './intent';
-import { generateTextVisionEmbedding, calculateCosineSimilarity } from './vision-embeddings-api';
 import { rerankWithVision, shouldUseVisionReranking } from './vision-reranking';
+import { generateClipTextEmbedding, clipCosineSimilarity } from './clip-query';
 import type { Product, SearchResponse, ParsedIntent, SearchQuery } from '@/types';
 
 // Quality filter settings cache
@@ -106,8 +106,6 @@ interface SearchOptions {
   page?: number;
   similarityThreshold?: number;
   diversityFactor?: number;
-  enableImageValidation?: boolean;
-  imageValidationThreshold?: number;
   allowSexyContent?: boolean; // Explicitly allow sexy/provocative content
   userRatings?: { [productId: string]: number }; // User's personal ratings (1-5)
   skipVisionReranking?: boolean; // Skip vision re-ranking (for pagination to avoid timeout)
@@ -354,8 +352,6 @@ export async function semanticSearch(
     page = 1,
     similarityThreshold = 0.3,  // Back to 0.3 with proper embeddings
     diversityFactor = 0.1,
-    enableImageValidation = false,  // DISABLED - vision model broken, needs fixing
-    imageValidationThreshold = 0.6,  // 60% image similarity required
     allowSexyContent = false, // Default to filtering sexy content
     userRatings = {}, // User's personal ratings (session or persistent)
     skipVisionReranking = false, // Skip vision re-ranking (for pagination)
@@ -396,8 +392,6 @@ export async function semanticSearch(
     intent.searchQueries,
     poolSize,
     similarityThreshold,
-    enableImageValidation,
-    imageValidationThreshold,
     allowSexyContent
   );
 
@@ -1256,12 +1250,9 @@ async function executeMultiSearch(
   queries: SearchQuery[],
   limit: number,
   similarityThreshold: number,
-  enableImageValidation: boolean = false,
-  imageValidationThreshold: number = 0.6,
   allowSexyContent: boolean = false
 ): Promise<Map<string, Product[]>> {
   console.log('[executeMultiSearch] Starting with queries:', queries.map(q => q.query));
-  console.log('[executeMultiSearch] Image validation:', enableImageValidation ? 'ENABLED' : 'DISABLED');
 
   // Fetch quality filter settings
   const qualitySettings = await getQualityFilterSettings();
@@ -1277,26 +1268,14 @@ async function executeMultiSearch(
   const textEmbeddings = await generateEmbeddings(queryTexts);
   console.log('[executeMultiSearch] Text embeddings generated:', textEmbeddings.length, 'embeddings of length', textEmbeddings[0]?.length);
 
-  // Generate vision embeddings if image validation is enabled
-  // Uses serverless-compatible API version (vision-embeddings-api.ts)
-  let visionEmbeddings: number[][] | null = null;
-  if (enableImageValidation) {
-    console.log('[executeMultiSearch] Generating vision embeddings for image validation...');
-    try {
-      visionEmbeddings = await Promise.all(
-        queryTexts.map(text => generateTextVisionEmbedding(text))
-      );
-      console.log('[executeMultiSearch] Vision embeddings generated:', visionEmbeddings.length);
-    } catch (error) {
-      console.error('[executeMultiSearch] Vision embedding generation failed, continuing without image validation:', error);
-      visionEmbeddings = null;
-    }
-  }
+  // Fire CLIP text embedding requests in parallel with the upcoming DB searches.
+  // Used for post-retrieval image re-ranking (CLIP text ↔ stored CLIP image embeddings).
+  // Resolves to null per-query if HUGGINGFACE_API_KEY is not set — no impact on search.
+  const clipEmbeddingPromises = queryTexts.map(text => generateClipTextEmbedding(text));
 
   // Execute searches in parallel
   const searchPromises = queries.map(async (searchQuery, index) => {
     const textEmbedding = textEmbeddings[index];
-    const visionEmbedding = visionEmbeddings?.[index];
 
     // Calculate how many results to fetch based on priority and weight
     // Cap at 200 to ensure <2 second query time (target: fast initial load)
@@ -1418,58 +1397,6 @@ async function executeMultiSearch(
       return passes;
     });
 
-    // STAGE 2: Image validation (if enabled and vision embedding available)
-    // Uses serverless-compatible vision embeddings from vision-embeddings-api.ts
-    if (visionEmbedding && enableImageValidation) {
-      console.log(`[executeMultiSearch] Applying image validation (threshold: ${imageValidationThreshold})...`);
-
-      const beforeCount = filteredProducts.length;
-      filteredProducts = filteredProducts.filter((row: any) => {
-        // Skip if product doesn't have image embedding yet
-        if (!row.image_embedding) {
-          console.log(`[executeMultiSearch] Skipping image validation for "${row.title}" (no image embedding)`);
-          return true; // Keep products without embeddings for now
-        }
-
-        // Parse the image embedding from vector format
-        let imageEmbedding: number[];
-        try {
-          if (typeof row.image_embedding === 'string') {
-            imageEmbedding = JSON.parse(row.image_embedding);
-          } else if (Array.isArray(row.image_embedding)) {
-            imageEmbedding = row.image_embedding;
-          } else {
-            console.log(`[executeMultiSearch] Invalid image embedding format for "${row.title}"`);
-            return true;
-          }
-
-          // Calculate image similarity
-          const imageSimilarity = calculateCosineSimilarity(visionEmbedding, imageEmbedding);
-          const passes = imageSimilarity >= imageValidationThreshold;
-
-          if (!passes) {
-            console.log(
-              `[executeMultiSearch] ❌ Image validation FAILED for "${row.title}" ` +
-              `(image similarity: ${(imageSimilarity * 100).toFixed(1)}%, required: ${(imageValidationThreshold * 100).toFixed(1)}%)`
-            );
-          } else {
-            console.log(
-              `[executeMultiSearch] ✅ Image validation PASSED for "${row.title}" ` +
-              `(image similarity: ${(imageSimilarity * 100).toFixed(1)}%)`
-            );
-          }
-
-          return passes;
-        } catch (error) {
-          console.error(`[executeMultiSearch] Error validating image for "${row.title}":`, error);
-          return true; // Keep on error
-        }
-      });
-
-      const filteredCount = beforeCount - filteredProducts.length;
-      console.log(`[executeMultiSearch] Image validation filtered out ${filteredCount}/${beforeCount} products`);
-    }
-
     // Convert to Product type
     const products: Product[] = filteredProducts.map((row: ProductRow & { similarity: number }) => ({
       id: row.id,
@@ -1487,7 +1414,55 @@ async function executeMultiSearch(
       verifiedColors: row.verified_colors, // AI-verified actual colors from image analysis
     }));
 
-    return { query: searchQuery.query, products };
+    // IMAGE RE-RANKING: blend text similarity with CLIP image similarity.
+    // The CLIP request was fired before the DB search above, so most of its
+    // latency is hidden.  Falls back silently if HF API is unavailable.
+    const clipEmbedding = await clipEmbeddingPromises[index];
+    let finalProducts = products;
+
+    if (clipEmbedding && products.length > 0) {
+      const productIds = products.map(p => p.id);
+
+      const { data: imgData } = await supabase
+        .from('products')
+        .select('id, image_embedding')
+        .in('id', productIds)
+        .not('image_embedding', 'is', null);
+
+      if (imgData && imgData.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const imgMap = new Map<string, number[]>(
+          (imgData as any[])
+            .filter(d => d.image_embedding)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map((d: any) => {
+              const emb: number[] =
+                typeof d.image_embedding === 'string'
+                  ? JSON.parse(d.image_embedding)
+                  : d.image_embedding;
+              return [d.id as string, emb] as [string, number[]];
+            })
+        );
+
+        finalProducts = products
+          .map(product => {
+            const imageEmb = imgMap.get(product.id);
+            if (!imageEmb) return product;
+            const imageSim = clipCosineSimilarity(clipEmbedding, imageEmb);
+            // 70% text/semantic similarity + 30% CLIP visual similarity
+            const combined = 0.7 * (product.similarity || 0) + 0.3 * imageSim;
+            return { ...product, similarity: combined };
+          })
+          .sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+
+        console.log(
+          `[executeMultiSearch] 🖼️ CLIP image re-ranking applied for "${searchQuery.query}": ` +
+          `${imgData.length}/${products.length} products re-ranked`
+        );
+      }
+    }
+
+    return { query: searchQuery.query, products: finalProducts };
   });
 
   const searchResults = await Promise.all(searchPromises);
