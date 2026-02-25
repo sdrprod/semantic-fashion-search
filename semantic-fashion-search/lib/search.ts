@@ -299,6 +299,13 @@ async function browseCategorySearch(
     garmentStems.has(t) || garmentStems.has(t.replace(/s$/, ''))
   );
 
+  // Determine if we're browsing a footwear category.
+  const footwearStems = new Set(['shoe', 'heel', 'boot', 'sandal', 'sneaker',
+    'loafer', 'pump', 'slipper', 'mule', 'wedge', 'oxford', 'flat']);
+  const isFootwearBrowse = [...allTerms].some(t =>
+    footwearStems.has(t) || footwearStems.has(t.replace(/s$/, ''))
+  );
+
   // Build query — count:exact gives us the total for pagination
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q: any = supabase
@@ -310,6 +317,23 @@ async function browseCategorySearch(
     .textSearch('title', ftsQuery, { type: 'websearch', config: 'english' })
     .not('image_url', 'is', null)
     .neq('image_url', '');
+
+  // Global explicit-content exclusions for browse path.
+  // The isSexyProduct() filter is not called on browse results, so we block
+  // known explicit-content title patterns directly via ILIKE.
+  {
+    const sexyBrowsePhrases = [
+      '%lingerie%',     // lingerie sets, lingerie tops, etc.
+      '%maid outfit%',  // sexy maid costume
+      '%maid costume%', // halloween maid costume
+      '%sexy costume%', // explicit costume items
+      '%burlesque%',    // burlesque wear
+      '%boudoir%',      // boudoir sets
+    ];
+    for (const phrase of sexyBrowsePhrases) {
+      q = q.not('title', 'ilike', phrase);
+    }
+  }
 
   // Cross-category exclusions for garment browse pages.
   // These ILIKE patterns match accessories/hardware that mention a garment
@@ -323,11 +347,30 @@ async function browseCategorySearch(
       '%belly belt%',  // belly chain belt
       '%belt for%',    // "belt for dresses/skirts/jeans"
       '%dress up%',    // "dress up costume" / halloween
+      '%socks%',       // "high top ... socks" — FTS "top" false match
     ];
     for (const phrase of accessoryPhrases) {
       q = q.not('title', 'ilike', phrase);
     }
     console.log(`[browseCategorySearch] 🚫 Applying ${accessoryPhrases.length} garment cross-exclusions`);
+  }
+
+  // Cross-category exclusions for footwear browse pages.
+  // Prevents jewelry/accessory items marketed as shoe decorations from showing.
+  if (isFootwearBrowse) {
+    const shoeAccessoryPhrases = [
+      '%shoe chain%',        // decorative shoe chains
+      '%shoe charm%',        // shoe charms / bling charms
+      '%shoe clip%',         // bow/rhinestone shoe clips
+      '%shoe decoration%',   // generic shoe decoration accessories
+      '%shoe accessories%',  // shoe accessories packs
+      '%shoe ornament%',     // shoe ornaments
+      '%clog accessories%',  // Croc/clog charm sets
+    ];
+    for (const phrase of shoeAccessoryPhrases) {
+      q = q.not('title', 'ilike', phrase);
+    }
+    console.log(`[browseCategorySearch] 🚫 Applying ${shoeAccessoryPhrases.length} footwear accessory exclusions`);
   }
 
   if (settings.enablePriceFilter && settings.minPriceThreshold > 0) {
