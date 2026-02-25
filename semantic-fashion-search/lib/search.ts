@@ -1309,6 +1309,21 @@ async function executeMultiSearch(
       qualitySettings.hybridTextWeight
     );
 
+    // For single-word nav browse queries in hybrid mode, expand the FTS query text
+    // to include category synonyms. "outerwear" as a literal FTS term matches products
+    // titled "Men's Outerwear & Coats" (mostly men's → all filtered → 0 results).
+    // Expanding to "jacket OR coat OR blazer OR vest..." matches the actual women's
+    // vocabulary used in product titles, while the vector component stays "outerwear"
+    // for semantic relevance.
+    let ftsQueryText = searchQuery.query;
+    if (searchModeResult.useHybrid && !searchQuery.query.trim().includes(' ')) {
+      const variations = generateSearchTermVariations(searchQuery.query.trim().toLowerCase());
+      if (variations.length > 1) {
+        ftsQueryText = variations.join(' OR ');
+        console.log(`[executeMultiSearch] 📖 FTS expanded "${searchQuery.query}" → "${ftsQueryText}"`);
+      }
+    }
+
     console.log(`[executeMultiSearch] "${searchQuery.query}" → mode=${qualitySettings.searchMode} useHybrid=${searchModeResult.useHybrid} vw=${searchModeResult.vectorWeight} tw=${searchModeResult.textWeight}`);
     console.log(`[executeMultiSearch] Calling ${searchModeResult.useHybrid ? 'hybrid_match_products' : 'match_products'} for "${searchQuery.query}" with limit ${fetchLimit}`);
 
@@ -1318,7 +1333,7 @@ async function executeMultiSearch(
       const result = searchModeResult.useHybrid
         ? await supabase.rpc('hybrid_match_products', {
             query_embedding: textEmbedding,
-            query_text: searchQuery.query,
+            query_text: ftsQueryText,
             match_count: fetchLimit,
             vector_weight: searchModeResult.vectorWeight,
             text_weight: searchModeResult.textWeight,

@@ -294,7 +294,7 @@ export function createSimpleIntent(query: string): ParsedIntent {
     bags: ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel', 'wallet'],
     tops: ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 't-shirt', 'tee', 'tunic', 'tank', 'cami'],
     bottoms: ['pants', 'jeans', 'skirt', 'shorts', 'trousers', 'leggings', 'chino', 'jogger'],
-    outerwear: ['jacket', 'coat', 'blazer', 'vest', 'parka', 'anorak', 'windbreaker', 'trench'],
+    outerwear: ['jacket', 'coat', 'blazer', 'vest', 'parka', 'anorak', 'windbreaker', 'trench', 'outerwear'],
     hat: ['hat', 'cap', 'beanie', 'fedora', 'beret', 'visor', 'snapback', 'bucket hat', 'baseball cap'],
     scarf: ['scarf', 'scarves', 'wrap', 'shawl', 'stole', 'pashmina', 'bandana'],
     belt: ['belt', 'belts', 'waistband', 'sash'],
