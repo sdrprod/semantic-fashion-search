@@ -403,10 +403,14 @@ async function browseCategorySearch(
     q = q.not('title', 'ilike', "%men's%");
   }
 
-  const startIndex = (page - 1) * limit;
+  // Fetch more items than requested to account for potential duplicates after deduplication.
+  // This ensures we have enough results after removing duplicates.
+  const fetchMultiplier = 3;  // Fetch 3x the limit to handle duplicates
+  const startIndex = (page - 1) * limit * fetchMultiplier;
+  const fetchLimit = limit * fetchMultiplier;
   const { data, error, count } = await q
     .order('price', { ascending: true, nullsFirst: false })
-    .range(startIndex, startIndex + limit - 1);
+    .range(startIndex, startIndex + fetchLimit - 1);
 
   if (error || !data) {
     console.error('[browseCategorySearch] Query error:', error);
@@ -414,7 +418,7 @@ async function browseCategorySearch(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const products: Product[] = (data as any[]).map(row => ({
+  let products: Product[] = (data as any[]).map(row => ({
     id: row.id,
     brand: row.brand || '',
     title: row.title || '',
@@ -429,6 +433,18 @@ async function browseCategorySearch(
     tags: row.tags || [],
     similarity: 1.0, // not a similarity-ranked result
   }));
+
+  // Deduplicate by brand::title (catches same product imported from different merchants/URLs)
+  const seenBrandTitle = new Set<string>();
+  products = products.filter(p => {
+    const key = `${(p.brand || '').toLowerCase().trim()}::${(p.title || '').toLowerCase().trim()}`;
+    if (seenBrandTitle.has(key)) return false;
+    seenBrandTitle.add(key);
+    return true;
+  });
+
+  // Slice to the requested limit (after deduplication)
+  products = products.slice(0, limit);
 
   return { products, totalCount: count ?? 0 };
 }
