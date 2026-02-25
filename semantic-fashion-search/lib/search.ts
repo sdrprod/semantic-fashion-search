@@ -379,13 +379,32 @@ export async function semanticSearch(
     intent = await extractIntent(query);
   }
 
+  // SHORTCUT: For nav category browsing, skip vector search and query the DB directly.
+  // browseCategorySearch uses ILIKE title matching — fast, no embedding needed, returns
+  // ALL matching products (paginated), and is immune to the sexy-product filter that
+  // incorrectly blocks e.g. "thong sandals" or "mesh dresses" from category pages.
+  if (isBroadQuery && intent.searchQueries.every(sq => sq.category !== 'all')) {
+    console.log(
+      `[semanticSearch] 🛍️ Browse mode: direct DB query for ` +
+      `${intent.searchQueries.map(sq => sq.query).join(' + ')}`
+    );
+    const settings = await getQualityFilterSettings();
+    const { products, totalCount } = await browseCategorySearch(
+      intent.searchQueries,
+      settings,
+      page,
+      limit,
+    );
+    console.log(
+      `[semanticSearch] 🛍️ Browse results: ${products.length} on page ${page}, ${totalCount} total`
+    );
+    return { query, results: products, totalCount, page, pageSize: limit, intent };
+  }
+
   // Fetch results sized for query type:
   // Simple queries: 50 raw → ~25-35 filtered (fast)
   // Complex queries: 100 raw → ~50-70 filtered (more coverage)
-  // Broad nav queries: 500 raw → ~300-400 filtered — vector embeddings are used here
-  // because they understand semantics (a dress IS a dress, not jewelry with "dress"
-  // in the title). FTS cannot make this distinction.
-  const initialFetchSize = isBroadQuery ? 500 : (isSimpleQuery(query) ? 50 : 100);
+  const initialFetchSize = isSimpleQuery(query) ? 50 : 100;
   const poolSize = initialFetchSize; // Will implement lazy-loading for additional pages
 
   const searchResults = await executeMultiSearch(
@@ -894,11 +913,13 @@ function isSexyProduct(title: string, description: string): boolean {
   const strongSexyTerms = [
     'sexy', 'lingerie', 'intimate', 'revealing', 'see-through',
     'fishnet', 'teddy', 'negligee', 'babydoll', 'chemise',
-    'garter', 'thong', 'g-string', 'crotchless',
+    'garter', 'g-string', 'crotchless',
     'open bust', 'cupless', 'peek-a-boo', 'peekaboo', 'erotic', 'naughty',
     'boudoir', 'sultry', 'provocative', 'enticing', 'lace bra set',
     'adult costume', 'roleplay', 'role play', 'burlesque', 'stripper'
   ];
+  // Note: 'thong' is intentionally excluded above — it is also a legitimate footwear
+  // term ("thong sandal", "flip-flop thong"). Handled contextually below.
 
   // Weak indicators (only check if in TITLE - too many false positives in descriptions)
   const weakSexyTerms = [
@@ -914,7 +935,12 @@ function isSexyProduct(title: string, description: string): boolean {
   // Check weak indicators ONLY in title (vendors stuff "mesh" in descriptions)
   const hasWeakIndicator = weakSexyTerms.some(term => titleOnly.includes(term));
 
-  return hasStrongIndicator || hasWeakIndicator;
+  // 'thong' is a legitimate footwear term (thong sandals, flip-flop thong style).
+  // Only flag as sexy when 'thong' appears WITHOUT adjacent footwear words.
+  const hasThongSexy = combinedText.includes('thong') &&
+    !/thong\s*(sandal|flip|flat|shoe|slipper|slide)|(?:sandal|slipper|flip|slide)\S*\s+thong/i.test(combinedText);
+
+  return hasStrongIndicator || hasWeakIndicator || hasThongSexy;
 }
 
 /**

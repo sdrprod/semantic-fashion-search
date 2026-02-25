@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       'sexy', 'lingerie', 'intimate', 'risque', 'provocative', 'enticing',
       'skimpy', 'revealing', 'sultry', 'seductive', 'alluring', 'naughty',
       'racy', 'steamy', 'sensual', 'erotic', 'burlesque', 'negligee',
-      'teddy', 'bodysuit', 'fishnet', 'lace bra', 'thong', 'garter',
+      'teddy', 'bodysuit', 'fishnet', 'lace bra', 'thong underwear', 'thong bikini', 'garter',
       'bedroom', 'boudoir', 'spicy', 'hot outfit', 'daring'
     ];
     const lowerQuery = query.trim().toLowerCase();
