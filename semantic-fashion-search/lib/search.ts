@@ -556,6 +556,40 @@ export async function semanticSearch(
     }
   }
 
+  // HYBRID BROWSE FIX: For broad nav queries, apply a title-based cross-category exclusion.
+  // Vector search semantically ranks the correct garment type first, but accessories
+  // marketed toward dress occasions (e.g. "Prom Dress Necklace", "Cocktail Dress Earring Set")
+  // can have the category word in their title and slip through the category filter.
+  // This ensures cleaner browsing results without blocking exact dress queries.
+  if (isBroadQuery && primaryCategory !== 'all') {
+    // Map of browse category → unambiguous title terms that indicate a DIFFERENT product type.
+    // Terms are chosen to be specific enough that they won't appear in real garment titles
+    // (e.g. 'necklace' won't appear in a real dress title, but WILL appear in jewelry).
+    const browseExclusions: Record<string, string[]> = {
+      dress: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+      tops: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+      bottoms: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+      shoes: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+      bags: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+      outerwear: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+    };
+    const exclusions = browseExclusions[primaryCategory] ?? [];
+    if (exclusions.length > 0) {
+      const preExclCount = categoryFilteredResults.length;
+      categoryFilteredResults = categoryFilteredResults.filter(product => {
+        const titleLower = product.title.toLowerCase();
+        return !exclusions.some(term => titleLower.includes(term));
+      });
+      if (preExclCount !== categoryFilteredResults.length) {
+        console.log(
+          `[semanticSearch] 🚫 Browse cross-category exclusion (${primaryCategory}): ` +
+          `removed ${preExclCount - categoryFilteredResults.length} jewelry items ` +
+          `from title scan (${categoryFilteredResults.length} remain)`
+        );
+      }
+    }
+  }
+
   // Apply price range filtering if user specified budget
   let priceFilteredResults = categoryFilteredResults;
 
@@ -989,7 +1023,9 @@ function generateSearchTermVariations(term: string): string[] {
     'belt': ['belt', 'waistband', 'sash', 'cinch', 'girdle'],
     'jewelry': ['necklace', 'earring', 'bracelet', 'ring', 'pendant', 'bangle', 'brooch', 'jewel', 'cuff', 'anklet', 'choker', 'charm'],
     'accessories': ['hat', 'cap', 'scarf', 'wrap', 'belt', 'sunglasses', 'eyewear', 'shades', 'glove', 'hair', 'headband', 'scrunchie'],
-    'dress': ['dress', 'gown', 'frock', 'maxi', 'midi', 'sundress', 'romper', 'jumpsuit'],
+    // 'maxi' and 'midi' intentionally excluded — they are length descriptors, not garment type nouns.
+    // "Maxi Dress" already matches via 'dress'; "Maxi Gold Necklace" must NOT match as a dress.
+    'dress': ['dress', 'gown', 'frock', 'sundress', 'romper', 'jumpsuit'],
   };
 
   // Check if we have predefined variations
