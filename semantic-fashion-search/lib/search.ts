@@ -340,14 +340,32 @@ async function browseCategorySearch(
   // in usage context ("chain belt for dresses") rather than being the garment.
   if (isGarmentBrowse) {
     const accessoryPhrases = [
-      '%chain belt%',  // chain belt accessories
-      '%sash belt%',   // sash belt accessories
-      '%rope belt%',   // rope/tassel belt accessories
-      '%waist belt%',  // waist belt accessories
-      '%belly belt%',  // belly chain belt
-      '%belt for%',    // "belt for dresses/skirts/jeans"
-      '%dress up%',    // "dress up costume" / halloween
-      '%socks%',       // "high top ... socks" — FTS "top" false match
+      // Belt accessories
+      '%chain belt%',   // decorative chain belts
+      '%sash belt%',    // sash belt accessories
+      '%rope belt%',    // rope/tassel belt accessories
+      '%waist belt%',   // waist belt accessories
+      '%waist-belt%',   // hyphenated: "PU-Leather-Waist-Belts"
+      '%belly belt%',   // belly chain belt
+      '%belt for%',     // "belt for dresses/skirts/jeans"
+      '%women belts%',  // "Wide Women Belts Elastic..." — belt accessories
+      '%for jeans%',    // accessories "for Jeans Pants Dresses" / "for jeans and leggings"
+      // Shawls, wraps, scarves — sold as accessories "for evening dresses"
+      '%shawl%',        // shawls and wraps (scarf shawls)
+      '%pashmina%',     // pashmina wraps
+      '%for dresses%',  // "...for Evening Dresses/Wedding Dresses" — accessories
+      // "dress" used as an adjective for OTHER product types
+      '%dress pant%',   // dress pants (formal trousers, not a dress)
+      '%dress shoe%',   // dress shoes (footwear)
+      '%dress hat%',    // "formal dress hats" — millinery
+      // Other non-clothing items that mention garments in their title
+      '%insole%',       // shoe insoles "for dress shoes"
+      '%by the yard%',  // fabric sold by the yard (sewing material)
+      '%jewelry set%',  // jewelry sets marketed with "party dress" context
+      // Costume/halloween items masquerading on browse pages
+      '%dress up%',     // "dress up costume" / halloween
+      // Legwear that matches garment FTS terms
+      '%socks%',        // "high top ... socks" — FTS "top" false match
     ];
     for (const phrase of accessoryPhrases) {
       q = q.not('title', 'ilike', phrase);
