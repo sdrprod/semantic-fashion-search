@@ -383,32 +383,13 @@ export async function semanticSearch(
     intent = await extractIntent(query);
   }
 
-  // SHORTCUT: For nav category browsing, skip vector search and query the DB directly.
-  // This surfaces ALL matching products (thousands) instead of just the top 100 by similarity.
-  if (isBroadQuery && intent.searchQueries.every(sq => sq.category !== 'all')) {
-    console.log(
-      `[semanticSearch] 🛍️ Browse mode: direct DB query for ` +
-      `${intent.searchQueries.map(sq => sq.query).join(' + ')}`
-    );
-    const settings = await getQualityFilterSettings();
-    const { products, totalCount } = await browseCategorySearch(
-      intent.searchQueries,
-      settings,
-      page,
-      limit,
-    );
-    console.log(
-      `[semanticSearch] 🛍️ Browse results: ${products.length} on page ${page}, ${totalCount} total`
-    );
-    return { query, results: products, totalCount, page, pageSize: limit, intent };
-  }
-
-  // Fetch results sized for <2 second query time
-  // Quality filtering + color filtering + price filtering reduces by 50-70%
-  // Simple queries: 50 raw → ~25-35 filtered → 2-3 pages cached (faster)
-  // Complex queries: 100 raw → ~50-70 filtered → 4-6 pages cached (more coverage)
-  // Broad nav queries (skirts, dresses, etc.) need a larger pool despite being "simple"
-  const initialFetchSize = (isSimpleQuery(query) && !isBroadQuery) ? 50 : 100;
+  // Fetch results sized for query type:
+  // Simple queries: 50 raw → ~25-35 filtered (fast)
+  // Complex queries: 100 raw → ~50-70 filtered (more coverage)
+  // Broad nav queries: 500 raw → ~300-400 filtered — vector embeddings are used here
+  // because they understand semantics (a dress IS a dress, not jewelry with "dress"
+  // in the title). FTS cannot make this distinction.
+  const initialFetchSize = isBroadQuery ? 500 : (isSimpleQuery(query) ? 50 : 100);
   const poolSize = initialFetchSize; // Will implement lazy-loading for additional pages
 
   const searchResults = await executeMultiSearch(
