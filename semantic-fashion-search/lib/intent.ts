@@ -90,7 +90,17 @@ export function classifySearchMode(
     return { useHybrid: true, vectorWeight: 0.5, textWeight: 0.5 };
   }
 
+  // Nav browse signal: short query (1-2 words) that IS a known fashion category.
+  // e.g. "dresses", "shoes", "tops", "pants jeans", "handbags totes"
+  // FTS ensures products that explicitly name the category rank higher;
+  // vector handles semantic diversity within the category.
+  const isNavBrowse = words.length <= 2 && hasKnownTerm;
+  if (isNavBrowse) {
+    return { useHybrid: true, vectorWeight: 0.6, textWeight: 0.4 };
+  }
+
   // Pure style/aesthetic query: vector only to avoid noise from FTS
+  // e.g. "boho summer vibes", "dark academia aesthetic", "cozy fall outfit"
   return { useHybrid: false, vectorWeight: 1.0, textWeight: 0.0 };
 }
 
