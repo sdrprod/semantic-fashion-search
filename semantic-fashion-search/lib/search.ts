@@ -361,11 +361,14 @@ async function browseCategorySearch(
       // Other non-clothing items that mention garments in their title
       '%insole%',       // shoe insoles "for dress shoes"
       '%by the yard%',  // fabric sold by the yard (sewing material)
+      '%clothing material%', // "Chiffon Fabric Dress Skirt Fashion Clothing Material"
       '%jewelry set%',  // jewelry sets marketed with "party dress" context
       // Costume/halloween items masquerading on browse pages
       '%dress up%',     // "dress up costume" / halloween
       // Legwear that matches garment FTS terms
       '%socks%',        // "high top ... socks" — FTS "top" false match
+      // Hard-coded: specific product to never show on garment browse
+      '%Blouson Sleeve Boatneck%', // Amazon Essentials sweatshirt dress — misclassified as dress
     ];
     for (const phrase of accessoryPhrases) {
       q = q.not('title', 'ilike', phrase);
