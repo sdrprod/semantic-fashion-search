@@ -289,6 +289,16 @@ async function browseCategorySearch(
   const ftsQuery = [...allTerms].join(' OR ');
   console.log(`[browseCategorySearch] FTS query: ${ftsQuery}`);
 
+  // Determine if we're browsing a garment category (as opposed to shoes/bags/jewelry).
+  // Garment pages need cross-category exclusions to prevent accessories that merely
+  // reference a garment ("chain belt for dresses", "belt for skirt/jeans") from showing.
+  const garmentStems = new Set(['dress', 'skirt', 'top', 'blouse', 'pant', 'jean',
+    'legging', 'short', 'sweater', 'cardigan', 'tunic', 'camisole', 'pullover',
+    'hoodie', 'outerwear', 'jacket', 'coat', 'blazer']);
+  const isGarmentBrowse = [...allTerms].some(t =>
+    garmentStems.has(t) || garmentStems.has(t.replace(/s$/, ''))
+  );
+
   // Build query — count:exact gives us the total for pagination
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q: any = supabase
@@ -300,6 +310,25 @@ async function browseCategorySearch(
     .textSearch('title', ftsQuery, { type: 'websearch', config: 'english' })
     .not('image_url', 'is', null)
     .neq('image_url', '');
+
+  // Cross-category exclusions for garment browse pages.
+  // These ILIKE patterns match accessories/hardware that mention a garment
+  // in usage context ("chain belt for dresses") rather than being the garment.
+  if (isGarmentBrowse) {
+    const accessoryPhrases = [
+      '%chain belt%',  // chain belt accessories
+      '%sash belt%',   // sash belt accessories
+      '%rope belt%',   // rope/tassel belt accessories
+      '%waist belt%',  // waist belt accessories
+      '%belly belt%',  // belly chain belt
+      '%belt for%',    // "belt for dresses/skirts/jeans"
+      '%dress up%',    // "dress up costume" / halloween
+    ];
+    for (const phrase of accessoryPhrases) {
+      q = q.not('title', 'ilike', phrase);
+    }
+    console.log(`[browseCategorySearch] 🚫 Applying ${accessoryPhrases.length} garment cross-exclusions`);
+  }
 
   if (settings.enablePriceFilter && settings.minPriceThreshold > 0) {
     q = q.gte('price', settings.minPriceThreshold);
