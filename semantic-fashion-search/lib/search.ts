@@ -1747,3 +1747,106 @@ export async function simpleSearch(
     onSale: row.on_sale,
   }));
 }
+
+/**
+ * Refine a set of current results based on a new intent query
+ * Used for multi-level refinement: filters and re-ranks results in-memory
+ */
+export async function refineResults(
+  currentResults: Product[],
+  refinementIntent: ParsedIntent,
+  userRatings: { [id: string]: number } = {}
+): Promise<Product[]> {
+  if (!currentResults || currentResults.length === 0) {
+    return [];
+  }
+
+  console.log('[refineResults] Starting refinement with intent:', {
+    color: refinementIntent.color,
+    primaryItem: refinementIntent.primaryItem,
+    priceRange: refinementIntent.priceRange,
+  });
+
+  // Filter results based on refinement intent criteria
+  let filtered = currentResults.filter(product => {
+    // Color matching
+    if (refinementIntent.color) {
+      const colorMatch = product.verifiedColors?.some(c =>
+        c.toLowerCase().includes(refinementIntent.color!.toLowerCase())
+      );
+      if (!colorMatch) {
+        return false;
+      }
+    }
+
+    // Category/garment matching
+    if (refinementIntent.primaryItem) {
+      const itemMatch = product.title.toLowerCase().includes(
+        refinementIntent.primaryItem.toLowerCase()
+      );
+      if (!itemMatch) {
+        return false;
+      }
+    }
+
+    // Price range matching
+    if (refinementIntent.priceRange) {
+      if (
+        refinementIntent.priceRange.min &&
+        product.price &&
+        product.price < refinementIntent.priceRange.min
+      ) {
+        return false;
+      }
+      if (
+        refinementIntent.priceRange.max &&
+        product.price &&
+        product.price > refinementIntent.priceRange.max
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  console.log('[refineResults] After filtering:', filtered.length, 'products');
+
+  // Re-rank by relevance to new intent
+  // Use a simple scoring based on keyword matches in title + description
+  filtered = filtered
+    .map(product => {
+      let score = product.similarity || 0;
+
+      // Boost if primary item appears in title
+      if (refinementIntent.primaryItem) {
+        const titleMatches = (
+          product.title.toLowerCase().match(
+            new RegExp(refinementIntent.primaryItem.toLowerCase(), 'g')
+          ) || []
+        ).length;
+        score += titleMatches * 0.05;
+      }
+
+      // Boost if color matches and is in verified colors
+      if (refinementIntent.color && product.verifiedColors) {
+        const colorMatches = product.verifiedColors.filter(c =>
+          c.toLowerCase().includes(refinementIntent.color!.toLowerCase())
+        ).length;
+        score += colorMatches * 0.1;
+      }
+
+      // Boost if user has highly rated this product before
+      const userRating = userRatings[product.id];
+      if (userRating && userRating >= 4) {
+        score += (userRating - 3) * 0.1; // +0.1 for 4-star, +0.2 for 5-star
+      }
+
+      return { ...product, similarity: score };
+    })
+    .sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+
+  console.log('[refineResults] After re-ranking, top result similarity:', filtered[0]?.similarity);
+
+  return filtered;
+}

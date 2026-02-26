@@ -12,8 +12,11 @@ import { Footer } from '@/components/Footer';
 import { HowToUse } from '@/components/HowToUse';
 import { EmailSubscribe } from '@/components/EmailSubscribe';
 import { SearchLoadingModal } from '@/components/SearchLoadingModal';
+import RefinementBox from '@/components/RefinementBox';
+import RefinementBreadcrumb from '@/components/RefinementBreadcrumb';
 import { useSessionRatings } from '@/src/hooks/useSessionRatings';
 import { usePersistentRatings } from '@/src/hooks/usePersistentRatings';
+import { useRefinementHistory } from '@/src/hooks/useRefinementHistory';
 import type { Product, ParsedIntent } from '@/types';
 
 const EXAMPLE_SEARCHES = [
@@ -29,6 +32,7 @@ function HomeContent() {
   const persistentRatings = usePersistentRatings({
     userId: session?.user?.id ?? null,
   });
+  const refinement = useRefinementHistory(session?.user?.id);
   const { ratings, isLoaded: ratingsLoaded } = sessionRatings;
   const [query, setQuery] = useState('');
   const [actualSearchQuery, setActualSearchQuery] = useState(''); // The query actually used for search (may differ for visual search)
@@ -36,6 +40,7 @@ function HomeContent() {
   const [allResults, setAllResults] = useState<Product[]>([]); // ALL results from search (for client-side pagination)
   const [results, setResults] = useState<Product[]>([]); // Current page results
   const [loading, setLoading] = useState(false);
+  const [refinementLoading, setRefinementLoading] = useState(false);
   const [searchProgress, setSearchProgress] = useState<string | null>(null); // Real-time progress message
   const [error, setError] = useState<string | null>(null);
   const [intent, setIntent] = useState<ParsedIntent | null>(null);
@@ -82,7 +87,54 @@ function HomeContent() {
     setPage(1);
     setTotalCount(0);
     setFanoutSeed(0);
+    refinement.clearRefinements();
     window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  // Handle refinement submission
+  const handleRefine = async (refinementQuery: string) => {
+    const currentLevelData = refinement.refinementLevels[refinement.currentLevelIndex];
+    if (!currentLevelData) return;
+
+    setRefinementLoading(true);
+    try {
+      const response = await fetch('/api/search/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentResults: currentLevelData.results,
+          refinementQuery,
+          userRatings: ratings,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Refinement failed');
+      }
+
+      const data = await response.json();
+      refinement.pushRefinement(refinementQuery, data.results, data.totalCount, data.intent);
+      setPage(1); // Reset pagination for new refinement level
+    } catch (err) {
+      console.error('[Refine] Error:', err);
+      setError(err instanceof Error ? err.message : 'Refinement failed');
+    } finally {
+      setRefinementLoading(false);
+    }
+  };
+
+  // Handle breadcrumb navigation
+  const handleSelectRefinementLevel = (levelIndex: number) => {
+    while (refinement.currentLevelIndex > levelIndex) {
+      refinement.popRefinement();
+    }
+    setPage(1); // Reset pagination when navigating levels
+  };
+
+  // Handle clear filters
+  const handleClearRefinements = () => {
+    refinement.clearRefinements();
+    setPage(1);
   };
 
   // Refresh the "also searching for" queries
@@ -102,6 +154,7 @@ function HomeContent() {
     setQualityWarning(null);
     setSearchProgress('Analyzing your request with AI...');
     setPage(1);
+    refinement.clearRefinements(); // Clear any previous refinements when starting new search
 
     // If images are uploaded, use hybrid search
     if (uploadedImages.length > 0) {
@@ -150,6 +203,14 @@ function HomeContent() {
       setIntent(data.intent || null);
       setQualityWarning(data.qualityWarning || null);
       setActualSearchQuery(searchQuery.trim()); // Store the actual query used
+
+      // Initialize refinement level with search results
+      refinement.pushRefinement(
+        searchQuery.trim(),
+        fullResults,
+        data.totalCount ?? fullResults.length,
+        data.intent || { searchQueries: [] }
+      );
     } catch (err) {
       console.error('Search failed:', err);
       setError(err instanceof Error ? err.message : 'Search failed. Please try again.');
@@ -183,6 +244,7 @@ function HomeContent() {
     setQualityWarning(null);
     setResults([]); // Clear previous results
     setPage(1);
+    refinement.clearRefinements(); // Clear any previous refinements when starting new search
 
     try {
       const formData = new FormData();
@@ -209,8 +271,11 @@ function HomeContent() {
 
       const data = await response.json();
       console.log('[Visual Search] Response:', data);
-      setResults(data.results || []);
-      setTotalCount(data.totalCount || data.results?.length || 0);
+      const fullResults = data.results || [];
+      setAllResults(fullResults); // Store full results for refinement
+      setResults(fullResults.slice(0, pageSize)); // Show first page
+      const totalCount = data.totalCount || fullResults.length;
+      setTotalCount(totalCount);
       setQualityWarning(data.qualityWarning || null);
 
       // Store the actual query generated by visual search for pagination
@@ -231,7 +296,16 @@ function HomeContent() {
         intentMsg = `I'm analyzing the ${imageText} you uploaded to find pieces with similar styles, colors, and aesthetics! I'll search for items that match the vibe and look of what you've shown me. Does that work for you?`;
       }
 
-      setIntent({ explanation: intentMsg } as ParsedIntent);
+      const intentData = { explanation: intentMsg } as ParsedIntent;
+      setIntent(intentData);
+
+      // Initialize refinement level with search results
+      refinement.pushRefinement(
+        data.query || searchQuery.trim() || 'Visual Search',
+        fullResults,
+        totalCount,
+        intentData
+      );
     } catch (err) {
       console.error('Visual search failed:', err);
       setError(err instanceof Error ? err.message : 'Visual search failed. Please try again.');
@@ -472,6 +546,27 @@ function HomeContent() {
 
           {!loading && !error && results.length > 0 && (
             <>
+              {/* Refinement Breadcrumb - shows refinement history */}
+              {refinement.refinementLevels.length > 0 && (
+                <>
+                  <RefinementBreadcrumb
+                    levels={refinement.refinementLevels}
+                    currentLevel={refinement.currentLevelIndex}
+                    onSelectLevel={handleSelectRefinementLevel}
+                    onClearAll={handleClearRefinements}
+                  />
+                  <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #e8e0d8' }} />
+                </>
+              )}
+
+              {/* Refinement Box - allows user to narrow down results */}
+              <RefinementBox
+                onRefine={handleRefine}
+                isLoading={refinementLoading}
+                canRefine={refinement.canRefineMore}
+                currentResults={results.length}
+              />
+
               <div className="results-header">
                 <div className="results-info">
                   <p className="results-count">

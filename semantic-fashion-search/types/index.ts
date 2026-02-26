@@ -99,6 +99,25 @@ export interface PaginationState {
   totalPages: number;
 }
 
+// Refinement types (for multi-level search narrowing)
+export interface RefinementLevel {
+  query: string;                    // The refinement query at this level (e.g., "punk style")
+  refinementQuery?: string;         // The refining query (undefined for initial level)
+  results: Product[];               // Result snapshot at this level
+  totalCount: number;               // Total results at this level
+  page: number;                     // Current pagination page for this level
+  intent?: ParsedIntent;            // AI-parsed intent for this level
+  timestamp: number;                // When this refinement was created (Unix ms)
+}
+
+export interface SearchRefinement {
+  initialQuery: string;             // e.g., "black boots"
+  refinements: string[];            // e.g., ["punk style", "winter only"]
+  resultCounts: number[];           // Result count at each level
+  timestamps: number[];             // Timestamp for each refinement
+  clickedProductId?: string;        // Product clicked by user (if any)
+}
+
 // API response types
 export interface ApiResponse<T> {
   success: boolean;
