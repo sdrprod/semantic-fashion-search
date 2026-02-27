@@ -1,0 +1,46 @@
+﻿Column1,Column2,Column3,Column4
+Vendor,Domain,Country,Categories
+Gucci,https://www.gucci.com,Italy,clothing; footwear; bags; accessories
+Prada,https://www.prada.com,Italy,clothing; footwear; bags; accessories
+Chanel,https://www.chanel.com,France,clothing; bags; jewelry; accessories
+Louis Vuitton,https://www.louisvuitton.com,France,clothing; footwear; bags; accessories
+Dior,https://www.dior.com,France,clothing; footwear; bags; accessories
+Versace,https://www.versace.com,Italy,clothing; footwear; bags; accessories
+Balenciaga,https://www.balenciaga.com,France,clothing; footwear; bags; accessories
+Saint Laurent,https://www.ysl.com,France,clothing; footwear; bags; accessories
+Tom Ford,https://www.tomford.com,United States,clothing; footwear; bags; accessories
+Tory Burch,https://www.toryburch.com,United States,clothing; footwear; bags; accessories
+The Row,https://www.therow.com,United States,clothing; footwear; bags; accessories
+Donna Karan,https://www.donnakaran.com,United States,clothing; bags; accessories
+Diane von Furstenberg,https://www.dvf.com,United States,clothing; accessories
+Carolina Herrera,https://www.carolinaherrera.com,United States,clothing; bags; accessories
+Jason Wu,https://jasonwu.com,United States,clothing; accessories
+Alice + Olivia,https://www.aliceandolivia.com,United States,clothing; accessories
+Nicole Miller,https://www.nicolemiller.com,United States,clothing; accessories
+Marchesa,https://www.marchesa.com,United States,clothing; accessories
+Rachel Zoe,https://www.rachelzoe.com,United States,clothing; accessories
+Coach,https://www.coach.com,United States,bags; accessories
+Cult Gaia,https://cultgaia.com,United States,clothing; bags; accessories
+David Yurman,https://www.davidyurman.com,United States,jewelry; accessories
+Tiffany & Co.,https://www.tiffany.com,United States,jewelry; accessories
+Harry Winston,https://www.harrywinston.com,United States,jewelry; accessories
+Bloomingdale's - clothing,https://www.bloomingdales.com/shop/womens-apparel,United States,clothing
+Bloomingdale's - shoes,https://www.bloomingdales.com/shop/shoes/womens-shoes,United States,footwear
+Bloomingdale's - handbags,https://www.bloomingdales.com/shop/handbags,United States,bags
+Bloomingdale's - jewelry,https://www.bloomingdales.com/shop/jewelry,United States,jewelry
+Bloomingdale's - accessories,https://www.bloomingdales.com/shop/accessories/womens-accessories,United States,accessories
+Saks Fifth Avenue - clothing,https://www.saksfifthavenue.com/c/women-s-apparel,United States,clothing
+Saks Fifth Avenue - shoes,https://www.saksfifthavenue.com/c/women-s-shoes,United States,footwear
+Saks Fifth Avenue - handbags,https://www.saksfifthavenue.com/c/handbags,United States,bags
+Saks Fifth Avenue - jewelry,https://www.saksfifthavenue.com/c/jewelry-fine,United States,jewelry
+Saks Fifth Avenue - accessories,https://www.saksfifthavenue.com/c/women-s-accessories,United States,accessories
+Nordstrom - clothing,https://www.nordstrom.com/browse/women/clothing,United States,clothing
+Nordstrom - shoes,https://www.nordstrom.com/browse/women/shoes,United States,footwear
+Nordstrom - handbags,https://www.nordstrom.com/browse/women/handbags,United States,bags
+Nordstrom - jewelry,https://www.nordstrom.com/browse/women/jewelry,United States,jewelry
+Nordstrom - accessories,https://www.nordstrom.com/browse/women/accessories,United States,accessories
+Neiman Marcus - clothing,https://www.neimanmarcus.com/c/womens-clothing-cat000001,United States,clothing
+Neiman Marcus - shoes,https://www.neimanmarcus.com/c/shoes-womens-shoes-cat000551,United States,footwear
+Neiman Marcus - handbags,https://www.neimanmarcus.com/c/handbags-cat000243,United States,bags
+Neiman Marcus - jewelry,https://www.neimanmarcus.com/c/jewelry-cat48720732,United States,jewelry
+Neiman Marcus - accessories,https://www.neimanmarcus.com/c/cusp-jewelry-accessories-cat59270784,United States,accessories
