@@ -167,6 +167,18 @@ OUTFIT / ENSEMBLE QUERIES (CRITICAL):
 - Do NOT generate a single query for the whole outfit — this is the most common mistake and produces only tops in results
 - Do NOT skip any of the 4 categories even if the user didn't explicitly ask for all of them
 
+COMPOUND ITEM QUERIES (when user explicitly names 2+ specific items):
+- If the user mentions 2 or more specific fashion items by name WITHOUT using outfit/ensemble keywords, generate a separate searchQuery for EACH named item — do NOT collapse them into one query
+- Weight the most-described item higher (0.65–0.7), the secondary item(s) lower (0.3–0.45)
+- Keep the occasion/style context in EVERY query so results stay coherent
+- Examples:
+  - "floral dress for a party and sandals to go with it" → TWO queries: { "query": "floral dress party casual", "category": "dress", "weight": 0.65 } and { "query": "party sandals casual", "category": "shoes", "weight": 0.35 }
+  - "white blouse and black pants for work" → TWO queries: tops weight 0.6, bottoms weight 0.4
+  - "evening bag to match a red dress" → TWO queries: dress weight 0.6, bags weight 0.4
+  - "cozy sweater with matching scarf" → TWO queries: tops weight 0.6, accessories weight 0.4
+- Signals that indicate a compound query: "and", "with", "to go with", "to match", "plus", "along with", "paired with", listing two distinct product types
+- This is DIFFERENT from outfit mode: only generate queries for items explicitly named, NOT the full 4-category set
+
 COLOR EXTRACTION (CRITICAL):
 - If user specifies a color, extract it EXACTLY in the "color" field
 - Common colors: black, white, red, blue, navy, pink, green, yellow, orange, purple, brown, beige, cream, grey/gray, gold, silver
@@ -224,6 +236,48 @@ Contextual inference rules:
   // Validate the response structure
   if (!parsed.searchQueries || !Array.isArray(parsed.searchQueries)) {
     throw new Error('Invalid intent structure: missing searchQueries');
+  }
+
+  // Safety net: if secondaryItems were named but have no corresponding searchQuery,
+  // add lightweight queries for them so they actually get searched.
+  // This covers cases where Claude puts items in secondaryItems but forgets to
+  // generate searchQueries for them (e.g., "dress and sandals" → sandals missing).
+  if (parsed.secondaryItems && parsed.secondaryItems.length > 0) {
+    const SECONDARY_ITEM_CATEGORY: Record<string, string> = {
+      'sandal': 'shoes', 'sandals': 'shoes', 'heel': 'shoes', 'heels': 'shoes',
+      'boot': 'shoes', 'boots': 'shoes', 'sneaker': 'shoes', 'sneakers': 'shoes',
+      'shoe': 'shoes', 'shoes': 'shoes', 'loafer': 'shoes', 'flat': 'shoes', 'pump': 'shoes',
+      'bag': 'bags', 'bags': 'bags', 'handbag': 'bags', 'purse': 'bags',
+      'clutch': 'bags', 'tote': 'bags', 'backpack': 'bags',
+      'pants': 'bottoms', 'jeans': 'bottoms', 'skirt': 'bottoms',
+      'shorts': 'bottoms', 'trousers': 'bottoms', 'leggings': 'bottoms',
+      'top': 'tops', 'tops': 'tops', 'blouse': 'tops', 'shirt': 'tops',
+      'sweater': 'tops', 'cardigan': 'tops', 'cami': 'tops',
+      'jacket': 'outerwear', 'coat': 'outerwear', 'blazer': 'outerwear',
+      'scarf': 'accessories', 'belt': 'accessories', 'hat': 'accessories',
+      'jewelry': 'accessories', 'necklace': 'accessories', 'earrings': 'accessories',
+    };
+
+    const existingCategories = new Set(parsed.searchQueries.map(q => q.category.toLowerCase()));
+    const contextWords = [parsed.occasion, ...(parsed.style ?? [])].filter(Boolean).join(' ');
+
+    for (const item of parsed.secondaryItems) {
+      const itemLower = item.toLowerCase();
+      let category: string | null = null;
+      for (const [keyword, cat] of Object.entries(SECONDARY_ITEM_CATEGORY)) {
+        if (itemLower.includes(keyword)) { category = cat; break; }
+      }
+      if (category && !existingCategories.has(category)) {
+        console.log(`[extractIntent] Safety net: adding searchQuery for secondary item "${item}" (${category})`);
+        parsed.searchQueries.push({
+          query: `${contextWords} ${item}`.trim(),
+          category,
+          priority: 2,
+          weight: 0.35,
+        });
+        existingCategories.add(category);
+      }
+    }
   }
 
   return parsed;
