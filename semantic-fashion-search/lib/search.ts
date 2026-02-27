@@ -1820,6 +1820,36 @@ export async function simpleSearch(
   }));
 }
 
+// High-level category groups and the title keywords that identify each.
+// Used by refineResults to determine whether a product belongs to the same
+// category as the refinement's primaryItem, or to a completely different category.
+const CATEGORY_GROUP_TERMS: Record<string, string[]> = {
+  shoes:     ['shoe', 'heel', 'boot', 'bootie', 'sandal', 'sneaker', 'loafer', 'pump', 'mule', 'flat', 'wedge', 'slipper', 'trainer', 'stiletto', 'oxford', 'espadrille', 'clog', 'moccasin', 'brogue'],
+  tops:      ['top', 'blouse', 'shirt', 'sweater', 'cardigan', 'hoodie', 'tee', 't-shirt', 'tunic', 'cami', 'camisole', 'tank', 'pullover'],
+  bottoms:   ['pant', 'jean', 'legging', 'short', 'skirt', 'trouser', 'chino', 'culotte', 'jogger'],
+  outerwear: ['jacket', 'coat', 'blazer', 'parka', 'trench', 'windbreaker', 'anorak', 'vest'],
+  dresses:   ['dress', 'gown', 'romper', 'jumpsuit'],
+  bags:      ['bag', 'purse', 'handbag', 'tote', 'clutch', 'backpack', 'satchel'],
+};
+
+const ITEM_TO_GROUP: Record<string, string> = {
+  shoe: 'shoes', shoes: 'shoes',
+  top: 'tops', tops: 'tops', blouse: 'tops', shirt: 'tops', sweater: 'tops',
+  pants: 'bottoms', skirt: 'bottoms', shorts: 'bottoms',
+  jacket: 'outerwear', coat: 'outerwear',
+  dress: 'dresses', jumpsuit: 'dresses',
+  bag: 'bags',
+};
+
+/** Returns the high-level category group of a product based on its title, or null if unknown. */
+function getProductCategoryGroup(product: Product): string | null {
+  const title = product.title.toLowerCase();
+  for (const [group, terms] of Object.entries(CATEGORY_GROUP_TERMS)) {
+    if (terms.some(t => title.includes(t))) return group;
+  }
+  return null;
+}
+
 /**
  * Refine a set of current results based on a new intent query
  * Used for multi-level refinement: filters and re-ranks results in-memory
@@ -1864,14 +1894,46 @@ export async function refineResults(
       }
     }
 
-    // Category/garment matching — check title (singular + plural) and description
+    // Category/garment matching — category-targeted filter.
+    //
+    // When a user refines "all of the shoes should be hiking boots", they want:
+    //   • Shoe items: filtered to only hiking boots
+    //   • Tops/pants/coats: passed through unchanged
+    //
+    // We detect the product's category group and only apply the primaryItem filter
+    // to products that are actually in the target category.  Products that clearly
+    // belong to a DIFFERENT category are always kept.
     if (refinementIntent.primaryItem) {
       const item = refinementIntent.primaryItem.toLowerCase();
+      const targetGroup = ITEM_TO_GROUP[item] ?? null;
+      const productGroup = getProductCategoryGroup(product);
+
+      // Product is clearly in a DIFFERENT category → keep it, skip item filter
+      if (targetGroup && productGroup && productGroup !== targetGroup) {
+        return true;
+      }
+
+      // Product is in the target category (or unclassified) → apply the item filter
       const itemInTitle = product.title.toLowerCase().includes(item);
       const itemPluralInTitle = product.title.toLowerCase().includes(item + 's');
       const itemInDesc = product.description?.toLowerCase().includes(item);
       if (!itemInTitle && !itemPluralInTitle && !itemInDesc) {
         return false;
+      }
+
+      // Apply style/constraint qualifiers to narrow within the target category.
+      // e.g., style: ["hiking"] keeps only boots with "hiking" in title/description.
+      // Only run when the product is confirmed to be in the target category.
+      if (targetGroup && productGroup === targetGroup) {
+        const qualifiers = [
+          ...(refinementIntent.style ?? []),
+          ...(refinementIntent.constraints ?? []),
+        ];
+        if (qualifiers.length > 0) {
+          const productText = `${product.title} ${product.description || ''}`.toLowerCase();
+          const matchesQualifier = qualifiers.some(q => productText.includes(q.toLowerCase()));
+          if (!matchesQualifier) return false;
+        }
       }
     }
 

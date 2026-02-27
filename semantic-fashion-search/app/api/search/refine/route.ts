@@ -37,8 +37,22 @@ const CATEGORY_MAP: Record<string, string[]> = {
  * Handles colors, garment types, and price ranges without calling Claude.
  * Returns null if the query is too complex — caller should fall back to extractIntent().
  */
+// Qualifier words that modify a category (e.g. "hiking boots", "rain jacket").
+// The fast parser can't understand these — fall back to Claude so the qualifier
+// is captured in ParsedIntent.style / ParsedIntent.constraints.
+const CATEGORY_QUALIFIERS = [
+  'hiking', 'running', 'trail', 'rain', 'snow', 'winter', 'summer', 'spring', 'fall',
+  'athletic', 'workout', 'sport', 'sports', 'gym', 'outdoor', 'waterproof', 'insulated',
+  'warm', 'lightweight', 'casual', 'formal', 'business', 'office', 'work',
+  'comfortable', 'stretchy', 'slim', 'oversized', 'fitted',
+];
+
 function fastParseRefinementIntent(query: string): ParsedIntent | null {
   const lower = query.toLowerCase();
+
+  // If the query contains a qualifier word that modifies a category, the fast parser
+  // can't handle it correctly — fall back to Claude for proper intent extraction.
+  if (CATEGORY_QUALIFIERS.some(q => lower.includes(q))) return null;
 
   // --- Color detection (negation must be checked BEFORE positive) ---
   // Match patterns like "except black", "not black", "without black",

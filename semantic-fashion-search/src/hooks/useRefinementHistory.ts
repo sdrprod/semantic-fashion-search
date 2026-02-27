@@ -11,6 +11,7 @@ interface UseRefinementHistoryReturn {
   // Methods
   pushRefinement: (query: string, results: Product[], totalCount: number, intent: ParsedIntent) => void;
   popRefinement: () => void;
+  jumpToLevel: (levelIndex: number) => void;
   clearRefinements: () => void;
 
   // Persistence
@@ -115,6 +116,13 @@ export function useRefinementHistory(userId?: string): UseRefinementHistoryRetur
     });
   }, []);
 
+  // Jump directly to a specific level — avoids the React stale-state race condition
+  // that occurs when calling popRefinement() in a while loop (currentLevelIndex never
+  // updates inside the loop because state updates are batched).
+  const jumpToLevel = useCallback((levelIndex: number) => {
+    setRefinementLevels(prev => prev.slice(0, levelIndex + 1));
+  }, []);
+
   const clearRefinements = useCallback(() => {
     setRefinementLevels([]);
     if (typeof window !== 'undefined') {
@@ -128,6 +136,7 @@ export function useRefinementHistory(userId?: string): UseRefinementHistoryRetur
     canRefineMore: refinementLevels.length < MAX_REFINEMENT_LEVELS,
     pushRefinement,
     popRefinement,
+    jumpToLevel,
     clearRefinements,
     saveRefinementHistory,
   };

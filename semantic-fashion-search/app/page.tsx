@@ -129,9 +129,9 @@ function HomeContent() {
   // Handle breadcrumb navigation
   const handleSelectRefinementLevel = (levelIndex: number) => {
     const targetLevel = refinement.refinementLevels[levelIndex];
-    while (refinement.currentLevelIndex > levelIndex) {
-      refinement.popRefinement();
-    }
+    // jumpToLevel slices state in one atomic update, avoiding the stale-state
+    // race condition that occurs when calling popRefinement() in a while loop.
+    refinement.jumpToLevel(levelIndex);
     setPage(1);
     if (targetLevel) {
       setAllResults(targetLevel.results);
