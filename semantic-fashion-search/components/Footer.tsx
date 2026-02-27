@@ -1,8 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 
 export function Footer() {
+  const [cacheStatus, setCacheStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
+
+  const handleClearCache = async () => {
+    if (cacheStatus === 'loading') return;
+    setCacheStatus('loading');
+    try {
+      const res = await fetch('/api/cache/clear', { method: 'POST' });
+      setCacheStatus(res.ok ? 'ok' : 'err');
+    } catch {
+      setCacheStatus('err');
+    }
+    setTimeout(() => setCacheStatus('idle'), 2500);
+  };
+
   return (
     <footer className="footer">
       <div className="footer-content">
@@ -107,6 +122,26 @@ export function Footer() {
         <p className="footer-powered">
           Powered by <span className="footer-atlaz-brand">Atlaz AI</span>
         </p>
+        <button
+          onClick={handleClearCache}
+          title="Clear search cache"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: cacheStatus === 'loading' ? 'wait' : 'pointer',
+            fontSize: '0.75rem',
+            color: cacheStatus === 'ok' ? '#4caf50' : cacheStatus === 'err' ? '#e57373' : 'inherit',
+            opacity: cacheStatus === 'idle' ? 0.18 : 0.9,
+            padding: '0 0.25rem',
+            transition: 'opacity 0.2s, color 0.2s',
+            lineHeight: 1,
+          }}
+          onMouseEnter={e => { if (cacheStatus === 'idle') (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; }}
+          onMouseLeave={e => { if (cacheStatus === 'idle') (e.currentTarget as HTMLButtonElement).style.opacity = '0.18'; }}
+          aria-label="Clear search cache"
+        >
+          {cacheStatus === 'loading' ? '…' : cacheStatus === 'ok' ? '✓' : cacheStatus === 'err' ? '✗' : '↺'}
+        </button>
       </div>
     </footer>
   );
