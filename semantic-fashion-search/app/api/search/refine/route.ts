@@ -40,9 +40,28 @@ const CATEGORY_MAP: Record<string, string[]> = {
 function fastParseRefinementIntent(query: string): ParsedIntent | null {
   const lower = query.toLowerCase();
 
+  // --- Color detection (negation must be checked BEFORE positive) ---
+  // Match patterns like "except black", "not black", "without black",
+  // "no black", "anything but black", "other than black", "all colors except black"
+  const negationPattern = /\b(?:except|without|excluding|other\s+than|anything\s+but|all\s+colou?rs?\s+except|every\s+colou?r\s+(?:except|but)|no)\s+(?:the\s+|colou?r\s+)?(\S+)/;
+  const negationMatch = lower.match(negationPattern);
+
+  let excludeColor: string | null = null;
   let color: string | null = null;
-  for (const c of COLOR_LIST) {
-    if (lower.includes(c)) { color = c; break; }
+
+  if (negationMatch) {
+    // Check if the captured word is a known color
+    const candidate = negationMatch[1].replace(/[^a-z-]/g, '');
+    if (COLOR_LIST.includes(candidate)) {
+      excludeColor = candidate;
+    }
+  }
+
+  // Only look for a positive color if no exclusion was detected
+  if (!excludeColor) {
+    for (const c of COLOR_LIST) {
+      if (lower.includes(c)) { color = c; break; }
+    }
   }
 
   let primaryItem: string | undefined;
@@ -59,20 +78,24 @@ function fastParseRefinementIntent(query: string): ParsedIntent | null {
   else if (overMatch)  priceRange = { min: +overMatch[1], max: null };
 
   // If we couldn't extract anything useful, let Claude handle it
-  if (!color && !primaryItem && !priceRange) return null;
+  if (!color && !excludeColor && !primaryItem && !priceRange) return null;
 
   const parts = [color, primaryItem].filter(Boolean);
   const priceDesc = priceRange?.max ? ` under $${priceRange.max}` : priceRange?.min ? ` over $${priceRange.min}` : '';
+  const explanation = excludeColor
+    ? `Showing all colors except ${excludeColor}.`
+    : `Showing ${parts.join(' ')}${priceDesc} results.`;
 
   return {
     color,
+    excludeColor,
     primaryItem,
     priceRange,
     style: [],
     constraints: [],
     secondaryItems: [],
     searchQueries: [],
-    explanation: `Showing ${parts.join(' ')}${priceDesc} results.`,
+    explanation,
   };
 }
 

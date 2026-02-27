@@ -1835,19 +1835,31 @@ export async function refineResults(
 
   console.log('[refineResults] Starting refinement with intent:', {
     color: refinementIntent.color,
+    excludeColor: refinementIntent.excludeColor,
     primaryItem: refinementIntent.primaryItem,
     priceRange: refinementIntent.priceRange,
   });
 
   // Filter results based on refinement intent criteria
   let filtered = currentResults.filter(product => {
-    // Color matching — check verifiedColors first, then fall back to title/description text
+    // Color INCLUDE — keep only products matching this color
     if (refinementIntent.color) {
       const color = refinementIntent.color.toLowerCase();
       const colorInVerified = product.verifiedColors?.some(c => c.toLowerCase().includes(color));
       const colorInTitle = product.title.toLowerCase().includes(color);
       const colorInDesc = product.description?.toLowerCase().includes(color);
       if (!colorInVerified && !colorInTitle && !colorInDesc) {
+        return false;
+      }
+    }
+
+    // Color EXCLUDE — remove products matching this color (negation: "all colors except black")
+    if (refinementIntent.excludeColor) {
+      const excluded = refinementIntent.excludeColor.toLowerCase();
+      const colorInVerified = product.verifiedColors?.some(c => c.toLowerCase().includes(excluded));
+      const colorInTitle = product.title.toLowerCase().includes(excluded);
+      const colorInDesc = product.description?.toLowerCase().includes(excluded);
+      if (colorInVerified || colorInTitle || colorInDesc) {
         return false;
       }
     }

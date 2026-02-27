@@ -51,7 +51,8 @@ export interface ParsedIntent {
   occasion?: string;
   style?: string[];
   constraints?: string[];
-  color?: string | null; // Specific color mentioned by user
+  color?: string | null; // Specific color to INCLUDE
+  excludeColor?: string | null; // Specific color to EXCLUDE (e.g. "all colors except black")
   priceRange?: {
     min: number | null;
     max: number | null;
