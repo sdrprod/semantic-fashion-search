@@ -4162,3 +4162,80 @@ b) refineResults reads style[] and constraints[] and applies them as a
                                        rewrite, style/constraints qualifier check
 
 ================================================================================
+
+================================================================================
+
+## Commit 6b9864c -- Minor UX: pagination options, refinement placeholder, gitignore assets
+## Date: Feb 27, 2026
+================================================================================
+
+Three small housekeeping changes committed together.
+
+### 1 -- Pagination options aligned with grid
+
+Results-per-page options changed from [10, 25, 50] to [12, 24, 60] in
+components/Pagination.tsx. The grid already defaulted to 12 items per page
+(useState(12) in app/page.tsx). 12/24/60 are clean multiples of 12, so every
+option fills complete rows and no awkward partial rows appear.
+
+### 2 -- Refinement box placeholder text updated
+
+Default placeholder in components/RefinementBox.tsx changed from:
+  "Want to narrow it down? Try 'punk style, chunky heels' or 'only winter boots'"
+to:
+  "Want to narrow it down? Filter by typing a request like 'Only in white and under $100.'"
+
+Clearer call-to-action that shows the price-range syntax users often need.
+
+### 3 -- public/assets/ added to .gitignore
+
+semantic-fashion-search/.gitignore now includes public/assets/ so locally
+uploaded product images are never accidentally committed.
+
+### Files Changed
+
+  components/Pagination.tsx              -- pageSizeOptions [10,25,50] -> [12,24,60]
+  components/RefinementBox.tsx           -- default placeholder text updated
+  semantic-fashion-search/.gitignore     -- public/assets/ appended
+
+================================================================================
+
+## Commit 898b9e2 -- Add hidden cache-clear button in footer and /api/cache/clear route
+## Date: Feb 27, 2026
+================================================================================
+
+### New API route: POST /api/cache/clear
+
+Created app/api/cache/clear/route.ts. Calls redis.flushdb() via the Upstash
+client to wipe all cached search results immediately. Returns JSON:
+
+  { success: true, message: "Cache cleared" }
+
+Handles missing Redis config (503) and runtime errors (500) gracefully.
+No authentication required -- intended for internal/demo use only.
+
+### Hidden footer button
+
+Added a small refresh icon (Unicode circled arrow: ↺) to the footer bottom
+bar in components/Footer.tsx, positioned after "Powered by Atlaz AI".
+
+Behaviour:
+  - Opacity 0.18 at rest -- present but barely visible
+  - Opacity 0.7 on hover -- clearly visible to someone looking for it
+  - title="Clear search cache" tooltip on hover
+  - Clicking: POST /api/cache/clear
+  - While in flight: shows ellipsis (…), cursor changes to wait
+  - On success: shows green check (✓) for 2.5 seconds, then resets
+  - On failure: shows red cross (✗) for 2.5 seconds, then resets
+
+Motivation: during investor demos the Redis cache may hold stale results
+from earlier test queries. This button lets a presenter clear it without
+logging in or touching the Upstash console.
+
+### Files Changed
+
+  app/api/cache/clear/route.ts   -- new POST handler, redis.flushdb()
+  components/Footer.tsx          -- useState for status, handleClearCache,
+                                    hidden ↺ button in footer-bottom
+
+================================================================================

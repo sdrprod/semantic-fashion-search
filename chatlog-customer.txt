@@ -1958,3 +1958,36 @@ captured and applied.
 ---
 
 ================================================================================
+
+---
+
+### Pagination Options Aligned With the Grid
+
+The results-per-page selector in the bottom navigation bar now offers
+12, 24, and 60 items per page (previously 10, 25, and 50). Because the
+product grid shows 12 items per row, these new values keep every page
+full with no partial rows at the end.
+
+---
+
+### Clearer Refinement Hint Text
+
+The placeholder text in the refinement box has been updated to give a
+more practical example of how to use it:
+
+  "Want to narrow it down? Filter by typing a request like 'Only in white and under $100.'"
+
+This makes the price-range syntax more discoverable for new users.
+
+---
+
+### Search Cache Clear (Internal Tool)
+
+A small hidden button has been added to the footer for internal use.
+It clears the search results cache instantly, which is useful before
+demos to ensure fresh results are shown rather than cached ones from
+earlier test searches.
+
+---
+
+================================================================================
