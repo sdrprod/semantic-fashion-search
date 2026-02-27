@@ -687,13 +687,15 @@ export async function semanticSearch(
     // Map of browse category → unambiguous title terms that indicate a DIFFERENT product type.
     // Terms are chosen to be specific enough that they won't appear in real garment titles
     // (e.g. 'necklace' won't appear in a real dress title, but WILL appear in jewelry).
+    const JEWELRY_TERMS = ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch', 'ring', 'pendant', 'choker'];
+    const FOOTWEAR_TERMS = ['sneaker', 'loafer', 'sandal', 'stiletto', 'wedge', 'espadrille', 'oxford', 'trainer', 'clog', 'slingback', 'mule'];
     const browseExclusions: Record<string, string[]> = {
-      dress: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
-      tops: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
-      bottoms: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
-      shoes: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
-      bags: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
-      outerwear: ['necklace', 'earring', 'bracelet', 'bangle', 'anklet', 'brooch'],
+      dress:    [...JEWELRY_TERMS, ...FOOTWEAR_TERMS],
+      tops:     [...JEWELRY_TERMS, ...FOOTWEAR_TERMS],
+      bottoms:  [...JEWELRY_TERMS, ...FOOTWEAR_TERMS],
+      shoes:    [...JEWELRY_TERMS],
+      bags:     [...JEWELRY_TERMS, ...FOOTWEAR_TERMS],
+      outerwear:[...JEWELRY_TERMS, ...FOOTWEAR_TERMS],
     };
     const exclusions = browseExclusions[primaryCategory] ?? [];
     if (exclusions.length > 0) {
@@ -1084,6 +1086,38 @@ function getCategoryMatchType(product: Product, category: string): 'exact' | 'pa
   if (!containsSearchTerm) {
     // Search term not found at all → completely unrelated
     return 'none';
+  }
+
+  // Category-specific compound exclusions: the search word appears as a MODIFIER
+  // of a different product type, not as the product itself.
+  // e.g., "dress shoe" / "dress pants" contain "dress" but are NOT dresses.
+  // e.g., "laptop" contains "top" but is NOT a top.
+  const categoryCompoundExclusions: Record<string, string[]> = {
+    'dress': [
+      'dress shoe', 'dress shoes', 'dress boot', 'dress boots',
+      'dress pant', 'dress pants', 'dress trouser', 'dress trousers',
+      'dress hat', 'dress cap', 'dress glove', 'dress gloves',
+      'dress sock', 'dress socks', 'dress code', 'dress form',
+      'dress shirt', 'dress shirts',   // men's formal button-down
+    ],
+    'top': ['laptop', 'tabletop', 'desktop', 'spinning top'],
+    'bag': ['airbag', 'beanbag', 'sandbag'],
+  };
+
+  const compoundExclusions = categoryCompoundExclusions[normalizedCategory] ?? [];
+  if (compoundExclusions.some(c => combinedText.includes(c))) {
+    return 'none';
+  }
+
+  // When searching for clothing garments, exclude products that are clearly footwear.
+  // A dress search should never return shoes, even if the shoe is called a "dress shoe".
+  const clothingCategories = new Set([
+    'dress', 'skirt', 'top', 'tops', 'blouse', 'shirt', 'sweater',
+    'cardigan', 'jumpsuit', 'romper', 'bottoms', 'outerwear', 'jacket', 'coat',
+  ]);
+  if (clothingCategories.has(normalizedCategory)) {
+    const isFootwear = /\b(shoes?|heels?|boots?|sandals?|sneakers?|loafers?|pumps?|mules?|flats?|wedges?|stilettos?|espadrilles?|oxfords?|trainers?|clogs?|slingbacks?)\b/.test(title);
+    if (isFootwear) return 'none';
   }
 
   // Multi-piece indicators (set, bundle, outfit, etc.)
