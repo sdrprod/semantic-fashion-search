@@ -15,7 +15,7 @@ export function Pagination({
   onPageChange,
   onPageSizeChange,
 }: PaginationProps) {
-  const pageSizeOptions = [10, 25, 50];
+  const pageSizeOptions = [12, 24, 60];
 
   return (
     <div className="pagination">

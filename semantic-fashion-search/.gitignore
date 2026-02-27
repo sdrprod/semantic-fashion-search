@@ -38,3 +38,6 @@ lerna-debug.log*
 
 /src/generated/prisma
 # Force rebuild
+
+# Local uploaded assets
+public/assets/

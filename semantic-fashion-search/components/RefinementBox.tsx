@@ -20,7 +20,7 @@ const EXAMPLE_REFINEMENTS = [
 ];
 
 export default function RefinementBox({
-  placeholder = "Want to narrow it down? Try 'punk style, chunky heels' or 'only winter boots'",
+  placeholder = "Want to narrow it down? Filter by typing a request like 'Only in white and under $100.'",
   onRefine,
   isLoading = false,
   canRefine = true,
