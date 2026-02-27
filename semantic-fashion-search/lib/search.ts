@@ -1108,6 +1108,10 @@ function getCategoryMatchType(product: Product, category: string): 'exact' | 'pa
     return 'none';
   }
 
+  // Track whether the search term appears in title or only in description.
+  // Needed later for the footwear guard (description-only match is a weaker signal).
+  const titleHasSearchTerm = searchTerms.some(term => title.includes(term));
+
   // Category-specific compound exclusions: the search word appears as a MODIFIER
   // of a different product type, not as the product itself.
   // e.g., "dress shoe" / "dress pants" contain "dress" but are NOT dresses.
@@ -1136,8 +1140,14 @@ function getCategoryMatchType(product: Product, category: string): 'exact' | 'pa
     'cardigan', 'jumpsuit', 'romper', 'bottoms', 'outerwear', 'jacket', 'coat',
   ]);
   if (clothingCategories.has(normalizedCategory)) {
-    const isFootwear = /\b(shoes?|heels?|boots?|sandals?|sneakers?|loafers?|pumps?|mules?|flats?|wedges?|stilettos?|espadrilles?|oxfords?|trainers?|clogs?|slingbacks?)\b/.test(title);
-    if (isFootwear) return 'none';
+    const footwearPattern = /\b(shoes?|heels?|boots?|booties?|sandals?|sneakers?|loafers?|pumps?|mules?|flats?|wedges?|stilettos?|espadrilles?|oxfords?|trainers?|clogs?|slingbacks?|moccasins?|brogues?|slippers?)\b/;
+    // Always check title
+    if (footwearPattern.test(title)) return 'none';
+    // If the clothing term only appeared in the description (e.g. "dress occasion" in a
+    // shoe's description), also check the description for footwear terms.
+    // This prevents a shoe titled "Black Patent Leather" with "formal dress occasion"
+    // in its description from passing the category filter for "dress".
+    if (!titleHasSearchTerm && footwearPattern.test(description)) return 'none';
   }
 
   // Multi-piece indicators (set, bundle, outfit, etc.)
@@ -1340,6 +1350,14 @@ function isMensProduct(title: string, description: string): boolean {
   const decodedTitle = decodeHtmlEntities(title);
   const decodedDescription = decodeHtmlEntities(description);
   const combinedText = `${decodedTitle} ${decodedDescription}`.toLowerCase();
+
+  // Fast path: if the TITLE itself says "men's" or "mens" (as a whole word) without
+  // also saying "women's", it's unambiguously a men's product.
+  // We don't let description noise (SEO text like "also fits women") override a clear title.
+  const titleLower = decodedTitle.toLowerCase();
+  if (/\bmen'?s\b/.test(titleLower) && !/\bwom[ae]n'?s?\b/.test(titleLower)) {
+    return true;
+  }
 
   // Check for unisex indicators - if product explicitly says it's for both, allow it
   const unisexPatterns = [
