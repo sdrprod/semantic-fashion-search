@@ -1769,22 +1769,24 @@ export async function refineResults(
 
   // Filter results based on refinement intent criteria
   let filtered = currentResults.filter(product => {
-    // Color matching
+    // Color matching — check verifiedColors first, then fall back to title/description text
     if (refinementIntent.color) {
-      const colorMatch = product.verifiedColors?.some(c =>
-        c.toLowerCase().includes(refinementIntent.color!.toLowerCase())
-      );
-      if (!colorMatch) {
+      const color = refinementIntent.color.toLowerCase();
+      const colorInVerified = product.verifiedColors?.some(c => c.toLowerCase().includes(color));
+      const colorInTitle = product.title.toLowerCase().includes(color);
+      const colorInDesc = product.description?.toLowerCase().includes(color);
+      if (!colorInVerified && !colorInTitle && !colorInDesc) {
         return false;
       }
     }
 
-    // Category/garment matching
+    // Category/garment matching — check title (singular + plural) and description
     if (refinementIntent.primaryItem) {
-      const itemMatch = product.title.toLowerCase().includes(
-        refinementIntent.primaryItem.toLowerCase()
-      );
-      if (!itemMatch) {
+      const item = refinementIntent.primaryItem.toLowerCase();
+      const itemInTitle = product.title.toLowerCase().includes(item);
+      const itemPluralInTitle = product.title.toLowerCase().includes(item + 's');
+      const itemInDesc = product.description?.toLowerCase().includes(item);
+      if (!itemInTitle && !itemPluralInTitle && !itemInDesc) {
         return false;
       }
     }

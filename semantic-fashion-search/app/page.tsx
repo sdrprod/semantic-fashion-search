@@ -114,6 +114,9 @@ function HomeContent() {
 
       const data = await response.json();
       refinement.pushRefinement(refinementQuery, data.results, data.totalCount, data.intent);
+      setAllResults(data.results);
+      setResults(data.results.slice(0, pageSize));
+      setTotalCount(data.totalCount);
       setPage(1); // Reset pagination for new refinement level
     } catch (err) {
       console.error('[Refine] Error:', err);
@@ -125,16 +128,28 @@ function HomeContent() {
 
   // Handle breadcrumb navigation
   const handleSelectRefinementLevel = (levelIndex: number) => {
+    const targetLevel = refinement.refinementLevels[levelIndex];
     while (refinement.currentLevelIndex > levelIndex) {
       refinement.popRefinement();
     }
-    setPage(1); // Reset pagination when navigating levels
+    setPage(1);
+    if (targetLevel) {
+      setAllResults(targetLevel.results);
+      setResults(targetLevel.results.slice(0, pageSize));
+      setTotalCount(targetLevel.totalCount);
+    }
   };
 
   // Handle clear filters
   const handleClearRefinements = () => {
+    const originalLevel = refinement.refinementLevels[0];
     refinement.clearRefinements();
     setPage(1);
+    if (originalLevel) {
+      setAllResults(originalLevel.results);
+      setResults(originalLevel.results.slice(0, pageSize));
+      setTotalCount(originalLevel.totalCount);
+    }
   };
 
   // Refresh the "also searching for" queries
