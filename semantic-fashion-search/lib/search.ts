@@ -622,22 +622,42 @@ export async function semanticSearch(
   let categoryFilteredResults = colorFilteredResults;
   let categoryMatchCount = 0;
 
-  // Get primary category from the first search query (highest priority)
-  const primaryCategory = intent.searchQueries && intent.searchQueries.length > 0
-    ? intent.searchQueries[0].category
-    : 'all';
+  // Collect all queried categories (multi-category searches have more than one)
+  const queriedCategories = (intent.searchQueries ?? [])
+    .map(sq => sq.category.toLowerCase())
+    .filter(c => c && c !== 'all');
+  // De-duplicate (e.g. two dress queries → ['dress'])
+  const uniqueQueriedCategories = [...new Set(queriedCategories)];
+  const primaryCategory = uniqueQueriedCategories[0] ?? 'all';
+  const isMultiCategorySearch = uniqueQueriedCategories.length > 1;
 
   if (primaryCategory && primaryCategory !== 'all') {
-    console.log(`[semanticSearch] 👔 User specified category: "${primaryCategory}"`);
+    if (isMultiCategorySearch) {
+      console.log(`[semanticSearch] 👗👠 Multi-category search: ${uniqueQueriedCategories.join(', ')}`);
+    } else {
+      console.log(`[semanticSearch] 👔 User specified category: "${primaryCategory}"`);
+    }
 
     // Check each product for category match type (exact, partial, or none)
+    // For multi-category searches a product only needs to match ONE of the queried categories.
     let exactMatchCount = 0;
     let partialMatchCount = 0;
 
     categoryFilteredResults = colorFilteredResults.map((product) => {
-      const categoryMatchType = getCategoryMatchType(product, primaryCategory);
-      const matchesCategory = categoryMatchType !== 'none';
+      let categoryMatchType: 'exact' | 'partial' | 'none' = 'none';
 
+      if (isMultiCategorySearch) {
+        // Accept the best match across all queried categories
+        for (const cat of uniqueQueriedCategories) {
+          const matchType = getCategoryMatchType(product, cat);
+          if (matchType === 'exact') { categoryMatchType = 'exact'; break; }
+          if (matchType === 'partial') { categoryMatchType = 'partial'; }
+        }
+      } else {
+        categoryMatchType = getCategoryMatchType(product, primaryCategory);
+      }
+
+      const matchesCategory = categoryMatchType !== 'none';
       if (categoryMatchType === 'exact') exactMatchCount++;
       if (categoryMatchType === 'partial') partialMatchCount++;
       if (matchesCategory) categoryMatchCount++;
@@ -674,7 +694,7 @@ export async function semanticSearch(
       console.log(`[semanticSearch] 👔 After tiered filtering: ${categoryFilteredResults.length} results`);
     } else {
       // No category matches at all - show all results but warn
-      console.log(`[semanticSearch] ⚠️ No category matches found for "${primaryCategory}" - showing all results`);
+      console.log(`[semanticSearch] ⚠️ No category matches found for "${uniqueQueriedCategories.join(', ')}" - showing all results`);
     }
   }
 
