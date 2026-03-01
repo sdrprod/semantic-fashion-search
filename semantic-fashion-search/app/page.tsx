@@ -14,6 +14,7 @@ import { EmailSubscribe } from '@/components/EmailSubscribe';
 import { SearchLoadingModal } from '@/components/SearchLoadingModal';
 import RefinementBox from '@/components/RefinementBox';
 import RefinementBreadcrumb from '@/components/RefinementBreadcrumb';
+import { FashionIllustration } from '@/components/FashionIllustration';
 import { useSessionRatings } from '@/src/hooks/useSessionRatings';
 import { usePersistentRatings } from '@/src/hooks/usePersistentRatings';
 import { useRefinementHistory } from '@/src/hooks/useRefinementHistory';
@@ -531,8 +532,11 @@ function HomeContent() {
                 </div>
               )}
 
-              <div className="intent-explanation">
-                {intent?.explanation || `I understand that you are looking for ${query}. Is that correct?`}
+              <div className="intent-illustration-row">
+                <div className="intent-explanation">
+                  {intent?.explanation || `I understand that you are looking for ${query}. Is that correct?`}
+                </div>
+                <FashionIllustration />
               </div>
 
               {/* Quality Warning - shown when similarity scores are low */}

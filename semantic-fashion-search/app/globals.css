@@ -471,16 +471,46 @@ body {
 }
 
 /* Intent explanation */
+/* Row wrapper: intent text left, fashion illustration right (desktop) */
+.intent-illustration-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 1rem 0 2rem 0;
+}
+
 .intent-explanation {
+  flex: 1;
   background: #fff;
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
-  margin: 1rem 0 2rem 0;
   color: #495057;
   font-size: 1rem;
   line-height: 1.6;
   border: 1px solid #e9ecef;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Square illustration container — transparent bg preserved via object-fit: contain */
+.fashion-illustration {
+  flex-shrink: 0;
+  width: 160px;
+  height: 160px;
+}
+
+/* Mobile: stack illustration below the text box */
+@media (max-width: 640px) {
+  .intent-illustration-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fashion-illustration {
+    width: 140px;
+    height: 140px;
+    align-self: center;
+  }
 }
 
 /* Quality Warning - shown when similarity scores are low */
