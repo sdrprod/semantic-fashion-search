@@ -4,19 +4,19 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 const FASHION_IMAGES = [
-  '/images/woman-sunglasses-hat-black.webp',
-  '/images/woman-silhouette-black-hat-sunglasses-turtleneck.webp',
-  '/images/woman-silhouette-fitness.webp',
-  '/images/woman-silhouette-stylish.webp',
-  '/images/woman-with-umbrella.webp',
-  '/images/woman-singing.webp',
-  '/images/woman-running.webp',
-  '/images/woman-walking.webp',
-  '/images/woman-shopping.webp',
+  '/images/woman-sunglasses-hat-black.png',
+  '/images/woman-silhouette-black-hat-sunglasses-turtleneck.png',
+  '/images/woman-silhouette-fitness.png',
+  '/images/woman-silhouette-stylish.png',
+  '/images/woman-with-umbrella.png',
+  '/images/woman-singing.png',
+  '/images/woman-running.png',
+  '/images/woman-walking.png',
+  '/images/woman-shopping.png',
 ];
 
 /**
- * Renders a randomly-selected fashion illustration (woman*.webp) as a perfect square.
+ * Renders a randomly-selected fashion illustration (woman*.png) as a perfect square.
  * The image is chosen on client mount to avoid SSR hydration mismatches.
  * Transparent background is preserved (no fill, object-fit: contain).
  */
