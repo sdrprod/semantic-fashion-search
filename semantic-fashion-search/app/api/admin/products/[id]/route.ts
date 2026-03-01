@@ -12,7 +12,7 @@ async function requireAdmin() {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAdmin();
   if ('error' in auth) {
@@ -20,6 +20,7 @@ export async function PATCH(
   }
 
   try {
+    const { id } = await params;
     const { category } = await request.json();
     if (!category || typeof category !== 'string') {
       return NextResponse.json({ error: 'category is required' }, { status: 400 });
@@ -29,7 +30,7 @@ export async function PATCH(
     const { error } = await supabase
       .from('products')
       .update({ category, updated_at: new Date().toISOString() })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('[admin/products] PATCH error:', error);
@@ -45,7 +46,7 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAdmin();
   if ('error' in auth) {
@@ -53,11 +54,12 @@ export async function DELETE(
   }
 
   try {
+    const { id } = await params;
     const supabase = getSupabaseClient(true);
     const { error } = await supabase
       .from('products')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('[admin/products] DELETE error:', error);
