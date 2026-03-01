@@ -395,8 +395,37 @@ async function browseCategorySearch(
       // Activewear / pants that use "dress" as marketing adjective
       '%yoga pant%',    // yoga pants with "dress casual" in title
       '%sweatpant%',    // sweatpants with "dress casual" in title
+      '%cargo pant%',   // cargo pants with "dress casual" marketing copy
+      '%slacks%',       // dress slacks (formal trousers) — never actual dresses
+      '%maternity pant%', // maternity pants with "yoga dress" in marketing copy
+      '%pregnancy pant%', // pregnancy pants
       // Legwear that matches garment FTS terms
       '%socks%',        // "high top ... socks" — FTS "top" false match
+      // Broad footwear terminators: match "dress" anywhere before footwear noun
+      // (replaces brittle single-gap patterns that require exact adjacency)
+      '%dress%shoe%',   // "Party Dress Wedding...Shoes", "Beach Dress Designer Trend Shoes"
+      '%dress%heel%',   // "Paris Dress Classics...Heels", "Prom Wedding Dress...Heels"
+      '%dress%sandal%', // "Evening Dress Wedding...Sandals", "Party Dress Summer...Sandals"
+      '%dress%boot%',   // "Dress Ankle Boot", "Dress Comfy...Boots", "Dress Short Boots"
+      '%dress%sneaker%', // "Party Dress Walking Sneakers"
+      '%dress%trainer%', // "Designer Dress Casual...Trainers"
+      '%dress%loafer%', // "Dress Fashion Business...loafers"
+      '%dress%mule%',   // "Party Dress Summer Mules"
+      '%dress%slide%',  // "casual dress slide" (luxury shoe listings)
+      '%dress%pump%',   // extends existing %dress pump% to catch intervening words
+      '%dress%flat%',   // extends existing %dress flat% to catch intervening words
+      '%slingback%',    // slingback sandals/heels — never appear in dress titles
+      '%ankle boot%',   // ankle boots — catches titles where "Ankle Boots" precedes "Dress" adj
+      '%sandal%',       // sandals are footwear; catches titles where "Sandals" precedes "Dress"
+      // Men's formalwear (suits, groom attire) that contain "dress" as a noun
+      '%best man%',     // best man suits — "wedding dress best man" type titles
+      '%groom%',        // groom suits — never in women's dress product titles
+      // Outerwear that uses "Dress" as a fashion context adjective
+      '%windbreaker%',  // windbreakers are never dresses
+      '%windrunner%',   // running/windrunner jackets are never dresses
+      '%hooded jacket%', // hooded jackets are never dresses
+      // Belt/accessory language that describes what the item pairs with
+      '%with dresses%', // "perfect for pairing with dresses and jeans" — accessory language
       // Hard-coded: specific product to never show on garment browse
       '%Blouson Sleeve Boatneck%', // Amazon Essentials sweatshirt dress — misclassified as dress
     ];
