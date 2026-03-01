@@ -482,14 +482,13 @@ body {
 
 .intent-explanation {
   flex: 1;
-  background: #fff;
-  border-radius: 8px;
+  background: #000;
+  border-radius: 6px;
   padding: 1.25rem 1.5rem;
-  color: #495057;
+  color: #c17b4b;
   font-size: 1rem;
   line-height: 1.6;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 /* Square illustration container — transparent bg preserved via object-fit: contain */
