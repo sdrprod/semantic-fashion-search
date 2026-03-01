@@ -329,6 +329,11 @@ async function browseCategorySearch(
       '%sexy costume%', // explicit costume items
       '%burlesque%',    // burlesque wear
       '%boudoir%',      // boudoir sets
+      '%sexy%',         // any title explicitly labelled "sexy"
+      '%fishnet%',      // fishnet stockings / fishnet bodysuits
+      '%crotchless%',   // explicit lingerie
+      '%g-string%',     // explicit underwear
+      '%nipple%',       // explicit content
     ];
     for (const phrase of sexyBrowsePhrases) {
       q = q.not('title', 'ilike', phrase);
@@ -358,6 +363,26 @@ async function browseCategorySearch(
       '%dress pant%',   // dress pants (formal trousers, not a dress)
       '%dress shoe%',   // dress shoes (footwear)
       '%dress hat%',    // "formal dress hats" — millinery
+      '%dress shirt%',  // dress shirts (tops, not dresses)
+      '%dress flat%',   // flats marketed as "dress flats"
+      '%dress pump%',   // pumps marketed as "dress pumps"
+      '%dress sandal%', // sandals marketed as "dress sandals"
+      '%dress heel%',   // heels marketed as "dress heels"
+      '%dress boot%',   // boots marketed as "dress boot"
+      '%dress loafer%', // loafers marketed as "dress loafers"
+      '%dress watch%',  // watches marketed as "dress watches"
+      '%dress travel%', // travel items / yoga pants with "dress travel" in copy
+      // Garment bags and storage items
+      '%garment bag%',  // garment bags for storing/transporting dresses
+      '%dress bag%',    // wedding dress bags, garment storage bags
+      '%gown bag%',     // gown storage bags
+      // Belt accessories (plural form not caught by %belt for%)
+      '%belts for%',    // "Belts For Women" — belt accessories
+      '%waist chain%',  // chain waist belts / belly chains
+      // Swimwear rompers (romper is in FTS dress terms but swim rompers are swimwear)
+      '%swim romper%',  // swimsuit rompers
+      '%swimsuit%',     // swimsuits appearing via romper/jumpsuit FTS match
+      '%bathing suit%', // bathing suits appearing via romper/jumpsuit FTS match
       // Other non-clothing items that mention garments in their title
       '%insole%',       // shoe insoles "for dress shoes"
       '%by the yard%',  // fabric sold by the yard (sewing material)
@@ -365,6 +390,11 @@ async function browseCategorySearch(
       '%jewelry set%',  // jewelry sets marketed with "party dress" context
       // Costume/halloween items masquerading on browse pages
       '%dress up%',     // "dress up costume" / halloween
+      // Watches — "dress watch" style causes FTS match on garment pages
+      '%watch%',        // watches should never appear on garment browse pages
+      // Activewear / pants that use "dress" as marketing adjective
+      '%yoga pant%',    // yoga pants with "dress casual" in title
+      '%sweatpant%',    // sweatpants with "dress casual" in title
       // Legwear that matches garment FTS terms
       '%socks%',        // "high top ... socks" — FTS "top" false match
       // Hard-coded: specific product to never show on garment browse
@@ -398,9 +428,12 @@ async function browseCategorySearch(
     q = q.gte('price', settings.minPriceThreshold);
   }
 
-  // Safe server-side men's filter: "women's" does NOT contain "men's" as a substring
+  // Server-side men's pre-filter: catches the most obvious apostrophe forms at DB level.
+  // isMensProduct() is applied post-query (below) to catch all remaining forms.
   if (settings.enableMensFilter) {
-    q = q.not('title', 'ilike', "%men's%");
+    q = q.not('title', 'ilike', "%men's%");  // catches "men's" / "Men's"
+    q = q.not('title', 'ilike', '% for men%'); // catches "Shirt for Men" (safe: "for women" ≠ "for men")
+    q = q.not('title', 'ilike', 'men %');      // catches titles starting with "Men " or "Mens "
   }
 
   // Fetch more items than requested to account for potential duplicates after deduplication.
@@ -433,6 +466,15 @@ async function browseCategorySearch(
     tags: row.tags || [],
     similarity: 1.0, // not a similarity-ranked result
   }));
+
+  // Post-query men's filter: catches all remaining forms (no apostrophe, description-only, etc.)
+  // Mirrors the isMensProduct() logic used in executeMultiSearch for semantic search.
+  if (settings.enableMensFilter) {
+    const beforeMens = products.length;
+    products = products.filter(p => !isMensProduct(p.title, p.description || ''));
+    const filtered = beforeMens - products.length;
+    if (filtered > 0) console.log(`[browseCategorySearch] 🚫 Filtered ${filtered} men's products (post-query)`);
+  }
 
   // Deduplicate by brand::title (catches same product imported from different merchants/URLs)
   const seenBrandTitle = new Set<string>();
