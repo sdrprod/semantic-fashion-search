@@ -16,7 +16,7 @@
  */
 
 const HF_API_URL =
-  'https://api-inference.huggingface.co/pipeline/feature-extraction/openai/clip-vit-base-patch32';
+  'https://router.huggingface.co/pipeline/feature-extraction/openai/clip-vit-base-patch32';
 
 const CLIP_TIMEOUT_MS = 4000; // 4 s — must fit within search pipeline budget
 
