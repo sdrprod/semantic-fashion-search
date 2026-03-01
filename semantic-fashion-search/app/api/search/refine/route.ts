@@ -91,6 +91,21 @@ function fastParseRefinementIntent(query: string): ParsedIntent | null {
     }
   }
 
+  // Material/texture keywords — stored in style[], not primaryItem.
+  // Prevents Claude from being called for simple material queries ("suede", "leather"),
+  // avoiding the "primaryItem: 'suede items'" problem that wipes all results.
+  const MATERIAL_KEYWORDS = [
+    'suede', 'leather', 'patent leather', 'velvet', 'silk', 'satin', 'lace',
+    'denim', 'canvas', 'knit', 'knitted', 'woven', 'cotton', 'linen',
+    'wool', 'cashmere', 'tweed', 'fleece', 'faux leather', 'faux fur',
+    'patent', 'mesh', 'sequin', 'sequined', 'embroidered', 'embroidery',
+    'metallic', 'sheer', 'chiffon', 'organza', 'seersucker', 'corduroy',
+  ];
+  let material: string | null = null;
+  for (const m of MATERIAL_KEYWORDS) {
+    if (lower.includes(m)) { material = m; break; }
+  }
+
   let priceRange: { min: number | null; max: number | null } | undefined;
   const betweenMatch = lower.match(/between\s+\$?(\d+)\s+and\s+\$?(\d+)/);
   const underMatch   = lower.match(/(?:under|below|less than|max|at most)\s+\$?(\d+)/);
@@ -100,9 +115,9 @@ function fastParseRefinementIntent(query: string): ParsedIntent | null {
   else if (overMatch)  priceRange = { min: +overMatch[1], max: null };
 
   // If we couldn't extract anything useful, let Claude handle it
-  if (!color && !excludeColor && !primaryItem && !priceRange) return null;
+  if (!color && !excludeColor && !primaryItem && !priceRange && !material) return null;
 
-  const parts = [color, primaryItem].filter(Boolean);
+  const parts = [color, primaryItem || material].filter(Boolean);
   const priceDesc = priceRange?.max ? ` under $${priceRange.max}` : priceRange?.min ? ` over $${priceRange.min}` : '';
   const explanation = excludeColor
     ? `Showing all colors except ${excludeColor}.`
@@ -113,7 +128,7 @@ function fastParseRefinementIntent(query: string): ParsedIntent | null {
     excludeColor,
     primaryItem,
     priceRange,
-    style: [],
+    style: material ? [material] : [],
     constraints: [],
     secondaryItems: [],
     searchQueries: [],

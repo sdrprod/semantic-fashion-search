@@ -1975,14 +1975,17 @@ export async function refineResults(
 
   // Filter results based on refinement intent criteria
   let filtered = currentResults.filter(product => {
-    // Color INCLUDE — keep only products matching this color
-    // Intentionally NOT checking description: too many false positives from contextual
-    // mentions like "pairs well with black" or "available in red" that aren't the product color.
+    // Color INCLUDE — keep only products matching this color.
+    // Description is checked as a fallback because product titles often omit the color
+    // (e.g. "Leather Loafer" not "Brown Leather Loafer"). False positives from contextual
+    // description mentions (rare in fashion product copy) are less harmful than
+    // false negatives that hide correctly-colored items.
     if (refinementIntent.color) {
       const color = refinementIntent.color.toLowerCase();
       const colorInVerified = product.verifiedColors?.some(c => c.toLowerCase().includes(color));
       const colorInTitle = product.title.toLowerCase().includes(color);
-      if (!colorInVerified && !colorInTitle) {
+      const colorInDesc = product.description?.toLowerCase().includes(color);
+      if (!colorInVerified && !colorInTitle && !colorInDesc) {
         return false;
       }
     }
@@ -2010,6 +2013,22 @@ export async function refineResults(
     if (refinementIntent.primaryItem) {
       const item = refinementIntent.primaryItem.toLowerCase();
       const targetGroup = ITEM_TO_GROUP[item] ?? null;
+
+      // Multi-word or unrecognized primaryItem (e.g. Claude returning "suede items", "leather shoes") →
+      // the literal title check below would never match real products, so fall back to
+      // style qualifiers (which are set correctly) and skip the broken item filter.
+      if (item.includes(' ') && !targetGroup) {
+        const qualifiers = [
+          ...(refinementIntent.style ?? []),
+          ...(refinementIntent.constraints ?? []),
+        ];
+        if (qualifiers.length > 0) {
+          const productText = `${product.title} ${product.description || ''}`.toLowerCase();
+          return qualifiers.some(q => productText.includes(q.toLowerCase()));
+        }
+        return true; // No style qualifiers either — pass everything through
+      }
+
       const productGroup = getProductCategoryGroup(product);
 
       // Product is clearly in a DIFFERENT category → keep it, skip item filter
@@ -2049,6 +2068,20 @@ export async function refineResults(
           const matchesQualifier = qualifiers.some(q => productText.includes(q.toLowerCase()));
           if (!matchesQualifier) return false;
         }
+      }
+    }
+
+    // Style/material filter when no primaryItem was specified.
+    // Handles fast-parser results like { style: ['suede'], primaryItem: undefined } so that
+    // material-only queries ("suede", "velvet") actually filter the product list.
+    if (!refinementIntent.primaryItem) {
+      const qualifiers = [
+        ...(refinementIntent.style ?? []),
+        ...(refinementIntent.constraints ?? []),
+      ];
+      if (qualifiers.length > 0) {
+        const productText = `${product.title} ${product.description || ''}`.toLowerCase();
+        if (!qualifiers.some(q => productText.includes(q.toLowerCase()))) return false;
       }
     }
 
