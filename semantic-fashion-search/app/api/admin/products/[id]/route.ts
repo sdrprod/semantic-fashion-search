@@ -27,7 +27,8 @@ export async function PATCH(
     }
 
     const supabase = getSupabaseClient(true);
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from('products')
       .update({ category, updated_at: new Date().toISOString() })
       .eq('id', id);
