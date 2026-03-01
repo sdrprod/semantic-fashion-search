@@ -19,6 +19,7 @@ export interface Product {
   matchesCategory?: boolean; // Whether product matches user-specified category/garment type (used during filtering)
   visionScore?: number; // GPT-4 Vision score (0-10) for visual similarity to query
   visionMatch?: boolean; // Whether product visually matches query (visionScore >= 6)
+  category?: string; // Product category stored in DB (e.g. "Dresses", "Tops")
 }
 
 // Search types

@@ -311,7 +311,7 @@ async function browseCategorySearch(
   let q: any = supabase
     .from('products')
     .select(
-      'id, brand, title, description, price, currency, image_url, product_url, merchant_name, on_sale, verified_colors, tags',
+      'id, brand, title, description, price, currency, image_url, product_url, merchant_name, on_sale, verified_colors, tags, category',
       { count: 'exact' }
     )
     .textSearch('title', ftsQuery, { type: 'websearch', config: 'english' })
@@ -464,6 +464,7 @@ async function browseCategorySearch(
     onSale: row.on_sale,
     verifiedColors: row.verified_colors,
     tags: row.tags || [],
+    category: row.category || undefined,
     similarity: 1.0, // not a similarity-ranked result
   }));
 
@@ -1661,6 +1662,7 @@ async function executeMultiSearch(
       merchantName: row.merchant_name,
       onSale: row.on_sale,
       verifiedColors: row.verified_colors, // AI-verified actual colors from image analysis
+      category: row.category || undefined,
     }));
 
     // IMAGE RE-RANKING: blend text similarity with CLIP image similarity.
@@ -1859,6 +1861,7 @@ export async function simpleSearch(
     similarity: row.similarity,
     merchantName: row.merchant_name,
     onSale: row.on_sale,
+    category: row.category || undefined,
   }));
 }
 

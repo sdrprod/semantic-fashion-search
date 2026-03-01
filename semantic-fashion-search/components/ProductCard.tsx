@@ -7,6 +7,7 @@ import { FeedbackPopover } from '@/components/FeedbackPopover';
 
 interface ProductCardProps {
   product: Product;
+  onDeleted?: (id: string) => void;
   sessionRatings?: {
     getRating: (productId: string) => number;
     rate: (productId: string, rating: number) => void;
@@ -26,12 +27,19 @@ interface RatingStats {
   percent5Star: number;
 }
 
-export function ProductCard({ product, sessionRatings, persistentRatings }: ProductCardProps) {
+export function ProductCard({ product, onDeleted, sessionRatings, persistentRatings }: ProductCardProps) {
   const { data: session } = useSession();
   const [imageError, setImageError] = useState(false);
   const [stats, setStats] = useState<RatingStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+
+  // Admin controls state
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState(product.category || '');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Decode common HTML entities safely
   const decodeHtmlEntities = (text: string): string => {
@@ -153,6 +161,59 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
     setShowFeedback(false);
   };
 
+  // Admin: open panel and lazy-load categories
+  const handleAdminOpen = async () => {
+    const next = !adminOpen;
+    setAdminOpen(next);
+    setConfirmDelete(false);
+    setAdminStatus('idle');
+    if (next && categories.length === 0) {
+      try {
+        const res = await fetch('/api/admin/categories');
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data.categories || []);
+        }
+      } catch {
+        // silently ignore; dropdown will be empty but still usable
+      }
+    }
+  };
+
+  // Admin: move product to new category
+  const handleMove = async () => {
+    if (!selectedCategory) return;
+    setAdminStatus('saving');
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: selectedCategory }),
+      });
+      setAdminStatus(res.ok ? 'saved' : 'error');
+    } catch {
+      setAdminStatus('error');
+    }
+  };
+
+  // Admin: delete product
+  const handleDelete = async () => {
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDeleted?.(product.id);
+      } else {
+        setAdminStatus('error');
+        setConfirmDelete(false);
+      }
+    } catch {
+      setAdminStatus('error');
+      setConfirmDelete(false);
+    }
+  };
+
+  const isAdmin = session?.user?.role === 'admin';
+
   return (
     <div className="product-card">
       <div className="product-image-container">
@@ -228,6 +289,133 @@ export function ProductCard({ product, sessionRatings, persistentRatings }: Prod
             View Product
           </a>
         </div>
+
+        {/* Admin Controls — only visible to admins */}
+        {isAdmin && (
+          <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '6px' }}>
+            <button
+              onClick={handleAdminOpen}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '11px',
+                color: '#999',
+                padding: '2px 0',
+              }}
+            >
+              ⚙ Admin {adminOpen ? '▴' : '▾'}
+            </button>
+
+            {adminOpen && (
+              <div style={{
+                background: '#f9f9f9',
+                border: '1px solid #e8e8e8',
+                borderRadius: '4px',
+                padding: '10px',
+                marginTop: '6px',
+                fontSize: '12px',
+              }}>
+                {/* Category selector */}
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'block', color: '#666', marginBottom: '4px' }}>
+                    Category:
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => { setSelectedCategory(e.target.value); setAdminStatus('idle'); }}
+                    style={{
+                      width: '100%',
+                      padding: '4px 6px',
+                      fontSize: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    {selectedCategory && !categories.includes(selectedCategory) && (
+                      <option value={selectedCategory}>{selectedCategory}</option>
+                    )}
+                    {categories.length === 0 && (
+                      <option value="">Loading…</option>
+                    )}
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleMove}
+                    disabled={adminStatus === 'saving' || !selectedCategory}
+                    style={{
+                      padding: '3px 10px',
+                      fontSize: '12px',
+                      cursor: adminStatus === 'saving' ? 'wait' : 'pointer',
+                      background: '#fff',
+                      border: '1px solid #bbb',
+                      borderRadius: '3px',
+                    }}
+                  >
+                    {adminStatus === 'saving' ? 'Saving…' :
+                     adminStatus === 'saved' ? 'Saved ✓' :
+                     adminStatus === 'error' ? 'Error — retry' :
+                     'Move'}
+                  </button>
+                </div>
+
+                {/* Delete */}
+                {!confirmDelete ? (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#c00',
+                      padding: '2px 0',
+                    }}
+                  >
+                    Delete Product
+                  </button>
+                ) : (
+                  <div>
+                    <p style={{ color: '#c00', margin: '0 0 6px 0', fontSize: '12px' }}>
+                      ⚠ Are you sure? This cannot be undone.
+                    </p>
+                    <button
+                      onClick={handleDelete}
+                      style={{
+                        padding: '3px 10px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        background: '#c00',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '3px',
+                        marginRight: '6px',
+                      }}
+                    >
+                      Yes, delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      style={{
+                        padding: '3px 10px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        background: '#fff',
+                        border: '1px solid #bbb',
+                        borderRadius: '3px',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

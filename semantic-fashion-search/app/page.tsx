@@ -607,6 +607,11 @@ function HomeContent() {
                     product={product}
                     sessionRatings={sessionRatings}
                     persistentRatings={persistentRatings}
+                    onDeleted={(id) => {
+                      setResults(prev => prev.filter(p => p.id !== id));
+                      setAllResults(prev => prev.filter(p => p.id !== id));
+                      setTotalCount(prev => prev - 1);
+                    }}
                   />
                 ))}
               </div>
