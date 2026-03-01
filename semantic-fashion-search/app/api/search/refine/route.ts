@@ -78,9 +78,17 @@ function fastParseRefinementIntent(query: string): ParsedIntent | null {
     }
   }
 
+  // Store the actual matched keyword (e.g. "heels"), not the canonical key ("shoes").
+  // refineResults does a literal title check against primaryItem, so "heels" must
+  // produce "heel"/"heels" title matches — not "shoes".
   let primaryItem: string | undefined;
-  for (const [item, keywords] of Object.entries(CATEGORY_MAP)) {
-    if (keywords.some(k => lower.includes(k))) { primaryItem = item; break; }
+  outer: for (const keywords of Object.values(CATEGORY_MAP)) {
+    for (const keyword of keywords) {
+      if (lower.includes(keyword)) {
+        primaryItem = keyword;
+        break outer;
+      }
+    }
   }
 
   let priceRange: { min: number | null; max: number | null } | undefined;

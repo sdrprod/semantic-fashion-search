@@ -1907,12 +1907,41 @@ const CATEGORY_GROUP_TERMS: Record<string, string[]> = {
 };
 
 const ITEM_TO_GROUP: Record<string, string> = {
+  // shoes — all common sub-types so keywords like "heels", "boots" resolve to group 'shoes'
   shoe: 'shoes', shoes: 'shoes',
-  top: 'tops', tops: 'tops', blouse: 'tops', shirt: 'tops', sweater: 'tops',
-  pants: 'bottoms', skirt: 'bottoms', shorts: 'bottoms',
-  jacket: 'outerwear', coat: 'outerwear',
-  dress: 'dresses', jumpsuit: 'dresses',
-  bag: 'bags',
+  heel: 'shoes', heels: 'shoes',
+  boot: 'shoes', boots: 'shoes', bootie: 'shoes', booties: 'shoes',
+  sandal: 'shoes', sandals: 'shoes',
+  sneaker: 'shoes', sneakers: 'shoes', trainer: 'shoes', trainers: 'shoes',
+  loafer: 'shoes', loafers: 'shoes',
+  flat: 'shoes', flats: 'shoes',
+  pump: 'shoes', pumps: 'shoes',
+  mule: 'shoes', mules: 'shoes',
+  clog: 'shoes', clogs: 'shoes',
+  wedge: 'shoes', wedges: 'shoes',
+  slipper: 'shoes', slippers: 'shoes',
+  stiletto: 'shoes', stilettos: 'shoes',
+  // tops
+  top: 'tops', tops: 'tops', blouse: 'tops', blouses: 'tops',
+  shirt: 'tops', shirts: 'tops', sweater: 'tops', sweaters: 'tops',
+  cami: 'tops', camisole: 'tops', tank: 'tops', tee: 'tops',
+  // bottoms
+  pants: 'bottoms', pant: 'bottoms', skirt: 'bottoms', skirts: 'bottoms',
+  shorts: 'bottoms', trouser: 'bottoms', trousers: 'bottoms',
+  jean: 'bottoms', jeans: 'bottoms', legging: 'bottoms', leggings: 'bottoms',
+  // outerwear
+  jacket: 'outerwear', jackets: 'outerwear',
+  coat: 'outerwear', coats: 'outerwear',
+  blazer: 'outerwear', blazers: 'outerwear',
+  // dresses
+  dress: 'dresses', dresses: 'dresses',
+  gown: 'dresses', gowns: 'dresses',
+  jumpsuit: 'dresses', jumpsuits: 'dresses',
+  romper: 'dresses', rompers: 'dresses',
+  // bags
+  bag: 'bags', bags: 'bags',
+  purse: 'bags', purses: 'bags',
+  handbag: 'bags', tote: 'bags', clutch: 'bags',
 };
 
 /** Returns the high-level category group of a product based on its title, or null if unknown. */
@@ -1947,12 +1976,13 @@ export async function refineResults(
   // Filter results based on refinement intent criteria
   let filtered = currentResults.filter(product => {
     // Color INCLUDE — keep only products matching this color
+    // Intentionally NOT checking description: too many false positives from contextual
+    // mentions like "pairs well with black" or "available in red" that aren't the product color.
     if (refinementIntent.color) {
       const color = refinementIntent.color.toLowerCase();
       const colorInVerified = product.verifiedColors?.some(c => c.toLowerCase().includes(color));
       const colorInTitle = product.title.toLowerCase().includes(color);
-      const colorInDesc = product.description?.toLowerCase().includes(color);
-      if (!colorInVerified && !colorInTitle && !colorInDesc) {
+      if (!colorInVerified && !colorInTitle) {
         return false;
       }
     }
@@ -1987,11 +2017,22 @@ export async function refineResults(
         return true;
       }
 
-      // Product is in the target category (or unclassified) → apply the item filter
-      const itemInTitle = product.title.toLowerCase().includes(item);
-      const itemPluralInTitle = product.title.toLowerCase().includes(item + 's');
-      const itemInDesc = product.description?.toLowerCase().includes(item);
-      if (!itemInTitle && !itemPluralInTitle && !itemInDesc) {
+      // Product is in the target category (or unclassified) → apply the item filter.
+      // Check both the exact keyword and its singular/plural variant so that e.g.
+      // primaryItem="heels" matches "Strappy Heel" (singular) and vice-versa.
+      // Exception: words like "dress"/"shorts" that end in 's' but aren't plurals.
+      const KEEP_TRAILING_S = new Set(['dress', 'dresses', 'clothes', 'tights', 'shorts']);
+      const itemForms: string[] = [item];
+      if (item.endsWith('s') && item.length > 3 && !KEEP_TRAILING_S.has(item)) {
+        itemForms.push(item.slice(0, -1)); // plural → singular: "heels" → "heel"
+      } else if (!item.endsWith('s')) {
+        itemForms.push(item + 's');        // singular → plural: "heel" → "heels"
+      }
+      const titleLower = product.title.toLowerCase();
+      const descLower  = product.description?.toLowerCase() ?? '';
+      const itemInTitle = itemForms.some(f => titleLower.includes(f));
+      const itemInDesc  = itemForms.some(f => descLower.includes(f));
+      if (!itemInTitle && !itemInDesc) {
         return false;
       }
 
