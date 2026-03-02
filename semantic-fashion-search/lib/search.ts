@@ -2146,3 +2146,161 @@ export async function refineResults(
 
   return filtered;
 }
+
+// ---------------------------------------------------------------------------
+// Semantic refinement (replaces the old keyword-matching refineResults path)
+// ---------------------------------------------------------------------------
+
+/**
+ * Structured filters that semantic similarity genuinely cannot handle:
+ * - excludeColor: logical NOT — similarity to "not black" is still high for black items
+ * - priceRange: numerical comparison, not a semantic concept
+ */
+export interface RefinementFilters {
+  excludeColor?: string;
+  priceRange?: { min: number | null; max: number | null };
+}
+
+/**
+ * Re-rank and filter the current result set using embedding cosine similarity.
+ *
+ * Flow:
+ *  1. Apply hard filters (color exclusion, price range) — the only two things
+ *     that semantics genuinely cannot handle.
+ *  2. Generate an embedding for the refinement query.
+ *  3. Fetch stored product embeddings for the current result IDs from Supabase.
+ *  4. Compute cosine similarity for each candidate.
+ *  5. Apply an adaptive threshold: keep products above the midpoint of
+ *     [max_similarity, mean_similarity] — separates genuine matches from the
+ *     long tail without requiring any hard-coded keyword lists.
+ *  6. Return sorted results, always keeping a minimum of 5 to avoid empty pages.
+ */
+export async function refineResultsSemantically(
+  currentResults: Product[],
+  refinementQuery: string,
+  filters: RefinementFilters = {},
+  userRatings: { [id: string]: number } = {}
+): Promise<Product[]> {
+  if (!currentResults || currentResults.length === 0) return [];
+
+  console.log('[refineResultsSemantically] Refining', currentResults.length, 'results with:', refinementQuery);
+
+  const supabase = getSupabaseClient(true);
+
+  // ── 1. Hard filters (semantic similarity cannot handle these) ─────────────
+
+  let candidates = currentResults;
+
+  // Color exclusion: "except black", "not red", "without white" …
+  // A logical NOT cannot be expressed as a similarity threshold.
+  if (filters.excludeColor) {
+    const excluded = filters.excludeColor.toLowerCase();
+    candidates = candidates.filter(p => {
+      const inVerified = p.verifiedColors?.some(c => c.toLowerCase().includes(excluded));
+      const inText = `${p.title} ${p.description || ''}`.toLowerCase().includes(excluded);
+      return !inVerified && !inText;
+    });
+    console.log(`[refineResultsSemantically] After excluding "${filters.excludeColor}":`, candidates.length);
+  }
+
+  // Price range: "$50 < price < $100" is a numerical comparison, not semantic.
+  if (filters.priceRange) {
+    const { min, max } = filters.priceRange;
+    candidates = candidates.filter(p => {
+      if (p.price == null) return true; // keep unknown-price products
+      if (min != null && p.price < min) return false;
+      if (max != null && p.price > max) return false;
+      return true;
+    });
+    console.log('[refineResultsSemantically] After price filter:', candidates.length);
+  }
+
+  if (candidates.length === 0) return [];
+
+  // ── 2. Generate query embedding ───────────────────────────────────────────
+
+  let queryEmbedding: number[];
+  try {
+    queryEmbedding = await generateEmbedding(refinementQuery);
+  } catch (err) {
+    // If the embedding call fails, return candidates in their original order
+    // rather than surfacing an error to the user.
+    console.error('[refineResultsSemantically] Embedding generation failed, returning unranked:', err);
+    return candidates;
+  }
+
+  // ── 3. Fetch stored product embeddings for all candidates ─────────────────
+
+  const ids = candidates.map(p => p.id);
+  const embeddingMap = new Map<string, number[]>();
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, embedding')
+      .in('id', ids);
+    if (error) throw error;
+    if (data) {
+      for (const row of data) {
+        if (row.embedding) {
+          // Supabase pgvector can return the vector as a JSON string ("[0.1,0.2,...]").
+          // The TypeScript cast `as number[]` does NOT parse it — so we must do it explicitly.
+          const emb: number[] = typeof row.embedding === 'string'
+            ? JSON.parse(row.embedding)
+            : (row.embedding as number[]);
+          embeddingMap.set(row.id, emb);
+        }
+      }
+    }
+    console.log(`[refineResultsSemantically] Fetched embeddings for ${embeddingMap.size}/${ids.length} products`);
+  } catch (err) {
+    console.error('[refineResultsSemantically] Failed to fetch product embeddings, returning unranked:', err);
+    return candidates;
+  }
+
+  // ── 4. Score each candidate by cosine similarity ──────────────────────────
+
+  const scored = candidates.map(product => {
+    const productEmbedding = embeddingMap.get(product.id);
+    const semanticScore = productEmbedding
+      ? clipCosineSimilarity(queryEmbedding, productEmbedding)
+      : 0;
+
+    const userRating = userRatings[product.id];
+    const ratingBoost = userRating && userRating >= 4 ? (userRating - 3) * 0.05 : 0;
+
+    return { product, score: semanticScore + ratingBoost, rawSimilarity: semanticScore };
+  });
+
+  // Sort by combined score descending
+  scored.sort((a, b) => b.score - a.score);
+
+  // ── 5. Adaptive threshold ─────────────────────────────────────────────────
+  //
+  // Threshold = midpoint between the top similarity and the mean similarity.
+  // This naturally separates strong matches from the long tail without
+  // requiring any knowledge of what specific words mean.
+  //
+  // Example: top=0.42, mean=0.28  →  threshold=0.35
+  //   → keeps the products that are clearly more relevant than average.
+
+  const rawScores = scored.map(s => s.rawSimilarity).filter(s => s > 0);
+  let result = scored;
+
+  if (rawScores.length > 1) {
+    const maxScore = rawScores[0]; // already sorted
+    const meanScore = rawScores.reduce((a, b) => a + b, 0) / rawScores.length;
+    const threshold = (maxScore + meanScore) / 2;
+
+    const aboveThreshold = scored.filter(s => s.rawSimilarity >= threshold);
+    // Always keep at least 5 results so the page never goes blank
+    result = aboveThreshold.length >= 5 ? aboveThreshold : scored.slice(0, 5);
+
+    console.log(
+      `[refineResultsSemantically] Threshold ${threshold.toFixed(3)}` +
+      ` (max ${maxScore.toFixed(3)}, mean ${meanScore.toFixed(3)})` +
+      ` → kept ${result.length}/${scored.length}`
+    );
+  }
+
+  return result.map(s => ({ ...s.product, similarity: s.rawSimilarity }));
+}

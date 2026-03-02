@@ -604,20 +604,43 @@ function HomeContent() {
                 </button>
               </div>
 
-              <div className="results-grid">
-                {results.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    sessionRatings={sessionRatings}
-                    persistentRatings={persistentRatings}
-                    onDeleted={(id) => {
-                      setResults(prev => prev.filter(p => p.id !== id));
-                      setAllResults(prev => prev.filter(p => p.id !== id));
-                      setTotalCount(prev => prev - 1);
-                    }}
-                  />
-                ))}
+              {/* Results grid with overlay during semantic refinement */}
+              <div style={{ position: 'relative' }}>
+                {refinementLoading && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.80)',
+                    zIndex: 10,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '14px',
+                    borderRadius: '8px',
+                    minHeight: '200px',
+                  }}>
+                    <div className="refine-spinner" />
+                    <p style={{ color: '#c17b4b', fontWeight: 600, fontSize: '1rem', margin: 0 }}>
+                      Refining your results...
+                    </p>
+                  </div>
+                )}
+                <div className="results-grid" style={{ opacity: refinementLoading ? 0.4 : 1, transition: 'opacity 0.2s' }}>
+                  {results.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      sessionRatings={sessionRatings}
+                      persistentRatings={persistentRatings}
+                      onDeleted={(id) => {
+                        setResults(prev => prev.filter(p => p.id !== id));
+                        setAllResults(prev => prev.filter(p => p.id !== id));
+                        setTotalCount(prev => prev - 1);
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
               {totalCount > pageSize && (

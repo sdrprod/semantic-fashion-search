@@ -2475,3 +2475,17 @@ body {
     justify-content: center;
   }
 }
+
+/* ── Refinement loading spinner ───────────────────────────── */
+.refine-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid #e8e0d8;
+  border-top-color: #c17b4b;
+  border-radius: 50%;
+  animation: refine-spin 0.75s linear infinite;
+}
+
+@keyframes refine-spin {
+  to { transform: rotate(360deg); }
+}
