@@ -2240,14 +2240,19 @@ export async function refineResultsSemantically(
       .in('id', ids);
     if (error) throw error;
     if (data) {
-      for (const row of data) {
+      // Cast to any[] — the Supabase generated schema doesn't include 'embedding',
+      // so the inferred row type is 'never'. Same pattern as the image_embedding
+      // query above (line ~1715).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const row of (data as any[])) {
         if (row.embedding) {
           // Supabase pgvector can return the vector as a JSON string ("[0.1,0.2,...]").
-          // The TypeScript cast `as number[]` does NOT parse it — so we must do it explicitly.
+          // Parsing explicitly — a TypeScript cast alone does NOT convert the value.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const emb: number[] = typeof row.embedding === 'string'
             ? JSON.parse(row.embedding)
             : (row.embedding as number[]);
-          embeddingMap.set(row.id, emb);
+          embeddingMap.set(row.id as string, emb);
         }
       }
     }
