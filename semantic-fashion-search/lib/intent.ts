@@ -109,7 +109,44 @@ const anthropic = new Anthropic({
 });
 
 /**
+ * Retry with exponential backoff for Claude API calls
+ */
+async function retryClaudeWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if error is retryable (5xx server errors, 429, overloaded)
+      const isRetryable = lastError.message.includes('5') ||
+                         lastError.message.includes('429') ||
+                         lastError.message.includes('overload') ||
+                         lastError.message.includes('overloaded');
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw lastError;
+      }
+
+      // Exponential backoff with jitter
+      const delayMs = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1000;
+      console.log(`[intent] Claude API retry ${attempt + 1}/${maxRetries} after ${Math.round(delayMs)}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw lastError || new Error('Failed to extract intent from Claude');
+}
+
+/**
  * Extract search intent from a natural language query using Claude
+ * Falls back to simple intent extraction if Claude fails after retries
  */
 export async function extractIntent(query: string): Promise<ParsedIntent> {
   const systemPrompt = `You are a fashion search intent parser. Your job is to analyze natural language queries about fashion and extract structured search intents.
@@ -207,80 +244,89 @@ Contextual inference rules:
 - "summer" → light fabrics, bright colors, breathable materials
 - "winter" → warm fabrics, layering pieces, deeper colors`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-opus-4-6', // Using Opus 4.6 (new version number format)
-    max_tokens: 2048, // Increased from 1024 to allow for more detailed explanations
-    system: systemPrompt,
-    messages: [
-      {
-        role: 'user',
-        content: `Parse this fashion search query:\n\n"${query}"`,
-      },
-    ],
-  });
+  try {
+    const response = await retryClaudeWithBackoff(async () => {
+      return anthropic.messages.create({
+        model: 'claude-opus-4-6', // Using Opus 4.6 (new version number format)
+        max_tokens: 2048, // Increased from 1024 to allow for more detailed explanations
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Parse this fashion search query:\n\n"${query}"`,
+          },
+        ],
+      });
+    });
 
-  // Extract the text content from the response
-  const textContent = response.content.find(block => block.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text response from Claude');
-  }
+    // Extract the text content from the response
+    const textContent = response.content.find(block => block.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No text response from Claude');
+    }
 
-  // Parse the JSON response
-  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Could not extract JSON from Claude response');
-  }
+    // Parse the JSON response
+    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Could not extract JSON from Claude response');
+    }
 
-  const parsed = JSON.parse(jsonMatch[0]) as ParsedIntent;
+    const parsed = JSON.parse(jsonMatch[0]) as ParsedIntent;
 
-  // Validate the response structure
-  if (!parsed.searchQueries || !Array.isArray(parsed.searchQueries)) {
-    throw new Error('Invalid intent structure: missing searchQueries');
-  }
+    // Validate the response structure
+    if (!parsed.searchQueries || !Array.isArray(parsed.searchQueries)) {
+      throw new Error('Invalid intent structure: missing searchQueries');
+    }
 
-  // Safety net: if secondaryItems were named but have no corresponding searchQuery,
-  // add lightweight queries for them so they actually get searched.
-  // This covers cases where Claude puts items in secondaryItems but forgets to
-  // generate searchQueries for them (e.g., "dress and sandals" → sandals missing).
-  if (parsed.secondaryItems && parsed.secondaryItems.length > 0) {
-    const SECONDARY_ITEM_CATEGORY: Record<string, string> = {
-      'sandal': 'shoes', 'sandals': 'shoes', 'heel': 'shoes', 'heels': 'shoes',
-      'boot': 'shoes', 'boots': 'shoes', 'sneaker': 'shoes', 'sneakers': 'shoes',
-      'shoe': 'shoes', 'shoes': 'shoes', 'loafer': 'shoes', 'flat': 'shoes', 'pump': 'shoes',
-      'bag': 'bags', 'bags': 'bags', 'handbag': 'bags', 'purse': 'bags',
-      'clutch': 'bags', 'tote': 'bags', 'backpack': 'bags',
-      'pants': 'bottoms', 'jeans': 'bottoms', 'skirt': 'bottoms',
-      'shorts': 'bottoms', 'trousers': 'bottoms', 'leggings': 'bottoms',
-      'top': 'tops', 'tops': 'tops', 'blouse': 'tops', 'shirt': 'tops',
-      'sweater': 'tops', 'cardigan': 'tops', 'cami': 'tops',
-      'jacket': 'outerwear', 'coat': 'outerwear', 'blazer': 'outerwear',
-      'scarf': 'accessories', 'belt': 'accessories', 'hat': 'accessories',
-      'jewelry': 'accessories', 'necklace': 'accessories', 'earrings': 'accessories',
-    };
+    // Safety net: if secondaryItems were named but have no corresponding searchQuery,
+    // add lightweight queries for them so they actually get searched.
+    // This covers cases where Claude puts items in secondaryItems but forgets to
+    // generate searchQueries for them (e.g., "dress and sandals" → sandals missing).
+    if (parsed.secondaryItems && parsed.secondaryItems.length > 0) {
+      const SECONDARY_ITEM_CATEGORY: Record<string, string> = {
+        'sandal': 'shoes', 'sandals': 'shoes', 'heel': 'shoes', 'heels': 'shoes',
+        'boot': 'shoes', 'boots': 'shoes', 'sneaker': 'shoes', 'sneakers': 'shoes',
+        'shoe': 'shoes', 'shoes': 'shoes', 'loafer': 'shoes', 'flat': 'shoes', 'pump': 'shoes',
+        'bag': 'bags', 'bags': 'bags', 'handbag': 'bags', 'purse': 'bags',
+        'clutch': 'bags', 'tote': 'bags', 'backpack': 'bags',
+        'pants': 'bottoms', 'jeans': 'bottoms', 'skirt': 'bottoms',
+        'shorts': 'bottoms', 'trousers': 'bottoms', 'leggings': 'bottoms',
+        'top': 'tops', 'tops': 'tops', 'blouse': 'tops', 'shirt': 'tops',
+        'sweater': 'tops', 'cardigan': 'tops', 'cami': 'tops',
+        'jacket': 'outerwear', 'coat': 'outerwear', 'blazer': 'outerwear',
+        'scarf': 'accessories', 'belt': 'accessories', 'hat': 'accessories',
+        'jewelry': 'accessories', 'necklace': 'accessories', 'earrings': 'accessories',
+      };
 
-    const existingCategories = new Set(parsed.searchQueries.map(q => q.category.toLowerCase()));
-    const contextWords = [parsed.occasion, ...(parsed.style ?? [])].filter(Boolean).join(' ');
+      const existingCategories = new Set(parsed.searchQueries.map(q => q.category.toLowerCase()));
+      const contextWords = [parsed.occasion, ...(parsed.style ?? [])].filter(Boolean).join(' ');
 
-    for (const item of parsed.secondaryItems) {
-      const itemLower = item.toLowerCase();
-      let category: string | null = null;
-      for (const [keyword, cat] of Object.entries(SECONDARY_ITEM_CATEGORY)) {
-        if (itemLower.includes(keyword)) { category = cat; break; }
-      }
-      if (category && !existingCategories.has(category)) {
-        console.log(`[extractIntent] Safety net: adding searchQuery for secondary item "${item}" (${category})`);
-        parsed.searchQueries.push({
-          query: `${contextWords} ${item}`.trim(),
-          category,
-          priority: 2,
-          weight: 0.35,
-        });
-        existingCategories.add(category);
+      for (const item of parsed.secondaryItems) {
+        const itemLower = item.toLowerCase();
+        let category: string | null = null;
+        for (const [keyword, cat] of Object.entries(SECONDARY_ITEM_CATEGORY)) {
+          if (itemLower.includes(keyword)) { category = cat; break; }
+        }
+        if (category && !existingCategories.has(category)) {
+          console.log(`[extractIntent] Safety net: adding searchQuery for secondary item "${item}" (${category})`);
+          parsed.searchQueries.push({
+            query: `${contextWords} ${item}`.trim(),
+            category,
+            priority: 2,
+            weight: 0.35,
+          });
+          existingCategories.add(category);
+        }
       }
     }
-  }
 
-  return parsed;
+    return parsed;
+  } catch (error) {
+    // Claude failed after all retries, fall back to simple intent extraction
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[extractIntent] Claude API failed: ${errorMsg}. Falling back to simple intent extraction.`);
+    return createSimpleIntent(query);
+  }
 }
 
 /**
