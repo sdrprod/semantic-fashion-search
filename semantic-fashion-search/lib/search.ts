@@ -295,15 +295,18 @@ async function browseCategorySearch(
   const garmentStems = new Set(['dress', 'skirt', 'top', 'blouse', 'pant', 'jean',
     'legging', 'short', 'sweater', 'cardigan', 'tunic', 'camisole', 'pullover',
     'hoodie', 'outerwear', 'jacket', 'coat', 'blazer']);
-  const isGarmentBrowse = [...allTerms].some(t =>
-    garmentStems.has(t) || garmentStems.has(t.replace(/s$/, ''))
+  // Split multi-word terms (e.g. "tops blouses" stored as one entry) so individual
+  // words are checked against the stem sets — otherwise "tops blouses" fails the has() check.
+  const allWordsSplit = [...allTerms].flatMap(t => t.split(/\s+/));
+  const isGarmentBrowse = allWordsSplit.some(w =>
+    garmentStems.has(w) || garmentStems.has(w.replace(/s$/, ''))
   );
 
   // Determine if we're browsing a footwear category.
   const footwearStems = new Set(['shoe', 'heel', 'boot', 'sandal', 'sneaker',
     'loafer', 'pump', 'slipper', 'mule', 'wedge', 'oxford', 'flat']);
-  const isFootwearBrowse = [...allTerms].some(t =>
-    footwearStems.has(t) || footwearStems.has(t.replace(/s$/, ''))
+  const isFootwearBrowse = allWordsSplit.some(w =>
+    footwearStems.has(w) || footwearStems.has(w.replace(/s$/, ''))
   );
 
   // Build query — count:exact gives us the total for pagination
@@ -428,6 +431,19 @@ async function browseCategorySearch(
       '%with dresses%', // "perfect for pairing with dresses and jeans" — accessory language
       // Hard-coded: specific product to never show on garment browse
       '%Blouson Sleeve Boatneck%', // Amazon Essentials sweatshirt dress — misclassified as dress
+      // ── Bags / handbags appearing via "top" in title ──────────────────────
+      // e.g. "Top Handle Tote Bag", "Women Top Handle Handbag"
+      '%handbag%',        // any handbag — never a garment
+      '%top handle%',     // top-handle bags specifically
+      '%crossbody%',      // crossbody bags
+      '%shoulder bag%',   // shoulder bags
+      '%bucket bag%',     // bucket-style bags
+      '%tote bag%',       // tote bags (more specific than bare "tote" which can appear in garment copy)
+      '%clutch bag%',     // clutch bags
+      // ── Footwear appearing via "top" in title ─────────────────────────────
+      // e.g. "High Top Sneaker", "High Top Running Shoe"
+      '%sneaker%',        // all sneakers — never a top, blouse, or dress
+      '%high top%',       // "high top" appears almost exclusively on footwear
     ];
     for (const phrase of accessoryPhrases) {
       q = q.not('title', 'ilike', phrase);

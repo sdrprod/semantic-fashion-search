@@ -190,7 +190,14 @@ export function ProductCard({ product, onDeleted, sessionRatings, persistentRati
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: selectedCategory }),
       });
-      setAdminStatus(res.ok ? 'saved' : 'error');
+      if (res.ok) {
+        setAdminStatus('saved');
+        // Remove from the current results view after a brief pause so the admin
+        // can see the "Saved ✓" confirmation before the card disappears.
+        setTimeout(() => onDeleted?.(product.id), 900);
+      } else {
+        setAdminStatus('error');
+      }
     } catch {
       setAdminStatus('error');
     }
