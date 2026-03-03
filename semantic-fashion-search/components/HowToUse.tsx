@@ -11,7 +11,7 @@ export function HowToUse() {
     {
       number: 2,
       title: 'Upload Inspiration',
-      description: 'Found something you love? Upload up to 3 images and we\'ll find similar styles across thousands of brands and retailers.',
+      description: 'Found something you love? Upload up to 5 images and we\'ll find similar styles across thousands of brands and retailers.',
       image: '/images/image02.png',
       isPhone: true,
     },
