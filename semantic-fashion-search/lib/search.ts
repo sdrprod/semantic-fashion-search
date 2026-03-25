@@ -111,34 +111,53 @@ interface SearchOptions {
   skipVisionReranking?: boolean; // Skip vision re-ranking (for pagination to avoid timeout)
 }
 
+// Demo trigger phrases — add new demo queries here
+const DEMO_TRIGGER_DRESS = 'Modern long black dress with a romantic neckline for a formal evening event';
+const DEMO_TRIGGER_SWEATER = "luxury women's sweater in cream or beige color appropriate for work";
+
+/** Intent metadata returned per demo trigger */
+function getDemoIntent(trigger: string): ParsedIntent {
+  if (trigger === DEMO_TRIGGER_SWEATER) {
+    return {
+      searchQueries: [{ query: 'cream beige cashmere sweater work', category: 'sweaters', priority: 1, weight: 1.0 }],
+      primaryItem: 'sweater',
+      priceRange: undefined,
+      occasion: 'work',
+      style: ['luxury', 'cream', 'beige', 'cashmere'],
+    };
+  }
+  // Default: dress demo
+  return {
+    searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
+    primaryItem: 'dress',
+    priceRange: undefined,
+    occasion: 'formal evening',
+    style: ['romantic', 'elegant', 'black'],
+  };
+}
+
 /**
- * Fetch pre-populated demo products for live presentations
+ * Fetch pre-populated demo products for live presentations.
+ * Accepts a trigger string so both demo scenarios share the same logic.
  */
-async function getDemoSearchResults(limit: number = 12, page: number = 1): Promise<SearchResponse> {
-  const DEMO_TRIGGER = 'Modern long black dress with a romantic neckline for a formal evening event';
+async function getDemoSearchResults(trigger: string, limit: number = 12, page: number = 1): Promise<SearchResponse> {
   try {
     const supabase = getSupabaseClient(true);
 
-    // Fetch all demo products
+    // Fetch all demo products for this trigger
     const { data: demoProductsData, error } = await supabase
       .from('demo_products')
       .select('*')
-      .eq('demo_trigger', DEMO_TRIGGER)
+      .eq('demo_trigger', trigger)
       .order('price', { ascending: false });
 
     if (error || !demoProductsData) {
       console.error('[getDemoSearchResults] Error fetching demo products:', error);
       return {
-        query: DEMO_TRIGGER,
+        query: trigger,
         results: [],
         totalCount: 0,
-        intent: {
-          searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
-          primaryItem: 'dress',
-          priceRange: undefined,
-          occasion: 'formal evening',
-          style: ['romantic', 'elegant', 'black'],
-        },
+        intent: getDemoIntent(trigger),
         qualityWarning: 'Demo products not available',
       };
     }
@@ -162,31 +181,22 @@ async function getDemoSearchResults(limit: number = 12, page: number = 1): Promi
     const startIdx = (page - 1) * limit;
     const paginatedProducts = products.slice(startIdx, startIdx + limit);
 
-    console.log(`[getDemoSearchResults] Returned ${paginatedProducts.length} demo products (page ${page}, total ${products.length})`);
+    console.log(`[getDemoSearchResults] Trigger="${trigger}" — returned ${paginatedProducts.length} products (page ${page}, total ${products.length})`);
 
     return {
-      query: DEMO_TRIGGER,
+      query: trigger,
       results: paginatedProducts,
       totalCount: products.length,
-      intent: {
-        searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
-        primaryItem: 'dress',
-        priceRange: undefined,
-        occasion: 'formal evening',
-        style: ['romantic', 'elegant', 'black'],
-      },
+      intent: getDemoIntent(trigger),
       qualityWarning: undefined,
     };
   } catch (error) {
     console.error('[getDemoSearchResults] Error:', error);
     return {
-      query: DEMO_TRIGGER,
+      query: trigger,
       results: [],
       totalCount: 0,
-      intent: {
-        searchQueries: [{ query: 'black dress formal evening', category: 'dresses', priority: 1, weight: 1.0 }],
-        primaryItem: 'dress',
-      },
+      intent: getDemoIntent(trigger),
       qualityWarning: 'Demo search encountered an error',
     };
   }
@@ -554,11 +564,14 @@ export async function semanticSearch(
     skipVisionReranking = false, // Skip vision re-ranking (for pagination)
   } = options;
 
-  // CHECK FOR DEMO MODE - exact match on demo trigger phrase
-  const DEMO_TRIGGER = 'Modern long black dress with a romantic neckline for a formal evening event';
-  if (query.toLowerCase().trim() === DEMO_TRIGGER.toLowerCase().trim()) {
-    console.log('[semanticSearch] 🎬 DEMO MODE ACTIVATED - Returning pre-populated demo results');
-    return await getDemoSearchResults(limit, page);
+  // CHECK FOR DEMO MODE - exact match on any known demo trigger phrase
+  if (query.toLowerCase().trim() === DEMO_TRIGGER_DRESS.toLowerCase().trim()) {
+    console.log('[semanticSearch] 🎬 DEMO MODE ACTIVATED (dress) - Returning pre-populated demo results');
+    return await getDemoSearchResults(DEMO_TRIGGER_DRESS, limit, page);
+  }
+  if (query.toLowerCase().trim() === DEMO_TRIGGER_SWEATER.toLowerCase().trim()) {
+    console.log('[semanticSearch] 🎬 DEMO MODE ACTIVATED (sweater) - Returning pre-populated demo results');
+    return await getDemoSearchResults(DEMO_TRIGGER_SWEATER, limit, page);
   }
 
   // Detect broad queries that want to see "everything" in a category/color

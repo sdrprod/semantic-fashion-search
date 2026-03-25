@@ -27,8 +27,11 @@ export async function POST(request: NextRequest) {
     const validatedPage = Math.max(1, page);
 
     // Check if this is a demo query - skip caching for demo queries
-    const DEMO_TRIGGER = 'Modern long black dress with a romantic neckline for a formal evening event';
-    const isDemoQuery = query.toLowerCase().trim() === DEMO_TRIGGER.toLowerCase().trim();
+    const DEMO_TRIGGERS = [
+      'Modern long black dress with a romantic neckline for a formal evening event',
+      "luxury women's sweater in cream or beige color appropriate for work",
+    ];
+    const isDemoQuery = DEMO_TRIGGERS.some(t => query.toLowerCase().trim() === t.toLowerCase().trim());
     if (isDemoQuery) {
       console.log('[Search API] 🎬 DEMO QUERY DETECTED - Skipping cache for demo search');
     }

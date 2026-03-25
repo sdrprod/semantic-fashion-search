@@ -105,6 +105,7 @@ function HomeContent() {
         body: JSON.stringify({
           currentResults: currentLevelData.results,
           refinementQuery,
+          originalQuery: actualSearchQuery,
           userRatings: ratings,
         }),
       });

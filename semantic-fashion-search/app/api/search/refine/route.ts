@@ -1,6 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { refineResultsSemantically, RefinementFilters } from '@/lib/search';
+import { getSupabaseClient } from '@/lib/supabase';
 import type { Product } from '@/types';
+
+// Demo trigger constants (must match scripts/create-and-populate-sweater-demo.mjs)
+const SWEATER_DEMO_TRIGGER = "luxury women's sweater in cream or beige color appropriate for work";
+const BUTTONS_REFINEMENT_TRIGGER = `${SWEATER_DEMO_TRIGGER}||REFINE||buttons front`;
+
+/**
+ * Fetch pre-populated demo refinement products from demo_products table.
+ */
+async function getDemoRefinementProducts(): Promise<Product[]> {
+  try {
+    const supabase = getSupabaseClient(true);
+    const { data, error } = await supabase
+      .from('demo_products')
+      .select('*')
+      .eq('demo_trigger', BUTTONS_REFINEMENT_TRIGGER)
+      .order('price', { ascending: false });
+
+    if (error || !data) {
+      console.error('[getDemoRefinementProducts] Error fetching products:', error);
+      return [];
+    }
+
+    return (data as any[]).map(p => ({
+      id: p.id,
+      brand: p.brand,
+      title: p.title,
+      description: p.description || '',
+      price: parseFloat(p.price) || 0,
+      currency: p.currency || 'USD',
+      imageUrl: p.image_url,
+      productUrl: p.product_url,
+      verifiedColors: Array.isArray(p.verified_colors) ? p.verified_colors : [],
+      similarity: 0.95,
+    }));
+  } catch (err) {
+    console.error('[getDemoRefinementProducts] Error:', err);
+    return [];
+  }
+}
 
 interface RefineRequest {
   currentResults: Product[];
@@ -43,7 +83,7 @@ function extractColorExclusion(query: string): string | null {
 export async function POST(request: NextRequest) {
   try {
     const body: RefineRequest = await request.json();
-    const { currentResults, refinementQuery, userRatings = {} } = body;
+    const { currentResults, refinementQuery, originalQuery, userRatings = {} } = body;
 
     if (!refinementQuery || typeof refinementQuery !== 'string' || refinementQuery.trim().length < 2) {
       return NextResponse.json(
@@ -58,6 +98,23 @@ export async function POST(request: NextRequest) {
 
     const query = refinementQuery.trim();
     console.log('[Refine API] Refining', currentResults.length, 'results with:', query);
+
+    // ── Demo refinement detection ─────────────────────────────────────────────
+    // If the original search was the sweater demo AND the refinement asks about
+    // button-front options, return pre-populated static refinement products.
+    const isSweaterDemo = originalQuery &&
+      originalQuery.toLowerCase().trim() === SWEATER_DEMO_TRIGGER.toLowerCase().trim();
+    const isButtonRefinement = /\bbutton/i.test(query);
+
+    if (isSweaterDemo && isButtonRefinement) {
+      console.log('[Refine API] 🎬 DEMO REFINEMENT DETECTED - Returning pre-populated button-front products');
+      const demoResults = await getDemoRefinementProducts();
+      return NextResponse.json(
+        { results: demoResults, totalCount: demoResults.length },
+        { status: 200 }
+      );
+    }
+    // ── End demo refinement ───────────────────────────────────────────────────
 
     // Build the two hard filters that semantic similarity cannot handle
     const filters: RefinementFilters = {};
