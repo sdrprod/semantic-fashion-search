@@ -1153,10 +1153,11 @@ function isSexyProduct(title: string, description: string): boolean {
   // Note: 'thong' is intentionally excluded above — it is also a legitimate footwear
   // term ("thong sandal", "flip-flop thong"). Handled contextually below.
 
-  // Weak indicators (only check if in TITLE - too many false positives in descriptions)
-  const weakSexyTerms = [
-    'sheer', 'transparent', 'mesh', 'bodysuit', 'bedroom'
-  ];
+  // Weak indicators: only truly ambiguous terms that need co-occurrence to be flagged.
+  // 'mesh', 'sheer', 'bodysuit', 'bodycon' are mainstream fashion vocabulary —
+  // they only count as sexy when paired with a strong indicator (e.g. "sexy mesh",
+  // "mesh lingerie"). 'bedroom' remains a standalone weak indicator.
+  const weakSexyTerms = ['bedroom'];
 
   const combinedText = `${title} ${description}`.toLowerCase();
   const titleOnly = title.toLowerCase();
@@ -1164,7 +1165,7 @@ function isSexyProduct(title: string, description: string): boolean {
   // Check strong indicators in full text
   const hasStrongIndicator = strongSexyTerms.some(term => combinedText.includes(term));
 
-  // Check weak indicators ONLY in title (vendors stuff "mesh" in descriptions)
+  // Check weak indicators ONLY in title (bedroom context is always inappropriate)
   const hasWeakIndicator = weakSexyTerms.some(term => titleOnly.includes(term));
 
   // 'thong' is a legitimate footwear term (thong sandals, flip-flop thong style).
