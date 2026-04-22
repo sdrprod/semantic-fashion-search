@@ -3,7 +3,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { generateEmbedding } from '@/lib/embeddings';
 
 /**
- * Generate embeddings for products without embeddings
+ * Generate embeddings for products
  * POST /api/admin/generate-embeddings
  *
  * Headers:
@@ -12,70 +12,84 @@ import { generateEmbedding } from '@/lib/embeddings';
  * Body:
  *   action: 'count' | 'generate'
  *   batchSize?: number (default: 50)
+ *   force?: boolean — if true, re-generate embeddings for ALL products (even those
+ *           that already have one). Required when the embedding model has changed,
+ *           since stale embeddings from a different model produce near-zero cosine
+ *           similarity and the search threshold filters everything out.
+ *   offset?: number — row offset for paginating through the full catalog in force mode
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin secret
     const adminSecret = request.headers.get('x-admin-secret');
     if (adminSecret !== process.env.ADMIN_SECRET) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { action = 'count', batchSize = 50 } = body;
+    const { action = 'count', batchSize = 50, force = false, offset = 0 } = body;
 
     const supabase = getSupabaseClient(true);
 
     if (action === 'count') {
-      // Count products without embeddings
-      const { count, error } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .is('embedding', null);
+      // In force mode, report total products; otherwise report those missing embeddings.
+      let q = supabase.from('products').select('*', { count: 'exact', head: true });
+      if (!force) q = q.is('embedding', null);
 
-      if (error) {
-        throw new Error(`Failed to count products: ${error.message}`);
-      }
+      const { count, error } = await q;
+      if (error) throw new Error(`Failed to count products: ${error.message}`);
+
+      const { count: totalCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true });
 
       return NextResponse.json({
-        count: count || 0,
+        needsEmbedding: count ?? 0,
+        totalProducts: totalCount ?? 0,
+        mode: force ? 'force (all products)' : 'normal (missing only)',
       });
     }
 
     if (action === 'generate') {
-      // Fetch products without embeddings (limited by batchSize)
-      const { data: products, error: fetchError } = await supabase
+      // force=true: process ALL products at the given offset (re-index after model change)
+      // force=false: process only products with null embeddings (normal first-time indexing)
+      let q = supabase
         .from('products')
-        .select('id, combined_text')
-        .is('embedding', null)
-        .limit(batchSize);
+        .select('id, combined_text, title')
+        .order('created_at', { ascending: true })
+        .range(offset, offset + batchSize - 1);
 
-      if (fetchError) {
-        throw new Error(`Failed to fetch products: ${fetchError.message}`);
-      }
+      if (!force) q = (q as any).is('embedding', null);
 
-      const typedProducts = products as Array<{ id: string; combined_text: string }> | null;
+      const { data: products, error: fetchError } = await q;
+
+      if (fetchError) throw new Error(`Failed to fetch products: ${fetchError.message}`);
+
+      const typedProducts = products as Array<{ id: string; combined_text: string; title: string }> | null;
 
       if (!typedProducts || typedProducts.length === 0) {
         return NextResponse.json({
           generated: 0,
           errors: 0,
-          message: 'No products need embeddings',
+          processed: 0,
+          nextOffset: null,
+          message: force
+            ? `No more products at offset ${offset} — re-indexing complete`
+            : 'No products need embeddings',
         });
       }
 
       let generated = 0;
       let errors = 0;
 
-      // Generate embeddings for each product
       for (const product of typedProducts) {
         try {
-          const embedding = await generateEmbedding(product.combined_text);
+          const textToEmbed = product.combined_text || product.title || '';
+          if (!textToEmbed.trim()) {
+            errors++;
+            continue;
+          }
 
-          // Convert embedding array to PostgreSQL vector format
+          const embedding = await generateEmbedding(textToEmbed);
           const vectorString = `[${embedding.join(',')}]`;
 
           const { error: updateError } = await (supabase as any)
@@ -90,7 +104,7 @@ export async function POST(request: NextRequest) {
             generated++;
           }
 
-          // Rate limiting for OpenAI API (3,500 RPM = ~58 RPS, but let's be conservative)
+          // Stay well under OpenAI rate limits
           await new Promise(resolve => setTimeout(resolve, 100));
 
         } catch (err) {
@@ -99,10 +113,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const nextOffset = typedProducts.length === batchSize ? offset + batchSize : null;
+
       return NextResponse.json({
         generated,
         errors,
-        message: `Generated ${generated} embeddings with ${errors} errors`,
+        processed: typedProducts.length,
+        nextOffset,
+        message: `Processed ${typedProducts.length} products (offset ${offset}): ${generated} updated, ${errors} errors. ${nextOffset !== null ? `Next offset: ${nextOffset}` : 'Batch complete.'}`,
       });
     }
 
