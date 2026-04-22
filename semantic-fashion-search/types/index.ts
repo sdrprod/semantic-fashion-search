@@ -54,6 +54,7 @@ export interface ParsedIntent {
   constraints?: string[];
   color?: string | null; // Specific color to INCLUDE
   excludeColor?: string | null; // Specific color to EXCLUDE (e.g. "all colors except black")
+  pattern?: string | null; // Visual pattern/print: "floral", "striped", "plaid", "polka dot", etc.
   priceRange?: {
     min: number | null;
     max: number | null;

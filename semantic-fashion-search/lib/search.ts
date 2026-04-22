@@ -719,8 +719,48 @@ export async function semanticSearch(
     }
   }
 
+  // Apply pattern/print filtering if user specified a print (floral, striped, plaid, etc.)
+  let patternFilteredResults = colorFilteredResults;
+
+  if (intent.pattern) {
+    const patternSynonyms: Record<string, string[]> = {
+      floral:      ['floral', 'flower', 'flowers', 'botanical', 'wildflower', 'ditsy', 'garden print', 'rose print', 'daisy', 'fleur'],
+      striped:     ['striped', 'stripe', 'stripes', 'pinstripe', 'pinstripes', 'candy stripe'],
+      plaid:       ['plaid', 'tartan', 'checkered', 'check', 'gingham', 'madras'],
+      'polka dot': ['polka dot', 'polka-dot', 'dotted', 'dot print', 'spots'],
+      leopard:     ['leopard', 'animal print', 'cheetah', 'jaguar print'],
+      zebra:       ['zebra', 'zebra print', 'zebra stripe'],
+      snake:       ['snake print', 'snakeskin', 'python print'],
+      paisley:     ['paisley'],
+      geometric:   ['geometric', 'geo print', 'abstract print', 'abstract pattern'],
+      'tie-dye':   ['tie-dye', 'tiedye', 'tie dye'],
+      camouflage:  ['camouflage', 'camo'],
+      houndstooth: ['houndstooth', 'hound\'s tooth'],
+      argyle:      ['argyle'],
+    };
+
+    const synonyms = patternSynonyms[intent.pattern.toLowerCase()] ?? [intent.pattern.toLowerCase()];
+    let patternMatchCount = 0;
+
+    const withPatternFlag = colorFilteredResults.map(product => {
+      const combinedText = `${product.title} ${product.description || ''}`.toLowerCase();
+      const matchesPattern = synonyms.some(s => combinedText.includes(s));
+      if (matchesPattern) patternMatchCount++;
+      return { ...product, matchesPattern };
+    });
+
+    console.log(`[semanticSearch] 🌸 Pattern "${intent.pattern}" matches: ${patternMatchCount}/${withPatternFlag.length}`);
+
+    if (patternMatchCount > 0) {
+      patternFilteredResults = withPatternFlag.filter(p => (p as any).matchesPattern);
+      console.log(`[semanticSearch] 🌸 After strict pattern filter: ${patternFilteredResults.length} results`);
+    } else {
+      console.log(`[semanticSearch] ⚠️ No pattern matches for "${intent.pattern}" - showing all results`);
+    }
+  }
+
   // Apply category filtering if user specified a garment type
-  let categoryFilteredResults = colorFilteredResults;
+  let categoryFilteredResults = patternFilteredResults;
   let categoryMatchCount = 0;
 
   // Collect all queried categories (multi-category searches have more than one)

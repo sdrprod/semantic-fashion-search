@@ -90,6 +90,22 @@ export function classifySearchMode(
     return { useHybrid: true, vectorWeight: 0.5, textWeight: 0.5 };
   }
 
+  // Pattern/print signal: query contains a specific print keyword alongside a category.
+  // e.g. "floral dress", "striped shirt", "plaid coat", "polka dot skirt"
+  // These need higher text weight to enforce the pattern keyword via FTS — vector alone
+  // can't distinguish a floral dress from any other dress semantically.
+  const patternTerms = [
+    /\bfloral\b/i, /\bstriped?\b/i, /\bplaid\b/i, /\btartan\b/i, /\bgingham\b/i,
+    /\bpolka[\s-]?dot/i, /\bleopard\b/i, /\bzebra\b/i, /\banimal\s+print\b/i,
+    /\bpaisley\b/i, /\bgeometric\b/i, /\btie[\s-]?dye\b/i, /\bcamouflage\b|camo\b/i,
+    /\bhoundstooth\b/i, /\bargyle\b/i, /\bsnake\s+print\b/i, /\bcheetah\b/i,
+  ];
+  const hasPattern = patternTerms.some(p => p.test(query));
+  if (hasPattern) {
+    // Boost text weight so FTS enforces the pattern keyword is present in results
+    return { useHybrid: true, vectorWeight: 0.35, textWeight: 0.65 };
+  }
+
   // Nav browse signal: short query (1-2 words) that IS a known fashion category.
   // e.g. "dresses", "shoes", "tops", "pants jeans", "handbags totes"
   // FTS ensures products that explicitly name the category rank higher;
@@ -220,9 +236,21 @@ COLOR EXTRACTION (CRITICAL):
 - If user specifies a color, extract it EXACTLY in the "color" field
 - Common colors: black, white, red, blue, navy, pink, green, yellow, orange, purple, brown, beige, cream, grey/gray, gold, silver
 - Multi-word colors: "navy blue", "forest green", "hot pink", "burgundy", "emerald green"
-- Color patterns: "floral", "striped", "polka dot", "animal print" should be in style, NOT color
+- Color patterns: "floral", "striped", "polka dot", "animal print" should be in "pattern", NOT color
 - If multiple colors mentioned: use primary color (e.g., "black and white dress" → "black")
 - If no specific color: set color to null
+
+PATTERN EXTRACTION (CRITICAL):
+- If user specifies a print or pattern, extract it EXACTLY in the "pattern" field
+- Common patterns: floral, striped, plaid, polka dot, leopard, zebra, snake print, paisley, geometric, tie-dye, camouflage, houndstooth, argyle, abstract
+- "floral dress" → pattern: "floral", NOT in color or style
+- "striped shirt" → pattern: "striped"
+- "animal print top" → pattern: "leopard" (or most specific animal mentioned)
+- If no specific print/pattern mentioned: set pattern to null
+- Pattern goes in the "pattern" field AND should also appear in the searchQuery text for FTS matching
+
+Update the JSON structure to include:
+  "pattern": "specific pattern/print or null"
 
 PRICE RANGE EXTRACTION:
 - "under $X" or "less than $X" → {"min": null, "max": X}
@@ -436,13 +464,39 @@ export function createSimpleIntent(query: string): ParsedIntent {
   }
   const isMultiTermNav = wordMatches.length === queryWords.length && queryWords.length >= 2;
 
+  // Extract print/pattern keyword (e.g. "floral", "striped", "plaid")
+  // Checked AFTER color so a query like "blue striped dress" gets both color AND pattern.
+  const patternMap: Record<string, string[]> = {
+    floral:      ['floral', 'flower', 'flowers', 'fleurs', 'botanical', 'wildflower', 'ditsy', 'garden print', 'rose print', 'daisy'],
+    striped:     ['striped', 'stripe', 'stripes', 'pinstripe', 'pinstripes', 'candy stripe'],
+    plaid:       ['plaid', 'tartan', 'checkered', 'check', 'gingham', 'madras'],
+    'polka dot': ['polka dot', 'polka-dot', 'dotted', 'dot print', 'spots'],
+    leopard:     ['leopard', 'animal print', 'cheetah', 'jaguar print'],
+    zebra:       ['zebra', 'zebra print', 'zebra stripe'],
+    snake:       ['snake print', 'snakeskin', 'python print'],
+    paisley:     ['paisley'],
+    geometric:   ['geometric', 'geo print', 'abstract print', 'abstract pattern'],
+    'tie-dye':   ['tie-dye', 'tiedye', 'tie dye'],
+    camouflage:  ['camouflage', 'camo'],
+  };
+
+  let extractedPattern: string | null = null;
+  for (const [patternName, synonyms] of Object.entries(patternMap)) {
+    if (synonyms.some(s => lowerQuery.includes(s))) {
+      extractedPattern = patternName;
+      break;
+    }
+  }
+
   // Pluralize only if the word doesn't already end in s/x/z/ch/sh
   const pluralize = (word: string) =>
     /[sxz]$|[cs]h$/i.test(word) ? word : `${word}s`;
 
   // Create friendly, detailed explanation (2-3 sentences minimum)
   let explanation = '';
-  if (extractedColor && category !== 'all') {
+  if (extractedPattern && category !== 'all') {
+    explanation = `I can help you find ${extractedPattern} ${pluralize(itemName)}! I'm searching our collection for pieces that genuinely feature a ${extractedPattern} print and prioritizing exact matches so you see the real thing, not just items that casually mention the word. Let me show you what we have!`;
+  } else if (extractedColor && category !== 'all') {
     explanation = `I can help you find ${extractedColor} ${pluralize(itemName)}! I'm searching our collection specifically for ${extractedColor} ${pluralize(itemName)} that match your style. I'll prioritize items where the color is verified from product images to ensure you get exactly what you're looking for.`;
   } else if (extractedColor) {
     explanation = `Perfect! I'm searching for ${extractedColor} items across our entire collection. I'll use AI-verified color matching to show you pieces that are genuinely ${extractedColor}, not just items that mention the color in the description. This ensures you get the exact shade you're looking for!`;
@@ -454,6 +508,7 @@ export function createSimpleIntent(query: string): ParsedIntent {
 
   return {
     color: extractedColor,
+    pattern: extractedPattern,
     searchQueries: isMultiTermNav
       ? wordMatches.map(m => ({
           query: m.word,
