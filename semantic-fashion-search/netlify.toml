@@ -2,6 +2,11 @@
   command = "npm run build"
   publish = ".next"
 
+# The scripts/ directory contains local-only PowerShell admin tools with
+# hardcoded credentials. They are never deployed or executed by Netlify.
+[build.processing]
+  SECRETS_SCAN_OMIT_PATHS = "scripts"
+
 [build.environment]
   NODE_VERSION = "20"
 
