@@ -112,28 +112,37 @@ do {
 
     if (-not $products -or $products.Count -eq 0) { break }
 
-    # Build texts array - fall back to title if combined_text is empty
+    # Build texts array - fall back to title if combined_text is empty.
+    # Sanitize: remove control characters that break OpenAI JSON parsing.
     $texts = @()
     foreach ($p in $products) {
         $t = $p.combined_text
         if (-not $t -or $t.Trim() -eq '') { $t = $p.title }
+        if (-not $t) { $t = 'fashion product' }
+        # Strip control characters (null bytes, tabs that aren't spaces, etc.)
+        $t = $t -replace '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', ' '
+        $t = $t.Trim()
+        if ($t.Length -gt 2000) { $t = $t.Substring(0, 2000) }
         $texts += $t
     }
 
     # Generate embeddings for the whole batch in one OpenAI call
-    $embeddingBody = ConvertTo-Json -Depth 3 @{
+    $embeddingBody = ConvertTo-Json -Depth 4 @{
         model = "text-embedding-3-small"
         input = $texts
     }
 
     try {
-        $embResp   = Invoke-RestMethod `
+        $embResp = Invoke-RestMethod `
             -Uri "https://api.openai.com/v1/embeddings" `
             -Method POST `
             -Headers $openaiHeaders `
             -Body $embeddingBody
 
-        $embeddings = $embResp.data | Sort-Object { $_.index } | ForEach-Object { $_.embedding }
+        # IMPORTANT: do NOT use ForEach-Object { $_.embedding } here.
+        # PowerShell's pipeline unrolls inner arrays, flattening all
+        # 20x1536 floats into one giant flat array. Use indexed access instead.
+        $embeddingData = @($embResp.data | Sort-Object { [int]$_.index })
     } catch {
         Write-Host "  ERROR calling OpenAI at offset $offset : $_" -ForegroundColor Red
         Write-Host "  Resume from here with: -StartOffset $offset" -ForegroundColor Yellow
@@ -146,11 +155,13 @@ do {
 
     for ($i = 0; $i -lt $products.Count; $i++) {
         $productId = $products[$i].id
-        $embedding = $embeddings[$i]
 
-        # Format as PostgreSQL vector literal: [0.1,0.2,...]
-        $vectorStr   = "[" + ($embedding -join ",") + "]"
-        $updateBody  = ConvertTo-Json @{ embedding = $vectorStr }
+        # Access the embedding array by index - avoids the pipeline unroll bug
+        $vec = $embeddingData[$i].embedding
+
+        # Format as PostgreSQL vector literal: [f1,f2,...,f1536]
+        $vectorStr  = "[" + ($vec -join ",") + "]"
+        $updateBody = ConvertTo-Json @{ embedding = $vectorStr }
 
         $patchHeaders = $supabaseHeaders.Clone()
         $patchHeaders["Prefer"] = "return=minimal"
