@@ -19,7 +19,7 @@ $ErrorActionPreference = "Stop"
 
 # ── 1. Load credentials from .env.local ──────────────────────────────────────
 
-$envPath = Join-Path $PSScriptRoot ".." ".env.local"
+$envPath = Join-Path (Join-Path $PSScriptRoot "..") ".env.local"
 if (-not (Test-Path $envPath)) {
     Write-Host "ERROR: .env.local not found at $envPath" -ForegroundColor Red
     exit 1
