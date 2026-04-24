@@ -1,15 +1,13 @@
-# Reindex all product embeddings locally — no Netlify required.
-#
+# Reindex all product embeddings locally - no Netlify required.
 # Reads credentials from .env.local, hits Supabase and OpenAI directly.
-# Batches embedding generation (up to 20 texts per OpenAI call) for speed.
 #
 # Usage (run from the semantic-fashion-search directory):
 #   .\scripts\reindex-embeddings-local.ps1
 #
-# Optional:
-#   -BatchSize 20     rows fetched + embedded per round (default: 20)
-#   -StartOffset 0    resume a partial run
-#   -DryRun           count only, no changes
+# Optional flags:
+#   -BatchSize 20      products per round (default: 20)
+#   -StartOffset 0     resume a partial run from this row offset
+#   -DryRun            count only, make no changes
 
 param(
     [int]$BatchSize   = 20,
@@ -29,18 +27,31 @@ if (-not (Test-Path $envPath)) {
 
 $env_vars = @{}
 Get-Content $envPath | ForEach-Object {
-    if ($_ -match '^\s*([^#][^=]+?)\s*=\s*(.*)\s*$') {
-        $env_vars[$Matches[1]] = $Matches[2].Trim('"').Trim("'")
+    if ($_ -match '^\s*([^#=][^=]*?)\s*=\s*(.*)\s*$') {
+        $key = $Matches[1].Trim()
+        $val = $Matches[2].Trim().Trim('"').Trim("'")
+        $env_vars[$key] = $val
     }
 }
 
-$SUPABASE_URL    = $env_vars['SUPABASE_URL'] ?? $env_vars['NEXT_PUBLIC_SUPABASE_URL']
-$SUPABASE_KEY    = $env_vars['SUPABASE_SERVICE_ROLE_KEY']
-$OPENAI_KEY      = $env_vars['OPENAI_API_KEY']
+# PS 5.1 does not have the ?? operator - use if/else
+if ($env_vars['SUPABASE_URL']) {
+    $SUPABASE_URL = $env_vars['SUPABASE_URL']
+} else {
+    $SUPABASE_URL = $env_vars['NEXT_PUBLIC_SUPABASE_URL']
+}
+$SUPABASE_KEY = $env_vars['SUPABASE_SERVICE_ROLE_KEY']
+$OPENAI_KEY   = $env_vars['OPENAI_API_KEY']
 
-if (-not $SUPABASE_URL)  { Write-Host "ERROR: SUPABASE_URL not found in .env.local"             -ForegroundColor Red; exit 1 }
-if (-not $SUPABASE_KEY)  { Write-Host "ERROR: SUPABASE_SERVICE_ROLE_KEY not found in .env.local" -ForegroundColor Red; exit 1 }
-if (-not $OPENAI_KEY)    { Write-Host "ERROR: OPENAI_API_KEY not found in .env.local"            -ForegroundColor Red; exit 1 }
+if (-not $SUPABASE_URL) {
+    Write-Host "ERROR: SUPABASE_URL not found in .env.local" -ForegroundColor Red; exit 1
+}
+if (-not $SUPABASE_KEY) {
+    Write-Host "ERROR: SUPABASE_SERVICE_ROLE_KEY not found in .env.local" -ForegroundColor Red; exit 1
+}
+if (-not $OPENAI_KEY) {
+    Write-Host "ERROR: OPENAI_API_KEY not found in .env.local" -ForegroundColor Red; exit 1
+}
 
 $supabaseHeaders = @{
     "apikey"        = $SUPABASE_KEY
@@ -63,21 +74,27 @@ Write-Host ""
 
 # ── 2. Count total products ───────────────────────────────────────────────────
 
-$countResp = Invoke-RestMethod `
+$countHeaders = $supabaseHeaders.Clone()
+$countHeaders["Prefer"]     = "count=exact"
+$countHeaders["Range-Unit"] = "items"
+$countHeaders["Range"]      = "0-0"
+
+$countResp = Invoke-WebRequest `
     -Uri "$SUPABASE_URL/rest/v1/products?select=id" `
     -Method GET `
-    -Headers ($supabaseHeaders + @{ "Prefer" = "count=exact"; "Range-Unit" = "items"; "Range" = "0-0" }) `
-    -ResponseHeadersVariable respHeaders
+    -Headers $countHeaders
 
-# Supabase returns total count in Content-Range header: "0-0/1234"
-$contentRange = $respHeaders['Content-Range']
-$totalProducts = if ($contentRange -match '/(\d+)') { [int]$Matches[1] } else { 0 }
+$contentRange  = $countResp.Headers["Content-Range"]
+$totalProducts = 0
+if ($contentRange -match '/(\d+)') {
+    $totalProducts = [int]$Matches[1]
+}
 
 Write-Host " Total products in database: $totalProducts"
 
 if ($DryRun) {
     Write-Host ""
-    Write-Host "Dry run — no changes made. Remove -DryRun to start." -ForegroundColor Yellow
+    Write-Host "Dry run - no changes made. Remove -DryRun to start." -ForegroundColor Yellow
     exit 0
 }
 if ($totalProducts -eq 0) {
@@ -99,7 +116,6 @@ $startTime   = Get-Date
 
 do {
     $round++
-    $rangeEnd = $offset + $BatchSize - 1
 
     # Fetch a batch of products
     $fetchUri = "$SUPABASE_URL/rest/v1/products?select=id,combined_text,title&order=created_at.asc&limit=$BatchSize&offset=$offset"
@@ -107,30 +123,31 @@ do {
 
     if (-not $products -or $products.Count -eq 0) { break }
 
-    # Build texts array (fall back to title if combined_text is empty)
-    $texts = $products | ForEach-Object {
-        $t = $_.combined_text
-        if (-not $t -or $t.Trim() -eq '') { $t = $_.title }
-        $t
+    # Build texts array - fall back to title if combined_text is empty
+    $texts = @()
+    foreach ($p in $products) {
+        $t = $p.combined_text
+        if (-not $t -or $t.Trim() -eq '') { $t = $p.title }
+        $texts += $t
     }
 
     # Generate embeddings for the whole batch in one OpenAI call
-    $embeddingBody = @{
+    $embeddingBody = ConvertTo-Json -Depth 3 @{
         model = "text-embedding-3-small"
-        input = @($texts)
-    } | ConvertTo-Json -Depth 3
+        input = $texts
+    }
 
     try {
-        $embResp = Invoke-RestMethod `
+        $embResp   = Invoke-RestMethod `
             -Uri "https://api.openai.com/v1/embeddings" `
             -Method POST `
             -Headers $openaiHeaders `
             -Body $embeddingBody
 
-        $embeddings = $embResp.data | Sort-Object index | ForEach-Object { $_.embedding }
+        $embeddings = $embResp.data | Sort-Object { $_.index } | ForEach-Object { $_.embedding }
     } catch {
-        Write-Host "  ERROR calling OpenAI at offset $offset`: $_" -ForegroundColor Red
-        Write-Host "  To resume from here: -StartOffset $offset" -ForegroundColor Yellow
+        Write-Host "  ERROR calling OpenAI at offset $offset : $_" -ForegroundColor Red
+        Write-Host "  Resume from here with: -StartOffset $offset" -ForegroundColor Yellow
         break
     }
 
@@ -143,19 +160,21 @@ do {
         $embedding = $embeddings[$i]
 
         # Format as PostgreSQL vector literal: [0.1,0.2,...]
-        $vectorStr = "[" + ($embedding -join ",") + "]"
+        $vectorStr   = "[" + ($embedding -join ",") + "]"
+        $updateBody  = ConvertTo-Json @{ embedding = $vectorStr }
 
-        $updateBody = @{ embedding = $vectorStr } | ConvertTo-Json
+        $patchHeaders = $supabaseHeaders.Clone()
+        $patchHeaders["Prefer"] = "return=minimal"
 
         try {
             Invoke-RestMethod `
                 -Uri "$SUPABASE_URL/rest/v1/products?id=eq.$productId" `
                 -Method PATCH `
-                -Headers ($supabaseHeaders + @{ "Prefer" = "return=minimal" }) `
+                -Headers $patchHeaders `
                 -Body $updateBody | Out-Null
             $batchDone++
         } catch {
-            Write-Host "  ERROR updating product $productId`: $_" -ForegroundColor Yellow
+            Write-Host "  ERROR updating product $productId : $_" -ForegroundColor Yellow
             $batchErrors++
         }
     }
@@ -183,6 +202,6 @@ Write-Host " Time    : ${totalElapsed}s"
 Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host ""
 if ($totalErrors -gt 0) {
-    Write-Host "Some updates failed. Run again to retry — already-updated" -ForegroundColor Yellow
-    Write-Host "products will simply get re-written (no harm done)." -ForegroundColor Yellow
+    Write-Host "Some updates failed. Run again to retry -" -ForegroundColor Yellow
+    Write-Host "already-updated products will simply be re-written." -ForegroundColor Yellow
 }
