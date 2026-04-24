@@ -72,38 +72,27 @@ Write-Host " Model    : text-embedding-3-small (OpenAI)"
 Write-Host " Batch    : $BatchSize products per round"
 Write-Host ""
 
-# ── 2. Count total products ───────────────────────────────────────────────────
+# ── 2. Verify connection with a quick 1-row fetch ────────────────────────────
 
-$countHeaders = $supabaseHeaders.Clone()
-$countHeaders["Prefer"]     = "count=exact"
-$countHeaders["Range-Unit"] = "items"
-$countHeaders["Range"]      = "0-0"
-
-$countResp = Invoke-WebRequest `
-    -Uri "$SUPABASE_URL/rest/v1/products?select=id" `
+$testResp = Invoke-RestMethod `
+    -Uri "$SUPABASE_URL/rest/v1/products?select=id&limit=1" `
     -Method GET `
-    -Headers $countHeaders
+    -Headers $supabaseHeaders
 
-$contentRange  = $countResp.Headers["Content-Range"]
-$totalProducts = 0
-if ($contentRange -match '/(\d+)') {
-    $totalProducts = [int]$Matches[1]
+if ($null -eq $testResp) {
+    Write-Host "ERROR: Could not reach Supabase products table." -ForegroundColor Red
+    exit 1
 }
 
-Write-Host " Total products in database: $totalProducts"
+Write-Host " Supabase connection OK"
 
 if ($DryRun) {
     Write-Host ""
     Write-Host "Dry run - no changes made. Remove -DryRun to start." -ForegroundColor Yellow
     exit 0
 }
-if ($totalProducts -eq 0) {
-    Write-Host "No products found." -ForegroundColor Yellow
-    exit 0
-}
 
-$estimatedRounds = [math]::Ceiling(($totalProducts - $StartOffset) / $BatchSize)
-Write-Host " Estimated rounds         : $estimatedRounds"
+Write-Host " Starting at offset       : $StartOffset"
 Write-Host ""
 
 # ── 3. Reindex loop ───────────────────────────────────────────────────────────
@@ -182,9 +171,9 @@ do {
     $totalDone   += $batchDone
     $totalErrors += $batchErrors
     $elapsed      = [math]::Round(((Get-Date) - $startTime).TotalSeconds)
-    $pct          = [math]::Round(($offset + $products.Count) / $totalProducts * 100)
+    $nextOffset   = $offset + $products.Count
 
-    Write-Host "Round $round | offset $offset | $batchDone updated, $batchErrors errors | $pct% | ${elapsed}s"
+    Write-Host "Round $round | rows $offset-$($nextOffset - 1) | $batchDone updated, $batchErrors errors | ${elapsed}s elapsed"
 
     $offset += $products.Count
 
