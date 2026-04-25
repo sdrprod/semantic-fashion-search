@@ -126,27 +126,68 @@ do {
         $texts += $t
     }
 
-    # Generate embeddings for the whole batch in one OpenAI call
-    $embeddingBody = ConvertTo-Json -Depth 4 @{
-        model = "text-embedding-3-small"
-        input = $texts
+    # Helper: call OpenAI embeddings for a single array of texts.
+    # Returns the sorted data array, or $null on failure.
+    function Invoke-OpenAIEmbeddings($inputTexts) {
+        try {
+            $body = ConvertTo-Json -Depth 4 @{
+                model = "text-embedding-3-small"
+                input = $inputTexts
+            }
+            $resp = Invoke-RestMethod `
+                -Uri "https://api.openai.com/v1/embeddings" `
+                -Method POST `
+                -Headers $openaiHeaders `
+                -Body $body
+            return @($resp.data | Sort-Object { [int]$_.index })
+        } catch {
+            return $null
+        }
     }
 
-    try {
-        $embResp = Invoke-RestMethod `
-            -Uri "https://api.openai.com/v1/embeddings" `
-            -Method POST `
-            -Headers $openaiHeaders `
-            -Body $embeddingBody
+    # Helper: sanitize a text string progressively more aggressively.
+    # Returns an array of fallback texts to try in order.
+    function Get-TextFallbacks($raw, $titleFallback) {
+        # Level 1: strip control chars (already done, but redo cleanly here)
+        $l1 = ($raw -replace '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', ' ').Trim()
+        if ($l1.Length -gt 2000) { $l1 = $l1.Substring(0, 2000) }
 
-        # IMPORTANT: do NOT use ForEach-Object { $_.embedding } here.
-        # PowerShell's pipeline unrolls inner arrays, flattening all
-        # 20x1536 floats into one giant flat array. Use indexed access instead.
-        $embeddingData = @($embResp.data | Sort-Object { [int]$_.index })
-    } catch {
-        Write-Host "  ERROR calling OpenAI at offset $offset : $_" -ForegroundColor Red
-        Write-Host "  Resume from here with: -StartOffset $offset" -ForegroundColor Yellow
-        break
+        # Level 2: strip all non-printable-ASCII (catches Unicode surrogates,
+        # stray emoji bytes, and other characters PS 5.1 serializes badly)
+        $l2 = ($l1 -replace '[^\x20-\x7E]', ' ').Trim()
+        $l2 = ($l2 -replace '\s+', ' ').Trim()
+
+        # Level 3: just the product title
+        $l3 = if ($titleFallback) { ($titleFallback -replace '[^\x20-\x7E]', ' ').Trim() } else { '' }
+
+        # Level 4: generic placeholder
+        $l4 = 'fashion clothing product'
+
+        return @($l1, $l2, $l3, $l4) | Where-Object { $_ -and $_.Trim() -ne '' }
+    }
+
+    # Try batch call first (fastest path)
+    $embeddingData = Invoke-OpenAIEmbeddings $texts
+
+    if (-not $embeddingData) {
+        # Batch failed - fall back to one product at a time so bad text
+        # doesn't block the whole batch. Try progressively simpler text.
+        Write-Host "  Batch failed at offset $offset - switching to per-product mode..." -ForegroundColor Yellow
+        $embeddingData = @()
+        for ($j = 0; $j -lt $products.Count; $j++) {
+            $fallbacks = Get-TextFallbacks $texts[$j] $products[$j].title
+            $singleData = $null
+            foreach ($attempt in $fallbacks) {
+                $singleData = Invoke-OpenAIEmbeddings @($attempt)
+                if ($singleData) { break }
+            }
+            if ($singleData) {
+                $embeddingData += $singleData[0]
+            } else {
+                Write-Host "  SKIP product $($products[$j].id) - all text variants failed" -ForegroundColor Red
+                $embeddingData += $null
+            }
+        }
     }
 
     # Update each product in Supabase
@@ -155,6 +196,12 @@ do {
 
     for ($i = 0; $i -lt $products.Count; $i++) {
         $productId = $products[$i].id
+
+        # Skip products where all text fallbacks failed
+        if ($null -eq $embeddingData[$i]) {
+            $batchErrors++
+            continue
+        }
 
         # Access the embedding array by index - avoids the pipeline unroll bug
         $vec = $embeddingData[$i].embedding
