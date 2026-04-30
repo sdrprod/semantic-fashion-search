@@ -707,12 +707,31 @@ export async function semanticSearch(
 
     console.log(`[semanticSearch] 🎨 Color matches: ${colorMatchCount}/${colorFilteredResults.length}`);
 
-    // CRITICAL: For color queries, ALWAYS filter strictly to only show matching colors
-    // Users expect "black dress" to show ONLY black dresses, not blue/red/yellow ones
-    if (colorMatchCount > 0) {
+    // Strict filter threshold: if verified-color matches are too few to be useful,
+    // supplement with title-based matches so users see a reasonable result set.
+    // verified_colors data may be incomplete; title mentions are a valid fallback.
+    const MIN_STRICT_RESULTS = 5;
+
+    if (colorMatchCount >= MIN_STRICT_RESULTS) {
+      // Enough verified matches — apply strict filter, show only confirmed color
       console.log(`[semanticSearch] 🎯 Applying strict color filter - removing non-matching items`);
       colorFilteredResults = colorFilteredResults.filter(p => p.matchesColor);
       console.log(`[semanticSearch] 🎨 After strict color filtering: ${colorFilteredResults.length} results`);
+    } else if (colorMatchCount > 0) {
+      // Too few verified matches — supplement with title/description matches so the
+      // page isn't nearly empty.  Verified matches stay at the top of the list.
+      const normalizedColor = intent.color.toLowerCase();
+      const titleMatches = colorFilteredResults.filter(p =>
+        !p.matchesColor &&
+        `${p.title} ${p.description || ''}`.toLowerCase().includes(normalizedColor)
+      );
+      colorFilteredResults = [
+        ...colorFilteredResults.filter(p => p.matchesColor),
+        ...titleMatches,
+      ];
+      console.log(
+        `[semanticSearch] 🎨 Supplemented: ${colorMatchCount} verified + ${titleMatches.length} title matches = ${colorFilteredResults.length} results`
+      );
     } else {
       // No color matches at all - show all results but warn
       console.log(`[semanticSearch] ⚠️ No color matches found for "${intent.color}" - showing all results`);

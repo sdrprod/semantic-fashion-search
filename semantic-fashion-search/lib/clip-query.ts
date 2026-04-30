@@ -34,7 +34,7 @@ export async function generateClipTextEmbedding(
 ): Promise<number[] | null> {
   const apiKey = process.env.HUGGINGFACE_API_KEY;
   if (!apiKey) {
-    // Feature disabled — no penalty, just no image re-ranking
+    console.warn('[CLIP] HUGGINGFACE_API_KEY not set — image re-ranking disabled');
     return null;
   }
 
