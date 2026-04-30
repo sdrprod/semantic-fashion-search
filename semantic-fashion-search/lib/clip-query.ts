@@ -15,8 +15,13 @@
  *   - The response format is unexpected
  */
 
+// sentence-transformers/clip-ViT-B-32 wraps the same CLIP ViT-B/32 weights as
+// openai/clip-vit-base-patch32 but exposes the TEXT encoder via the HF inference
+// API reliably.  Its 512-d text output lives in the same projected embedding space
+// as the vision encoder used to generate stored product image_embeddings, making
+// cross-modal cosine similarity valid.
 const HF_API_URL =
-  'https://router.huggingface.co/hf-inference/models/openai/clip-vit-base-patch32/pipeline/feature-extraction';
+  'https://router.huggingface.co/hf-inference/models/sentence-transformers/clip-ViT-B-32';
 
 const CLIP_TIMEOUT_MS = 4000; // 4 s — must fit within search pipeline budget
 
@@ -53,22 +58,30 @@ export async function generateClipTextEmbedding(
     clearTimeout(timer);
 
     if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
       console.warn(
-        `[CLIP] HuggingFace API returned ${response.status} — skipping image re-ranking`
+        `[CLIP] HuggingFace API returned ${response.status} — skipping image re-ranking. Body: ${errorBody.slice(0, 300)}`
       );
       return null;
     }
 
     const data = await response.json();
 
-    // HF feature-extraction returns: number[] or number[][]
-    const embedding: unknown = Array.isArray(data) && Array.isArray(data[0])
-      ? data[0]
-      : data;
+    // sentence-transformers returns number[][] (batch × dims) for a single input,
+    // e.g. [[0.12, -0.03, ...]] — unwrap the outer batch dimension.
+    // Fall back to treating a flat number[] as the embedding directly.
+    let embedding: unknown;
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+      embedding = data[0];          // [[...512 floats...]] → [...512 floats...]
+    } else if (Array.isArray(data)) {
+      embedding = data;             // flat array (older API response shape)
+    } else {
+      embedding = null;
+    }
 
-    if (!Array.isArray(embedding) || embedding.length !== 512) {
+    if (!Array.isArray(embedding) || (embedding as number[]).length !== 512) {
       console.warn(
-        `[CLIP] Unexpected embedding shape: ${Array.isArray(embedding) ? embedding.length : typeof embedding}d — expected 512d`
+        `[CLIP] Unexpected embedding shape: ${Array.isArray(embedding) ? (embedding as number[]).length : typeof embedding}d — expected 512d. Raw response: ${JSON.stringify(data).slice(0, 200)}`
       );
       return null;
     }
