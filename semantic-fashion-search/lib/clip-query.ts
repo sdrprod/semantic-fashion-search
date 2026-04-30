@@ -20,8 +20,10 @@
 // API reliably.  Its 512-d text output lives in the same projected embedding space
 // as the vision encoder used to generate stored product image_embeddings, making
 // cross-modal cosine similarity valid.
+// NOTE: must use api-inference.huggingface.co directly — router.huggingface.co
+// routes to "hf-inference" provider which does not support sentence-transformers models.
 const HF_API_URL =
-  'https://router.huggingface.co/hf-inference/models/sentence-transformers/clip-ViT-B-32';
+  'https://api-inference.huggingface.co/models/sentence-transformers/clip-ViT-B-32';
 
 const CLIP_TIMEOUT_MS = 4000; // 4 s — must fit within search pipeline budget
 
