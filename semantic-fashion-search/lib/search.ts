@@ -342,7 +342,9 @@ async function browseCategorySearch(
       '%sexy costume%', // explicit costume items
       '%burlesque%',    // burlesque wear
       '%boudoir%',      // boudoir sets
-      '%sexy%',         // any title explicitly labelled "sexy"
+      // NOTE: '%sexy%' removed — too broad, catches legitimate fashion dresses
+      // ("Sexy Elegant Bodycon", "Sexy Halter Cocktail"). '%sexy costume%' above
+      // covers the actual explicit-content case.
       '%fishnet%',      // fishnet stockings / fishnet bodysuits
       '%crotchless%',   // explicit lingerie
       '%g-string%',     // explicit underwear
@@ -1201,16 +1203,20 @@ function hasSexyIntent(query: string): boolean {
  */
 function isSexyProduct(title: string, description: string): boolean {
   // Strong sexy indicators (check title + description)
+  // NOTE: 'sexy' is intentionally excluded — it is ubiquitous in fashion brand copy
+  // ("Sexy Elegant", "Sexy Halter", "Sexy Backless Maxi Formal") and does NOT indicate
+  // explicit/inappropriate content. Real explicit content is caught by the terms below.
   const strongSexyTerms = [
-    'sexy', 'lingerie', 'intimate', 'revealing', 'see-through',
+    'lingerie', 'intimate', 'revealing', 'see-through',
     'fishnet', 'teddy', 'negligee', 'babydoll', 'chemise',
     'garter', 'g-string', 'crotchless',
     'open bust', 'cupless', 'peek-a-boo', 'peekaboo', 'erotic', 'naughty',
-    'boudoir', 'sultry', 'provocative', 'enticing', 'lace bra set',
+    'boudoir', 'provocative', 'enticing', 'lace bra set',
     'adult costume', 'roleplay', 'role play', 'burlesque', 'stripper'
   ];
   // Note: 'thong' is intentionally excluded above — it is also a legitimate footwear
   // term ("thong sandal", "flip-flop thong"). Handled contextually below.
+  // Note: 'sultry' removed — common editorial fashion descriptor, not explicit.
 
   // Weak indicators: only truly ambiguous terms that need co-occurrence to be flagged.
   // 'mesh', 'sheer', 'bodysuit', 'bodycon' are mainstream fashion vocabulary —
