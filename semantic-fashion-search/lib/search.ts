@@ -727,13 +727,34 @@ export async function semanticSearch(
         !p.matchesColor &&
         `${p.title} ${p.description || ''}`.toLowerCase().includes(normalizedColor)
       );
-      colorFilteredResults = [
-        ...colorFilteredResults.filter(p => p.matchesColor),
-        ...titleMatches,
-      ];
-      console.log(
-        `[semanticSearch] 🎨 Supplemented: ${colorMatchCount} verified + ${titleMatches.length} title matches = ${colorFilteredResults.length} results`
-      );
+      const supplementedCount = colorMatchCount + titleMatches.length;
+
+      if (supplementedCount >= MIN_STRICT_RESULTS) {
+        // Enough confirmed matches — reduce to matched results only
+        colorFilteredResults = [
+          ...colorFilteredResults.filter(p => p.matchesColor),
+          ...titleMatches,
+        ];
+        console.log(
+          `[semanticSearch] 🎨 Supplemented: ${colorMatchCount} verified + ${titleMatches.length} title matches = ${colorFilteredResults.length} results`
+        );
+      } else {
+        // Still too few even after supplementing — vendor titles lack color data.
+        // Keep all results but put color matches first so the category filter
+        // can work on the full result set instead of a tiny subset.
+        // Color-confirmed items bubble to the top; the rest sort by similarity.
+        const unmatched = colorFilteredResults.filter(
+          p => !p.matchesColor && !`${p.title} ${p.description || ''}`.toLowerCase().includes(normalizedColor)
+        );
+        colorFilteredResults = [
+          ...colorFilteredResults.filter(p => p.matchesColor),
+          ...titleMatches,
+          ...unmatched,
+        ];
+        console.log(
+          `[semanticSearch] 🎨 Insufficient color data (${supplementedCount} matches) — keeping all ${colorFilteredResults.length} results, color matches sorted first`
+        );
+      }
     } else {
       // No color matches at all - show all results but warn
       console.log(`[semanticSearch] ⚠️ No color matches found for "${intent.color}" - showing all results`);
@@ -1328,10 +1349,14 @@ function getCategoryMatchType(product: Product, category: string): 'exact' | 'pa
 
   // Unwanted context indicators (when term appears but in wrong context)
   // e.g., "shoe organizer" when searching "shoe" or "dress form" when searching "dress"
+  // IMPORTANT: Only include terms that are NEVER valid in fashion product titles/descriptions.
+  // Do NOT include: 'print', 'pattern', 'photo', 'image', 'form', 'stand', 'picture' —
+  // these all appear in legitimate fashion titles ("floral print dress", "form-fitting",
+  // "geometric pattern", "as shown in image") and would silently kill those results.
   const unwantedContexts = [
     'organizer', 'cleaner', 'rack', 'holder', 'storage', 'box', 'container',
-    'hanger', 'display', 'mannequin', 'form', 'stand', 'picture', 'print',
-    'poster', 'photo', 'image', 'pattern', 'template', 'tutorial'
+    'hanger', 'mannequin', 'display stand', 'hat stand', 'shoe stand',
+    'poster', 'template', 'tutorial',
   ];
 
   const hasUnwantedContext = unwantedContexts.some(context => combinedText.includes(context));
@@ -1461,8 +1486,12 @@ function productMatchesColor(product: Product, color: string): boolean {
       return true;
     }
 
-    // Verified colors exist but don't match - return false
-    // This is the key improvement: we trust AI verification over text descriptions
+    // Verified colors exist but don't match — check title as a safety net.
+    // The backfill may be incomplete or erroneous; a strong title match overrides.
+    const titleLower = product.title?.toLowerCase() || '';
+    if (titleLower.includes(normalizedColor)) return true;
+    const requestedVariationsCheck = colorVariations[normalizedColor] || [];
+    if (requestedVariationsCheck.some(v => titleLower.includes(v))) return true;
     return false;
   }
 
