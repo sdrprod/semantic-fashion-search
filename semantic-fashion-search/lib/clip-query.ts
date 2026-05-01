@@ -25,7 +25,7 @@
 const HF_API_URL =
   'https://api-inference.huggingface.co/models/sentence-transformers/clip-ViT-B-32';
 
-const CLIP_TIMEOUT_MS = 4000; // 4 s — must fit within search pipeline budget
+const CLIP_TIMEOUT_MS = 1500; // 1.5 s — fast-fail; HF serverless doesn't support CLIP text models
 
 /**
  * Generate a 512d CLIP text embedding for the given query string.
