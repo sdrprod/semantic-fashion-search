@@ -1991,3 +1991,88 @@ earlier test searches.
 ---
 
 ================================================================================
+
+================================================================================
+
+---
+
+## Search Quality Overhaul — May 1, 2026
+
+### What Was Wrong
+
+The "black dress" search (and many similar searches) were consistently returning only 2-3 results regardless of what you searched for, and those results often weren't the right type of product. After tracing the full search log, we found three separate bugs stacked on top of each other — each one making the next one worse.
+
+---
+
+### Bug 1: Search Was Silently Discarding Most Products
+
+A function that checks whether a product belongs to the searched category (e.g., "dress") was rejecting any product whose title or description contained common words like:
+
+- **print** → "floral print dress" ❌ rejected
+- **form** → "form-fitting bodycon dress" ❌ rejected
+- **pattern** → "geometric pattern midi dress" ❌ rejected
+- **image** → "as shown in image" (standard vendor boilerplate) ❌ rejected
+- **photo** → "color may vary from photo" ❌ rejected
+
+These words were intended to catch genuinely non-fashion items (like "dress form mannequin" or "shoe rack display"), but they were far too broad and were silently excluding the majority of legitimate fashion products. The fix removes those words from the exclusion list and replaces them with more specific phrases like "hat stand" and "shoe stand."
+
+---
+
+### Bug 2: Color Filter Was Eliminating Products Before Category Filter Ran
+
+When you searched "black dress," the system checked for color information first. Because most vendor product titles don't mention colors (they're often just "Elegant V-Neck Midi Dress" without specifying black, blue, or red), only 3 out of 22 products had verified color data. The system then reduced the result set to just those 3 items — which happened to be black bags and jackets, not dresses — before the category filter even had a chance to run.
+
+**The fix:** When there aren't enough color-verified products, the system now keeps all results (sorted with color-confirmed items first) and lets the category filter do its job on the full set. Black dresses without color in their title are now included rather than eliminated before they're ever considered.
+
+---
+
+### Bug 3: Color Matching Was Too Strict With AI-Verified Data
+
+Some products have AI-verified color data from image analysis. When that data existed but didn't include the searched color, the system was immediately rejecting the product — even if the word "black" was right there in the product's title. The fix now checks the title as a safety net before making a final rejection.
+
+---
+
+### Database Cleanup
+
+**Products re-categorized: 12,371**
+
+Vendor category names were inconsistent (some said "Boots," others "boots," others "Boots & Booties"). We ran a comprehensive re-categorization pass that normalized all ~12,400 products to consistent lowercase category names and also fixed genuine miscategorizations:
+
+| Old Category | New Category | Count |
+|---|---|---|
+| Accessories | dresses | 603 |
+| Sneakers | pants | 173 |
+| Pants & Jeans | dresses | 141 |
+| Sneakers | activewear | 123 |
+| Sneakers | handbags | 102 |
+| Boots → boots | (case fix) | 1,234 |
+| Sneakers → sneakers | (case fix) | 1,108 |
+| Heels → heels | (case fix) | 1,072 |
+
+**Products deleted: 196**
+
+Removed products that had no business being in a fashion search:
+- Adult incontinence products
+- Automotive belts (alternator, timing, serpentine, fan, conveyor)
+- Hat racks and shoe storage organizers
+- Shoe polish and cleaning kits
+- Medical compression socks and orthopedic braces
+- Multi-packs of basic underwear and socks (3-pack, 5-pack, 6-pack, etc.)
+- Men's basketball shoes and other sports-specific footwear
+- Nursing bras and postpartum medical products
+
+A deletion log was saved before removing anything so the process can be reversed if needed.
+
+---
+
+### Net Result
+
+After this Netlify deploy:
+- "Black dress" should return a full page of actual black dresses
+- Color-specific searches are more reliable even when vendor titles omit the color
+- Category browsing (clicking "Dresses" or "Boots") should be significantly more accurate
+- Contaminating non-fashion products have been removed from the database
+
+---
+
+================================================================================

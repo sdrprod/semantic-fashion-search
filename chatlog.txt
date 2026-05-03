@@ -4239,3 +4239,149 @@ logging in or touching the Upstash console.
                                     hidden ↺ button in footer-bottom
 
 ================================================================================
+
+================================================================================
+
+## Session: 2026-05-01 (Morning/Afternoon)
+### Commit: 8ae5ec7
+
+**Session Goal**: Root-cause the "black dress always returns the same 3 results"
+problem and fix it permanently.
+
+---
+
+### Context at Session Start
+
+- Embedding reindex (~20,000 products via reindex-embeddings-local.ps1) had
+  been completed the prior day. Only 7 errors across the full database.
+- Redis cache-clear button (↺ in footer) was already implemented and working.
+- verified_colors backfill (scripts/backfill-all-colors.ps1, GPT-4 Vision,
+  ~$16.41) had been run to completion the prior day.
+- Despite all of the above, "black dress" still returned only 3 results,
+  and those 3 were not actually black dresses.
+
+---
+
+### Root Cause Analysis (Full Log Trace)
+
+Obtained a complete Netlify function log for the "black dress" search:
+
+  [executeMultiSearch] received 75 products
+  Similarity scores: [0.725, 0.723, 0.716, 0.710, ...]  ← embeddings fine
+  Filtering 75 with text threshold 0.3
+  Quality filtering: 22 → 22 results (filtered 0)
+  Color matches: 3/22
+  Supplemented: 3 verified + 0 title matches = 3 results
+  Category matches: 0 exact, 0 partial, 0 total
+  Showing all results → 3 total
+
+Three separate bugs compounding in sequence:
+
+**Bug 1 — getCategoryMatchType() blocked by overly broad unwantedContexts**
+  The function that checks whether a product belongs to a queried category
+  contained this list:
+    ['organizer','cleaner','rack','holder','storage','box','container',
+     'hanger','display','mannequin','form','stand','picture','print',
+     'poster','photo','image','pattern','template','tutorial']
+  Any product whose title OR description contained one of these strings was
+  returned as 'none' (no match). Because fashion product titles routinely
+  contain 'print' ("floral print dress"), 'form' ("form-fitting bodycon"),
+  'pattern' ("geometric pattern skirt"), 'image' (vendor boilerplate),
+  and 'photo' ("as shown in photo"), the majority of dresses were being
+  silently excluded from category filtering.
+  → Fix: removed 'form', 'stand', 'picture', 'print', 'photo', 'image',
+    'pattern' from the list. Changed 'display' → 'display stand'.
+
+**Bug 2 — Color filter reduced 22 results to 3 before category filter ran**
+  The color filter logic:
+    colorMatchCount >= 5 → strict filter (keep only matched)
+    colorMatchCount 1-4 → supplement with title matches, keep that subset
+    colorMatchCount = 0 → keep all (warn)
+  With 3 verified-black matches and 0 title matches, the supplemented subset
+  was only 3 items — these happened to be black bags/jackets with verified
+  colors, not dresses. The category filter then received only those 3 items
+  and found 0 dresses. Fix:
+
+    if (supplementedCount >= MIN_STRICT_RESULTS) {
+      // original behavior — reduce to matched set
+    } else {
+      // NEW: keep ALL results sorted (color matches first)
+      // lets category filter work on the full 22-product set
+    }
+
+**Bug 3 — productMatchesColor() hard-rejected products on partial verified_colors**
+  When a product had verified_colors populated but the requested color wasn't
+  in the array, the function returned false with no fallback — even if the
+  product title contained the color. Fixed: after checking verified_colors
+  variations, now also checks product.title before returning false.
+
+---
+
+### Additional Work: Database Cleanup and Recategorization
+
+**Recategorization (scripts/recategorize-products.mjs)**
+  - Built a 200+ keyword rule engine mapping to the 23 canonical categories
+  - Rules ordered most-specific → least-specific to prevent misclassification
+  - Processed 12,419 products; changed 12,371 (mostly vendor Title Case → lowercase)
+  - Key real reclassifications: 603 Accessories→dresses, 173 Sneakers→pants,
+    141 Pants & Jeans→dresses, 123 Sneakers→activewear, 102 Sneakers→handbags
+  - 35 unmatched products kept as-is (reviewed manually)
+  - Second pass added rules for: clogs→flats, slippers→flats, slacks→pants,
+    two-piece sets→tops, beach cover-ups→tops, lounge sets→tops
+
+**Non-fashion cleanup (scripts/cleanup-nonfashion-products.mjs)**
+  - Built two-tier rule system: HARD_DELETE_SIGNALS (single phrase → delete)
+    and PACK_DELETE_PAIRS (pack indicator + item word → delete)
+  - Categories covered: incontinence/medical, automotive belts, tool belts,
+    hat racks, shoe storage/care, bag organizers, jewelry storage, clothing
+    hangers, laundry accessories, luggage tags, medical compression, safety
+    footwear, nursing/postpartum products, multi-pack underwear/socks/bras,
+    hair tools, men's basketball shoes, compression socks
+  - Run 1: deleted 183 products
+  - Run 2 (after rule refinements): deleted 13 more products
+  - Total deleted: 196 products; deletion logs saved as JSON for rollback
+  - Refined "basketball shoe" signal after false positives caught luxury
+    designer sneakers that mentioned basketball in description text
+
+**Color match fix (lib/search.ts: productMatchesColor)**
+  - When verified_colors exists but doesn't match requested color, now
+    checks product.title as a safety net before returning false
+  - Protects against incomplete or erroneous GPT-4 Vision verification data
+
+---
+
+### Files Changed in Commit 8ae5ec7
+
+  lib/search.ts
+    - getCategoryMatchType(): removed 'print','form','image','pattern','photo',
+      'picture','stand' from unwantedContexts; kept only genuine non-fashion
+      utility terms ('organizer','cleaner','rack','holder','storage','box',
+      'container','hanger','mannequin','display stand','hat stand','shoe stand',
+      'poster','template','tutorial')
+    - Color filter: new branch when supplemented < MIN_STRICT_RESULTS keeps
+      full result set sorted color-matches-first
+    - productMatchesColor(): title fallback before final false return
+
+  scripts/recategorize-products.mjs   [NEW]
+    - 23-category keyword rule engine, 200+ patterns
+    - Flags: --dry-run, --sample N, --category CATNAME, --skip-unchanged
+
+  scripts/cleanup-nonfashion-products.mjs   [NEW]
+    - Hard-delete signal list + pack-pair detection
+    - Flags: --dry-run, --sample N, --yes (skip prompt)
+    - Writes timestamped JSON deletion log before deleting
+
+  scripts/vacuum-products.mjs   [NEW]
+    - VACUUM FULL + ANALYZE on products table
+
+---
+
+### Pending / Not Yet In This Commit
+
+- CLIP text embedding fix (HuggingFace Space build) — not started
+- Image vector matching via OpenAI — under investigation
+- verified_colors backfill completed externally; search now benefits from it
+  but confirmed sparse — only 3/22 results had color data for "black dress"
+- The two search.ts fixes need a Netlify deploy to take effect
+
+================================================================================
